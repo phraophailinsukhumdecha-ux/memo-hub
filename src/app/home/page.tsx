@@ -184,7 +184,14 @@ export default function HomePage() {
     if (memo.status === 'cancel') return <Badge className="bg-slate-100 text-slate-700 border-slate-200">ยกเลิก</Badge>;
     if (new Date(memo.deadlineAt) < new Date()) return <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>;
     const { signed, total } = getApprovalProgress(memo);
-    if (total > 0) return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ ({signed}/{total})</Badge>;
+    const isOwner = memo.ownerId === user?.id;
+    if (isOwner) {
+      if (total > 0) return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ ({signed}/{total})</Badge>;
+      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
+    }
+    if (hasUserSigned(memo, user?.id || '')) {
+      return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว</Badge>;
+    }
     return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
   };
 
