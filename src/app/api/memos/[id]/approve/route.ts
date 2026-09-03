@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,21 +39,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         waitingAt: memo.waitingAt || now,
       });
 
-      const approversQ = query(
-        collection(db, 'users'),
-        where('isApprover', '==', true)
-      );
-      const approversSnap = await getDocs(approversQ);
+      const formData = memo.formData || {};
+      const nextColIndex = nextIndex + 1;
+      const notifiedUserIds = new Set<string>();
 
-      for (const approverDoc of approversSnap.docs) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: approverDoc.id,
-          type: 'new_memo',
-          memoId: id,
-          message: `มี Memo รอการอนุมัติ: ${memo.title}`,
-          isRead: false,
-          createdAt: now,
-        });
+      for (const key of Object.keys(formData)) {
+        if (key.startsWith('col_')) {
+          const colIdx = parseInt(key.split('_')[1]);
+          if (colIdx >= nextColIndex && formData[key]?.userId) {
+            const userId = formData[key].userId as string;
+            if (!notifiedUserIds.has(userId)) {
+              notifiedUserIds.add(userId);
+              await addDoc(collection(db, 'notifications'), {
+                userId,
+                type: 'new_memo',
+                memoId: id,
+                message: `มี Memo รอการอนุมัติ: ${memo.title}`,
+                isRead: false,
+                createdAt: now,
+              });
+            }
+          }
+        }
       }
     } else {
       await updateDoc(doc(db, 'memos', id), {

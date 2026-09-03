@@ -7,8 +7,8 @@ import { Plus, X } from 'lucide-react';
 
 interface ApprovalGridProps {
   config?: ApprovalGridConfig;
-  value?: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }>;
-  onChange?: (value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }>) => void;
+  value?: Record<string, { name?: string; userId?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }>;
+  onChange?: (value: Record<string, { name?: string; userId?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }>) => void;
   readonly?: boolean;
   memoType?: string;
   globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[];
@@ -86,6 +86,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       [colKey]: {
         ...value[colKey],
         name: selectedUser.displayName,
+        userId: selectedUser.id,
         signerTitle: selectedUser.department || '',
       },
     });

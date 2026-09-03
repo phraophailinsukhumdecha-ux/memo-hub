@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
 
 function generateMemoId(): string {
   const now = new Date();
@@ -61,21 +61,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (firstLevel) {
-      const approversQ = query(
-        collection(db, 'users'),
-        where('isApprover', '==', true)
-      );
-      const approversSnap = await getDocs(approversQ);
+      const notifiedUserIds = new Set<string>();
 
-      for (const approverDoc of approversSnap.docs) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: approverDoc.id,
-          type: 'new_memo',
-          memoId,
-          message: `มี Memo ใหม่รอการอนุมัติ: ${title}`,
-          isRead: false,
-          createdAt: now,
-        });
+      for (const key of Object.keys(formData)) {
+        if (key.startsWith('col_') && formData[key]?.userId) {
+          const userId = formData[key].userId as string;
+          if (!notifiedUserIds.has(userId) && userId !== ownerId) {
+            notifiedUserIds.add(userId);
+            await addDoc(collection(db, 'notifications'), {
+              userId,
+              type: 'new_memo',
+              memoId,
+              message: `มี Memo ใหม่รอการอนุมัติ: ${title}`,
+              isRead: false,
+              createdAt: now,
+            });
+          }
+        }
       }
     }
 
