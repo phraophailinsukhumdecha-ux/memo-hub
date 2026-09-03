@@ -59,7 +59,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
             </Label>
             <div className="flex-1">
               {readonly ? (
-                <span className="text-sm">{value[row.left.name] || ''}</span>
+                <span className="text-sm text-slate-900">{value[row.left.name] || ''}</span>
               ) : row.left.type === 'date' ? (
                 <input
                   type="date"
@@ -87,7 +87,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
               </Label>
               <div className="flex-1">
                 {readonly ? (
-                  <span className="text-sm">{value[row.right?.name || ''] || ''}</span>
+                  <span className="text-sm text-slate-900">{value[row.right?.name || ''] || ''}</span>
                 ) : row.right?.type === 'date' ? (
                   <input
                     type="date"

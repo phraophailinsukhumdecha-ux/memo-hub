@@ -125,7 +125,6 @@ export default function HomePage() {
   const pendingMemos = useMemo(() => {
     if (!user) return [];
     return memos.filter((m) => {
-      if (m.status !== 'waiting' && m.status !== 'new') return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
       if (!grid) return false;
       return Object.values(grid).some((col) => col.name === user.displayName);
@@ -352,7 +351,7 @@ export default function HomePage() {
           </DialogHeader>
           {selectedMemo && detailTemplate && (
             <div className="space-y-4">
-              {detailTemplate.fields.map((field) => (
+              {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
                 <SectionRenderer
                   key={field.id}
                   field={field}

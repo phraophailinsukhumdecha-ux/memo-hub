@@ -19,7 +19,7 @@ export function BodyText({ config, value = '', onChange, readonly }: BodyTextPro
     return (
       <div className="border border-slate-900 p-3 min-h-[200px]">
         {value ? (
-          <p className="text-sm whitespace-pre-wrap">{value}</p>
+          <p className="text-sm text-slate-900 whitespace-pre-wrap">{value}</p>
         ) : (
           <div className="space-y-6">
             {Array.from({ length: lines }).map((_, i) => (
