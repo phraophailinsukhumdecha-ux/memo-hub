@@ -49,13 +49,12 @@ export default function HomePage() {
     const gridConfig = t.fields.find((f) => f.type === 'approval_grid');
     const gridFieldCfg = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
     const cols = gridFieldCfg.columns || [];
-    const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }> = {};
+    const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; date?: string; time?: string }> = {};
     cols.forEach((col, i) => {
-      const defaultColTitle = i === cols.length - 1 ? 'อนุมัติ' : (col.title || '');
       if (i === 0) {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '', colTitle: defaultColTitle };
+        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
       } else {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '', colTitle: defaultColTitle };
+        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
       }
     });
     const formData: Record<string, unknown> = {};

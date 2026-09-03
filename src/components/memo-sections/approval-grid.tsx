@@ -55,8 +55,8 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     const colData = value[`col_${colIndex}`] || {};
     if (colData.colTitle) return colData.colTitle;
     if (colIndex === 0) return 'ผู้ขออนุมัติ';
-    if (colIndex === totalColumns - 1) return 'อนุมัติ';
-    return configColumns[colIndex]?.title || 'ตรวจสอบ';
+    if (colIndex === totalColumns - 1) return 'CEO';
+    return 'อนุมัติ';
   };
 
   const handleFieldChange = (colIndex: number, field: string, fieldValue: string) => {
@@ -94,17 +94,26 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
 
   const handleAddColumn = () => {
     if (!onChange) return;
-    const nextIndex = totalColumns;
-    const prevLastKey = `col_${lastIndex}`;
-    const prevLastData = value[prevLastKey] || {};
+    const lastKey = `col_${lastIndex}`;
+    const lastColData = value[lastKey] || {};
+    const newColData = { name: '', signerTitle: '', date: '', time: '', colTitle: 'อนุมัติ' };
 
-    const middleTitle = 'ตรวจสอบ';
-
-    onChange({
-      ...value,
-      [prevLastKey]: { ...prevLastData, colTitle: prevLastData.colTitle || configColumns[lastIndex]?.title || 'อนุมัติ' },
-      [`col_${nextIndex}`]: { name: 'จิรพล ยาวะพันธุ์', signerTitle: 'CEO', date: prevLastData.date || '', time: prevLastData.time || '', colTitle: 'อนุมัติ' },
+    const sortedKeys = Object.keys(value).sort((a, b) => {
+      return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
     });
+
+    const newValue: typeof value = {};
+    let newIdx = 0;
+    for (const key of sortedKeys) {
+      const idx = parseInt(key.split('_')[1]);
+      if (idx === lastIndex) {
+        newValue[`col_${newIdx}`] = newColData;
+        newIdx++;
+      }
+      newValue[`col_${newIdx}`] = value[key];
+      newIdx++;
+    }
+    onChange(newValue);
   };
 
   const handleRemoveColumn = (colIndex: number) => {
