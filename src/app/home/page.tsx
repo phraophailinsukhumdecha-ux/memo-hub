@@ -53,6 +53,8 @@ export default function HomePage() {
     cols.forEach((col, i) => {
       if (i === 0) {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
+      } else if (i === cols.length - 1) {
+        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: 'CEO' };
       } else {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
       }

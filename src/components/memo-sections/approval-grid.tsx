@@ -55,7 +55,6 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     const colData = value[`col_${colIndex}`] || {};
     if (colData.colTitle) return colData.colTitle;
     if (colIndex === 0) return 'ผู้ขออนุมัติ';
-    if (colIndex === totalColumns - 1) return 'CEO';
     return 'อนุมัติ';
   };
 
