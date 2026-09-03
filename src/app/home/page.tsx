@@ -49,10 +49,10 @@ export default function HomePage() {
     const gridConfig = t.fields.find((f) => f.type === 'approval_grid');
     const gridFieldCfg = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
     const cols = gridFieldCfg.columns || [];
-    const gridValue: Record<string, { name?: string; signerTitle?: string; date?: string; time?: string }> = {};
+    const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; date?: string; time?: string }> = {};
     cols.forEach((_, i) => {
       if (i === 0) {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '' };
+        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
       } else if (i === cols.length - 1) {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: 'จิรพล ยาวะพันธุ์', signerTitle: 'CEO' };
       } else {
@@ -122,11 +122,11 @@ export default function HomePage() {
   const isApprover = user?.isApprover === true;
 
   const hasUserSigned = (memo: Memo, userId: string) => {
-    const grid = memo.formData?.approval_grid_1 as Record<string, { userId?: string; signed?: boolean }> | undefined;
+    const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
     if (!grid) return false;
     for (const colKey of Object.keys(grid)) {
       if (colKey.startsWith('col_') && colKey !== 'col_0') {
-        if (grid[colKey]?.userId === userId && grid[colKey]?.signed) return true;
+        if ((grid[colKey]?.userId === userId || grid[colKey]?.name === user?.displayName) && grid[colKey]?.signed) return true;
       }
     }
     return false;

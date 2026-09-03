@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         for (const colKey of Object.keys(fieldValue)) {
           if (colKey.startsWith('col_') && colKey !== 'col_0') {
             const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
-            if (col?.userId === approverId) {
+            if (col?.userId === approverId || col?.name === approverName) {
               approverColKey = colKey;
               break;
             }
@@ -64,7 +64,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         for (const colKey of Object.keys(fieldValue)) {
           if (colKey.startsWith('col_') && colKey !== 'col_0') {
-            if (!fieldValue[colKey]?.signed && fieldValue[colKey]?.userId) {
+            const col = fieldValue[colKey];
+            if ((col?.userId || col?.name) && !col?.signed) {
               allApproved = false;
               break;
             }
