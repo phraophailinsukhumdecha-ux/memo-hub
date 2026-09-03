@@ -299,7 +299,7 @@ export default function MemosPage() {
                 <TableHead>หัวข้อ</TableHead>
                 <TableHead className="w-32">เทมเพลต</TableHead>
                 <TableHead className="w-24">สถานะ</TableHead>
-                <TableHead className="w-32">ผู้สร้าง</TableHead>
+                <TableHead className="w-48">ผู้สร้าง</TableHead>
                 <TableHead className="w-32">ผู้อนุมัติปัจจุบัน</TableHead>
                 <TableHead className="w-36">วันที่สร้าง</TableHead>
                 <TableHead className="w-36">Deadline</TableHead>
