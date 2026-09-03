@@ -224,15 +224,14 @@ export default function MemosPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            สร้าง Memo ใหม่
-          </Button>
-        </DialogTrigger>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              สร้าง Memo ใหม่
+            </Button>
+          </DialogTrigger>
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
@@ -290,6 +289,7 @@ export default function MemosPage() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
 
       <div className="rounded-lg border bg-white">
           <Table>
