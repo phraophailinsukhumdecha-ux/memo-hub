@@ -80,13 +80,14 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     const selectedUser = users?.find((u) => u.id === userId);
     if (!selectedUser || !onChange) return;
     const colKey = `col_${colIndex}`;
+    const signerTitle = colIndex === lastIndex ? (selectedUser.position || '') : (selectedUser.department || '');
     onChange({
       ...value,
       [colKey]: {
         ...value[colKey],
         name: selectedUser.displayName,
         userId: selectedUser.id,
-        signerTitle: selectedUser.department || '',
+        signerTitle,
       },
     });
   };
