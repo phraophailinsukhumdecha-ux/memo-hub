@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { approverId, approverName, comment } = await request.json();
+
+    const memoDoc = await getDoc(doc(db, 'memos', id));
+    if (!memoDoc.exists()) {
+      return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
+    }
+
+    const memo = memoDoc.data()!;
+    const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
+    const now = new Date();
+
+    const approval = {
+      level: currentLevel.level,
+      approvalLevel: currentLevel.approvalLevel,
+      approverId,
+      approverName,
+      action: 'approve',
+      comment: comment || '',
+      actedAt: now,
+    };
+
+    const nextIndex = memo.currentApprovalIndex + 1;
+    const hasNextLevel = nextIndex < memo.approvalRoute.length;
+
+    if (hasNextLevel) {
+      const nextLevel = memo.approvalRoute[nextIndex];
+      await updateDoc(doc(db, 'memos', id), {
+        currentApprovalIndex: nextIndex,
+        currentApprovalLevel: nextLevel.approvalLevel,
+        approvals: [...(memo.approvals || []), approval],
+        updatedAt: now,
+        waitingAt: memo.waitingAt || now,
+      });
+
+      const approversQ = query(
+        collection(db, 'users'),
+        where('isApprover', '==', true)
+      );
+      const approversSnap = await getDocs(approversQ);
+
+      for (const approverDoc of approversSnap.docs) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: approverDoc.id,
+          type: 'new_memo',
+          memoId: id,
+          message: `มี Memo รอการอนุมัติ: ${memo.title}`,
+          isRead: false,
+          createdAt: now,
+        });
+      }
+    } else {
+      await updateDoc(doc(db, 'memos', id), {
+        status: 'approved',
+        currentApprovalIndex: nextIndex,
+        currentApprovalLevel: null,
+        approvals: [...(memo.approvals || []), approval],
+        closedAt: now,
+        updatedAt: now,
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: memo.ownerId,
+        type: 'approved',
+        memoId: id,
+        message: `Memo ของคุณได้รับการอนุมัติแล้ว: ${memo.title}`,
+        isRead: false,
+        createdAt: now,
+      });
+    }
+
+    await addDoc(collection(db, 'eventLogs'), {
+      userId: approverId,
+      userName: approverName,
+      action: 'MEMO_APPROVED',
+      details: `อนุมัติ Memo: ${memo.title}`,
+      timestamp: now,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
+  }
+}
