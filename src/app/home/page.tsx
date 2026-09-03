@@ -120,6 +120,17 @@ export default function HomePage() {
   }, [selectedMemo, allUsers]);
 
   const isApprover = user?.isApprover === true;
+
+  const hasUserSigned = (memo: Memo, userId: string) => {
+    const grid = memo.formData?.approval_grid_1 as Record<string, { userId?: string; signed?: boolean }> | undefined;
+    if (!grid) return false;
+    for (const colKey of Object.keys(grid)) {
+      if (colKey.startsWith('col_') && colKey !== 'col_0') {
+        if (grid[colKey]?.userId === userId && grid[colKey]?.signed) return true;
+      }
+    }
+    return false;
+  };
   const isAdmin = user?.role === 'admin';
 
   const pendingMemos = useMemo(() => {
@@ -152,11 +163,27 @@ export default function HomePage() {
   }).length;
   const myCount = myMemos.length;
 
+  const getApprovalProgress = (memo: Memo) => {
+    const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
+    if (!grid) return { signed: 0, total: 0 };
+    let signed = 0;
+    let total = 0;
+    for (const colKey of Object.keys(grid)) {
+      if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
+        total++;
+        if (grid[colKey]?.signed) signed++;
+      }
+    }
+    return { signed, total };
+  };
+
   const getStatusBadge = (memo: Memo) => {
-    if (memo.status === 'approved') return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว</Badge>;
+    if (memo.status === 'approved') return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว (approve)</Badge>;
     if (memo.status === 'rejected') return <Badge className="bg-red-100 text-red-700 border-red-200">ถูกปฏิเสธ</Badge>;
     if (memo.status === 'cancel') return <Badge className="bg-slate-100 text-slate-700 border-slate-200">ยกเลิก</Badge>;
     if (new Date(memo.deadlineAt) < new Date()) return <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>;
+    const { signed, total } = getApprovalProgress(memo);
+    if (total > 0) return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ ({signed}/{total})</Badge>;
     return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
   };
 
@@ -250,7 +277,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
-            {showApprove && (memo.status === 'waiting' || memo.status === 'new') && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ
@@ -364,7 +391,7 @@ export default function HomePage() {
             </div>
           )}
           <DialogFooter className="flex-row gap-2 sm:gap-0">
-            {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ

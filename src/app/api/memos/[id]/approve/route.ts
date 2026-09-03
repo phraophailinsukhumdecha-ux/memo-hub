@@ -13,65 +13,71 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const memo = memoDoc.data()!;
-    const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
     const now = new Date();
+    const formData = memo.formData || {};
 
-    const approval = {
-      level: currentLevel.level,
-      approvalLevel: currentLevel.approvalLevel,
-      approverId,
-      approverName,
-      action: 'approve',
-      comment: comment || '',
-      actedAt: now,
-    };
-
-    const nextIndex = memo.currentApprovalIndex + 1;
-    const hasNextLevel = nextIndex < memo.approvalRoute.length;
-
-    if (hasNextLevel) {
-      const nextLevel = memo.approvalRoute[nextIndex];
-      await updateDoc(doc(db, 'memos', id), {
-        currentApprovalIndex: nextIndex,
-        currentApprovalLevel: nextLevel.approvalLevel,
-        approvals: [...(memo.approvals || []), approval],
-        updatedAt: now,
-        waitingAt: memo.waitingAt || now,
-      });
-
-      const formData = memo.formData || {};
-      const nextColIndex = nextIndex + 1;
-      const notifiedUserIds = new Set<string>();
-
-      for (const fieldKey of Object.keys(formData)) {
-        const fieldValue = formData[fieldKey];
-        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
-          for (const colKey of Object.keys(fieldValue)) {
-            if (colKey.startsWith('col_')) {
-              const colIdx = parseInt(colKey.split('_')[1]);
-              if (colIdx >= nextColIndex && (fieldValue as Record<string, Record<string, string>>)[colKey]?.userId) {
-                const userId = (fieldValue as Record<string, Record<string, string>>)[colKey].userId;
-                if (!notifiedUserIds.has(userId)) {
-                  notifiedUserIds.add(userId);
-                  await addDoc(collection(db, 'notifications'), {
-                    userId,
-                    type: 'new_memo',
-                    memoId: id,
-                    message: `มี Memo รอการอนุมัติ: ${memo.title}`,
-                    isRead: false,
-                    createdAt: now,
-                  });
-                }
-              }
+    let approverColKey: string | null = null;
+    for (const fieldKey of Object.keys(formData)) {
+      const fieldValue = formData[fieldKey];
+      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+        for (const colKey of Object.keys(fieldValue)) {
+          if (colKey.startsWith('col_') && colKey !== 'col_0') {
+            const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
+            if (col?.userId === approverId) {
+              approverColKey = colKey;
+              break;
             }
           }
         }
       }
-    } else {
+    }
+
+    if (!approverColKey) {
+      return NextResponse.json({ error: 'คุณไม่มีสิทธิ์อนุมัติ memo นี้' }, { status: 403 });
+    }
+
+    const approval = {
+      level: 0,
+      approvalLevel: approverColKey,
+      approverId,
+      approverName,
+      action: 'approve' as const,
+      comment: comment || '',
+      actedAt: now,
+    };
+
+    const updatedFormData = JSON.parse(JSON.stringify(formData));
+    for (const fieldKey of Object.keys(updatedFormData)) {
+      const fieldValue = updatedFormData[fieldKey];
+      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+        if (fieldValue[approverColKey]) {
+          fieldValue[approverColKey].signed = true;
+          fieldValue[approverColKey].date = now.toISOString().split('T')[0];
+          fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+        }
+      }
+    }
+
+    let allApproved = true;
+    for (const fieldKey of Object.keys(updatedFormData)) {
+      const fieldValue = updatedFormData[fieldKey];
+      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+        for (const colKey of Object.keys(fieldValue)) {
+          if (colKey.startsWith('col_') && colKey !== 'col_0') {
+            if (!fieldValue[colKey]?.signed && fieldValue[colKey]?.userId) {
+              allApproved = false;
+              break;
+            }
+          }
+        }
+      }
+      if (!allApproved) break;
+    }
+
+    if (allApproved) {
       await updateDoc(doc(db, 'memos', id), {
         status: 'approved',
-        currentApprovalIndex: nextIndex,
-        currentApprovalLevel: null,
+        formData: updatedFormData,
         approvals: [...(memo.approvals || []), approval],
         closedAt: now,
         updatedAt: now,
@@ -81,10 +87,42 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         userId: memo.ownerId,
         type: 'approved',
         memoId: id,
-        message: `Memo ของคุณได้รับการอนุมัติแล้ว: ${memo.title}`,
+        message: `Memo ของคุณได้รับการอนุมัติครบทุกคนแล้ว: ${memo.title}`,
         isRead: false,
         createdAt: now,
       });
+    } else {
+      await updateDoc(doc(db, 'memos', id), {
+        formData: updatedFormData,
+        approvals: [...(memo.approvals || []), approval],
+        updatedAt: now,
+        waitingAt: memo.waitingAt || now,
+      });
+
+      const notifiedUserIds = new Set<string>();
+      for (const fieldKey of Object.keys(updatedFormData)) {
+        const fieldValue = updatedFormData[fieldKey];
+        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+          for (const colKey of Object.keys(fieldValue)) {
+            if (colKey.startsWith('col_') && colKey !== 'col_0') {
+              const col = fieldValue[colKey];
+              if (col?.userId && !col?.signed && col.userId !== approverId) {
+                if (!notifiedUserIds.has(col.userId)) {
+                  notifiedUserIds.add(col.userId);
+                  await addDoc(collection(db, 'notifications'), {
+                    userId: col.userId,
+                    type: 'new_memo',
+                    memoId: id,
+                    message: `มี Memo รอการอนุมัติของคุณ: ${memo.title}`,
+                    isRead: false,
+                    createdAt: now,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     await addDoc(collection(db, 'eventLogs'), {
@@ -95,7 +133,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       timestamp: now,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, allApproved });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
   }
