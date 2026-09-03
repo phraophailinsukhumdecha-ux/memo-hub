@@ -53,8 +53,6 @@ export default function HomePage() {
     cols.forEach((_, i) => {
       if (i === 0) {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
-      } else if (i === cols.length - 1) {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: 'จิรพล ยาวะพันธุ์', signerTitle: 'CEO' };
       } else {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
       }
@@ -169,7 +167,7 @@ export default function HomePage() {
     let signed = 0;
     let total = 0;
     for (const colKey of Object.keys(grid)) {
-      if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
+      if (colKey.startsWith('col_') && colKey !== 'col_0' && (grid[colKey]?.userId || grid[colKey]?.name)) {
         total++;
         if (grid[colKey]?.signed) signed++;
       }
