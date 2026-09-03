@@ -63,19 +63,24 @@ export async function POST(request: NextRequest) {
     if (firstLevel) {
       const notifiedUserIds = new Set<string>();
 
-      for (const key of Object.keys(formData)) {
-        if (key.startsWith('col_') && formData[key]?.userId) {
-          const userId = formData[key].userId as string;
-          if (!notifiedUserIds.has(userId) && userId !== ownerId) {
-            notifiedUserIds.add(userId);
-            await addDoc(collection(db, 'notifications'), {
-              userId,
-              type: 'new_memo',
-              memoId,
-              message: `มี Memo ใหม่รอการอนุมัติ: ${title}`,
-              isRead: false,
-              createdAt: now,
-            });
+      for (const fieldKey of Object.keys(formData)) {
+        const fieldValue = formData[fieldKey];
+        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+          for (const colKey of Object.keys(fieldValue)) {
+            if (colKey.startsWith('col_') && (fieldValue as Record<string, Record<string, string>>)[colKey]?.userId) {
+              const userId = (fieldValue as Record<string, Record<string, string>>)[colKey].userId;
+              if (!notifiedUserIds.has(userId) && userId !== ownerId) {
+                notifiedUserIds.add(userId);
+                await addDoc(collection(db, 'notifications'), {
+                  userId,
+                  type: 'new_memo',
+                  memoId,
+                  message: `มี Memo ใหม่รอการอนุมัติ: ${title}`,
+                  isRead: false,
+                  createdAt: now,
+                });
+              }
+            }
           }
         }
       }

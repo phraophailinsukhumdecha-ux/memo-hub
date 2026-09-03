@@ -43,21 +43,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const nextColIndex = nextIndex + 1;
       const notifiedUserIds = new Set<string>();
 
-      for (const key of Object.keys(formData)) {
-        if (key.startsWith('col_')) {
-          const colIdx = parseInt(key.split('_')[1]);
-          if (colIdx >= nextColIndex && formData[key]?.userId) {
-            const userId = formData[key].userId as string;
-            if (!notifiedUserIds.has(userId)) {
-              notifiedUserIds.add(userId);
-              await addDoc(collection(db, 'notifications'), {
-                userId,
-                type: 'new_memo',
-                memoId: id,
-                message: `มี Memo รอการอนุมัติ: ${memo.title}`,
-                isRead: false,
-                createdAt: now,
-              });
+      for (const fieldKey of Object.keys(formData)) {
+        const fieldValue = formData[fieldKey];
+        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+          for (const colKey of Object.keys(fieldValue)) {
+            if (colKey.startsWith('col_')) {
+              const colIdx = parseInt(colKey.split('_')[1]);
+              if (colIdx >= nextColIndex && (fieldValue as Record<string, Record<string, string>>)[colKey]?.userId) {
+                const userId = (fieldValue as Record<string, Record<string, string>>)[colKey].userId;
+                if (!notifiedUserIds.has(userId)) {
+                  notifiedUserIds.add(userId);
+                  await addDoc(collection(db, 'notifications'), {
+                    userId,
+                    type: 'new_memo',
+                    memoId: id,
+                    message: `มี Memo รอการอนุมัติ: ${memo.title}`,
+                    isRead: false,
+                    createdAt: now,
+                  });
+                }
+              }
             }
           }
         }

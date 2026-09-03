@@ -216,43 +216,7 @@ export default function HomePage() {
     if (!selectedTemplate || !user) return;
     setCreating(true);
     try {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-      const gridConfig = selectedTemplate.fields.find((f) => f.type === 'approval_grid');
-      const gridFieldConfig = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
-      const cols = gridFieldConfig.columns || [];
-      const gridValue: Record<string, { name?: string; signerTitle?: string; date?: string; time?: string }> = {};
-      cols.forEach((_, i) => {
-        if (i === 0) {
-          gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user.displayName, signerTitle: user.department || '' };
-        } else if (i === cols.length - 1) {
-          gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: 'จิรพล ยาวะพันธุ์', signerTitle: 'CEO' };
-        } else {
-          gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
-        }
-      });
-
-      const formData: Record<string, unknown> = {};
-      for (const field of selectedTemplate.fields) {
-        if (field.type === 'section_title' || field.type === 'company_header') continue;
-        if (field.type === 'approval_grid') {
-          formData[field.id] = gridValue;
-                    } else if (field.type === 'form_row') {
-                      const rfConfig = (field.fieldConfig || {}) as { fields?: { name: string }[] };
-                      const rowFields = rfConfig.fields || [];
-          const rowValue: Record<string, string> = {};
-          rowFields.forEach((rf) => { rowValue[rf.name] = ''; });
-          formData[field.id] = rowValue;
-        } else if (field.type === 'checkbox_group') {
-          formData[field.id] = [];
-        } else if (field.type === 'body_text') {
-          formData[field.id] = '';
-        } else {
-          formData[field.id] = '';
-        }
-      }
+      const formData = { ...sectionFormData };
 
       await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
       setIsCreateDialogOpen(false);
