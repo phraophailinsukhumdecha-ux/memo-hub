@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, addDoc, query, where, getDocs } from 'firebase/firestore';
 
-function generateMemoId(): string {
+function getDeptAbbr(department: string): string {
+  if (!department) return 'XX';
+  const abbr = department.substring(0, 2).toUpperCase();
+  return abbr;
+}
+
+async function generateMemoId(department: string): Promise<string> {
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
-  return `MH-${dateStr}-${seq}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
+  const dept = getDeptAbbr(department);
+
+  const prefix = `${dept}${dateStr}`;
+  const memosRef = collection(db, 'memos');
+  const q = query(memosRef, where('memoNumber', '>=', prefix), where('memoNumber', '<', prefix + '\uf8ff'));
+  const snapshot = await getDocs(q);
+
+  const seq = snapshot.size + 1;
+  const seqStr = String(seq).padStart(2, '0');
+
+  return `${prefix}_${seqStr}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -27,7 +45,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const memoId = generateMemoId();
+    const memoId = await generateMemoId(department || 'XX');
     const now = new Date();
     const firstLevel = approvalRoute.length > 0 ? approvalRoute[0] : null;
 
