@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ApprovalGrid } from '@/components/memo-sections';
+import { ApprovalGrid, SectionRenderer } from '@/components/memo-sections';
 import { MemoTemplate, User, Group, ApprovalGridConfig } from '@/types';
 import { Mail, Save, X } from 'lucide-react';
 
@@ -186,22 +186,50 @@ export function MemoDocumentForm({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onCancel}>
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-[1400px] h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+        <div className="shrink-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">สร้าง Memo ใหม่</h2>
           <Button variant="ghost" size="icon" onClick={onCancel}>
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Form Fields */}
-        <div className="p-6 space-y-5">
-          {selectedTemplate.fields.map((field) => renderField(field))}
+        {/* Split Panel */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left: Form Fields */}
+          <div className="w-1/2 overflow-y-auto border-r">
+            <div className="p-6 space-y-4">
+              <h3 className="text-sm font-semibold text-slate-700">กรอกข้อมูล Memo</h3>
+              {selectedTemplate.fields.map((field) => renderField(field))}
+            </div>
+          </div>
+
+          {/* Right: Memo Preview */}
+          <div className="w-1/2 overflow-y-auto bg-slate-100 p-6">
+            <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
+            <div className="bg-white border-2 border-slate-900 text-sm">
+              <div className="border-b-2 border-slate-900 py-2 text-center">
+                <h1 className="text-lg font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
+              </div>
+              <div className="p-4 space-y-0">
+                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                  <SectionRenderer
+                    key={field.id}
+                    field={field}
+                    value={formData[field.id]}
+                    readonly={true}
+                    ownerUser={ownerUser}
+                    users={users}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
+        <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
           <Button variant="outline" onClick={onCancel} disabled={creating}>
             ยกเลิก
           </Button>
