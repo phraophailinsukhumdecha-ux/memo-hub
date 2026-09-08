@@ -59,7 +59,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
 
           {/* Right: Memo Details Table */}
           <div className="flex-1 p-4">
-            <table className="w-full text-sm">
+            <table className="text-sm">
               <tbody>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">MEMO NO.</td>
