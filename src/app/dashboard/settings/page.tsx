@@ -660,7 +660,7 @@ MemoHub Digital Memo & Approval System`}
                   <p>ผู้สร้าง: พระโฮลิน สุขmanaช</p>
                   <p>สถานะ: รออนุมัติ</p>
                   <p>Deadline: 10 กันยายน 2569</p>
-                  <p className="mt-2">กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้</p>
+                  <p className="mt-2">กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้: <span className="text-blue-600 underline">http://localhost:3000/home</span></p>
                   <p className="mt-2 text-slate-400">MemoHub Digital Memo & Approval System</p>
                 </div>
               </div>

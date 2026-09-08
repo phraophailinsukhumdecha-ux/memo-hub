@@ -71,7 +71,9 @@ function createTransporter(smtp: SmtpConfig) {
 function processContent(body: string) {
   if (!body) return { text: '', html: '' };
   const text = body;
-  const html = body.replace(/\n/g, '<br />');
+  const html = body
+    .replace(/\n/g, '<br />')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#2563eb;text-decoration:underline;">$1</a>');
   return { text, html };
 }
 
@@ -101,6 +103,8 @@ export async function POST(request: NextRequest) {
     if (!memoId || !toEmails || toEmails.length === 0) {
       return NextResponse.json({ ok: false, code: ERR.EVALIDATE, message: 'กรุณาระบุ memoId และผู้รับอีเมล' }, { status: 400 });
     }
+
+    const baseUrl = request.headers.get('origin') || `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host') || 'localhost:3000'}`;
 
     const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
     const settings = settingsDoc.data();
@@ -136,7 +140,7 @@ export async function POST(request: NextRequest) {
       deadline: deadlineStr,
       sendDate,
       time,
-      memo_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/home`,
+      memo_url: `${baseUrl}/home`,
     };
 
     const subjectTemplate = emailFormat?.subject || '[MemoHub] {memo_number} - {title}';
@@ -150,7 +154,7 @@ export async function POST(request: NextRequest) {
 สถานะ: {status}
 Deadline: {deadline}
 
-กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้
+กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้: {memo_url}
 
 MemoHub Digital Memo & Approval System`;
 
