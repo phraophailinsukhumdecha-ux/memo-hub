@@ -253,18 +253,21 @@ export default function HomePage() {
     const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; email?: string }> | undefined;
     if (!grid) return alert('ไม่พบข้อมูลผู้อนุมัติ');
 
+    const ownerEmail = allUsers.find((u) => u.id === memo.ownerId)?.email || '';
     const toEmails: string[] = [];
     for (const colKey of Object.keys(grid)) {
       if (colKey.startsWith('col_') && colKey !== 'col_0') {
         const col = grid[colKey];
         if (col?.userId) {
           const approver = allUsers.find((u) => u.id === col.userId);
-          if (approver?.email) toEmails.push(approver.email);
+          if (approver?.email && approver.email !== ownerEmail) {
+            toEmails.push(approver.email);
+          }
         }
       }
     }
 
-    if (toEmails.length === 0) return alert('ไม่พบอีเมลผู้อนุมัติ');
+    if (toEmails.length === 0) return alert('ไม่พบอีเมลผู้อนุมัติ (อีเมลซ้ำกับผู้สร้าง memo)');
 
     try {
       const res = await fetch('/api/send-memo-email', {
