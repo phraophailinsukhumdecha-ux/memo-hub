@@ -78,9 +78,7 @@ export function MemoDocumentForm({
 
     switch (field.type) {
       case 'form_row': {
-        const skipFields = ['quotationNo', 'jobNo'];
         const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string }>) || [];
-        const filteredFields = fields.filter((f) => !skipFields.includes(f.name));
         const value = (formData[field.id] as Record<string, string>) || {};
         const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
         const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
@@ -89,7 +87,7 @@ export function MemoDocumentForm({
 
         return (
           <div key={field.id} className="space-y-3">
-            {filteredFields.map((f, idx) => (
+            {fields.map((f, idx) => (
               <div key={f.name}>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-slate-700">{f.label}</Label>

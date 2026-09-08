@@ -38,11 +38,13 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
     return requiredByType.includes(memoType);
   };
 
+  const skipFields = readonly ? ['quotationNo', 'jobNo'] : [];
   const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
-  for (let i = 0; i < cfg.fields.length; i += 2) {
+  const filteredFields = cfg.fields.filter((f) => !skipFields.includes(f.name));
+  for (let i = 0; i < filteredFields.length; i += 2) {
     rows.push({
-      left: cfg.fields[i],
-      right: cfg.fields[i + 1] || null,
+      left: filteredFields[i],
+      right: filteredFields[i + 1] || null,
     });
   }
 
