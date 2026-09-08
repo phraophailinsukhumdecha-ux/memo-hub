@@ -6,6 +6,11 @@ import { CompanyHeaderConfig } from '@/types';
 interface CompanyHeaderProps {
   config?: CompanyHeaderConfig;
   readonly?: boolean;
+  memoNumber?: string;
+  refNo?: string;
+  quotationNo?: string;
+  jobNo?: string;
+  date?: string;
 }
 
 const DEFAULT_CONFIG: CompanyHeaderConfig = {
@@ -18,25 +23,67 @@ const DEFAULT_CONFIG: CompanyHeaderConfig = {
   ],
 };
 
-export function CompanyHeader({ config, readonly }: CompanyHeaderProps) {
+export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo, jobNo, date }: CompanyHeaderProps) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
   return (
-    <div className="border border-slate-900 p-4">
-      <div className="flex items-start justify-between">
+    <div className="mb-4">
+      {/* Logo + Company Name */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cfg.logoUrl}
             alt="Company Logo"
-            className="h-16 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
         </div>
-        <div className="text-right text-sm leading-relaxed text-slate-900">
-          <p className="font-semibold">{cfg.companyName}</p>
-          {cfg.addressLines.map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
+        <div className="text-right">
+          <p className="text-lg font-semibold text-slate-600 tracking-wide">{cfg.companyName}</p>
+        </div>
+      </div>
+
+      {/* MEMORANDUM Header + Memo Details */}
+      <div className="border border-slate-900">
+        <div className="flex">
+          {/* Left: MEMORANDUM + Address */}
+          <div className="flex-1 border-r border-slate-900 p-4">
+            <h2 className="text-xl font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
+            <div className="text-sm leading-relaxed text-slate-900 space-y-0.5">
+              <p>{cfg.companyName}</p>
+              {cfg.addressLines.map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Memo Details Table */}
+          <div className="w-64 p-4">
+            <table className="w-full text-sm">
+              <tbody>
+                <tr>
+                  <td className="font-bold text-slate-900 pr-2 py-1">MEMO NO.</td>
+                  <td className="text-slate-900 py-1">: {memoNumber || '-'}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold text-slate-900 pr-2 py-1">REF. NO.</td>
+                  <td className="text-slate-900 py-1">: {refNo || '(if any)'}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold text-slate-900 pr-2 py-1">Quotation no.</td>
+                  <td className="text-slate-900 py-1">: {quotationNo || '-'}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold text-slate-900 pr-2 py-1">Job no.</td>
+                  <td className="text-slate-900 py-1">: {jobNo || '-'}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold text-slate-900 pr-2 py-1">DATE</td>
+                  <td className="text-slate-900 py-1">: {date || '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

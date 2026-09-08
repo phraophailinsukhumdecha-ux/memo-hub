@@ -14,6 +14,7 @@ import { ApprovalGrid } from './approval-grid';
 interface SectionRendererProps {
   field: MemoField;
   value?: unknown;
+  formData?: Record<string, unknown>;
   onChange?: (value: unknown) => void;
   readonly?: boolean;
   memoType?: string;
@@ -23,18 +24,31 @@ interface SectionRendererProps {
   groups?: Group[];
 }
 
-export function SectionRenderer({ field, value, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, groups }: SectionRendererProps) {
+export function SectionRenderer({ field, value, formData, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, groups }: SectionRendererProps) {
   switch (field.type) {
     case 'section_title':
       return <SectionTitle label={field.label} readonly={readonly} />;
 
-    case 'company_header':
+    case 'company_header': {
+      const formRowField = formData ? Object.values(formData).find((v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          const obj = v as Record<string, unknown>;
+          return obj.subject !== undefined || obj.quotationNo !== undefined;
+        }
+        return false;
+      }) as Record<string, string> | undefined : undefined;
+
       return (
         <CompanyHeader
           config={field.fieldConfig as CompanyHeaderConfig | undefined}
           readonly={readonly}
+          memoNumber={formData?.memoNumber as string}
+          quotationNo={formRowField?.quotationNo}
+          jobNo={formRowField?.jobNo}
+          date={formRowField?.date}
         />
       );
+    }
 
     case 'checkbox_group':
       return (

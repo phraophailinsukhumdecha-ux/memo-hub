@@ -218,6 +218,7 @@ export function MemoDocumentForm({
                     key={field.id}
                     field={field}
                     value={formData[field.id]}
+                    formData={formData}
                     readonly={true}
                     ownerUser={ownerUser}
                     users={users}

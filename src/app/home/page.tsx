@@ -569,6 +569,7 @@ export default function HomePage() {
                       key={field.id}
                       field={field}
                       value={selectedMemo.formData?.[field.id]}
+                      formData={selectedMemo.formData as Record<string, unknown>}
                       readonly={true}
                       ownerUser={detailOwnerUser}
                       users={allUsers}
