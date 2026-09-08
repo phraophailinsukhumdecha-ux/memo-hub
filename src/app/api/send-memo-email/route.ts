@@ -188,108 +188,180 @@ function renderApprovalGridHtml(value: Record<string, Record<string, string>>): 
   return html;
 }
 
-function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>, emailFormatPreview?: string): string {
+function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>): string {
   const formData = (memo.formData || {}) as Record<string, unknown>;
-  const deadlineRaw = memo.deadlineAt as { toDate?: () => Date } | Date | undefined;
-  const deadlineDate = deadlineRaw && typeof deadlineRaw === 'object' && 'toDate' in deadlineRaw && typeof deadlineRaw.toDate === 'function' ? deadlineRaw.toDate() : new Date(deadlineRaw as Date | number | string);
-  const buddhistYear = deadlineDate.getFullYear() + 543;
-  const deadlineStr = `${deadlineDate.getDate()} ${deadlineDate.toLocaleDateString('th-TH', { month: 'long' })} ${buddhistYear}`;
-  const createdRaw = memo.createdAt as { toDate?: () => Date } | Date | undefined;
-  const createdDate = createdRaw && typeof createdRaw === 'object' && 'toDate' in createdRaw && typeof createdRaw.toDate === 'function' ? createdRaw.toDate() : new Date(createdRaw as Date | number | string);
-  const createdStr = `${createdDate.getDate()} ${createdDate.toLocaleDateString('th-TH', { month: 'long' })} ${createdDate.getFullYear() + 543}`;
 
-  const vars: Record<string, string> = {
-    memo_number: (memo.memoNumber as string) || '',
-    title: (memo.title as string) || '',
-    owner_name: (memo.ownerName as string) || '',
-    department: (memo.department as string) || '',
-    status: memo.status === 'approved' ? 'อนุมัติแล้ว' : memo.status === 'rejected' ? 'ถูกปฏิเสธ' : 'รออนุมัติ',
-    deadline: deadlineStr,
-    created_at: createdStr,
+  const renderSection = (field: { id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }): string => {
+    const value = formData[field.id];
+    const config = (field.fieldConfig || {}) as Record<string, unknown>;
+
+    switch (field.type) {
+      case 'section_title':
+        return `<div style="border-bottom:2px solid #000;padding:8px 0;text-align:center;margin-bottom:12px;">
+          <h1 style="font-size:18px;font-weight:bold;margin:0;letter-spacing:2px;">${escapeHtml(field.label || 'MEMO')}</h1>
+        </div>`;
+
+      case 'company_header': {
+        const logoUrl = (config.logoUrl as string) || '';
+        const companyName = (config.companyName as string) || '';
+        const addressLines = (config.addressLines as string[]) || [];
+        return `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="width:150px;vertical-align:top;">
+                ${logoUrl ? `<img src="${logoUrl}" style="max-width:140px;max-height:50px;" />` : ''}
+              </td>
+              <td style="text-align:right;vertical-align:top;font-size:11px;line-height:1.5;">
+                <p style="margin:0;font-weight:600;">${escapeHtml(companyName)}</p>
+                ${addressLines.map((line) => `<p style="margin:0;">${escapeHtml(line)}</p>`).join('')}
+              </td>
+            </tr>
+          </table>
+        </div>`;
+      }
+
+      case 'form_row': {
+        const fields = (config.fields as Array<{ name: string; label: string }>) || [];
+        const data = (typeof value === 'object' && value !== null) ? value as Record<string, string> : {};
+        if (fields.length === 0) return '';
+        let html = '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">';
+        for (let i = 0; i < fields.length; i += 2) {
+          const left = fields[i];
+          const right = fields[i + 1];
+          html += '<tr>';
+          html += `<td style="width:120px;padding:8px;border:1px solid #000;font-weight:600;font-size:13px;">${escapeHtml(left.label)}</td>`;
+          html += `<td style="padding:8px;border:1px solid #000;font-size:13px;">${escapeHtml(data[left.name] || '')}</td>`;
+          if (right) {
+            html += `<td style="width:140px;padding:8px;border:1px solid #000;font-weight:600;font-size:13px;">${escapeHtml(right.label)}</td>`;
+            html += `<td style="padding:8px;border:1px solid #000;font-size:13px;">${escapeHtml(data[right.name] || '')}</td>`;
+          } else {
+            html += '<td style="padding:8px;border:1px solid #000;" colspan="2"></td>';
+          }
+          html += '</tr>';
+        }
+        html += '</table>';
+        return html;
+      }
+
+      case 'body_text': {
+        const content = (typeof value === 'string' ? value : '') || '';
+        const lines = (config.lines as number) || 12;
+        if (content) {
+          return `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;min-height:${lines * 20}px;">
+            <p style="font-size:13px;white-space:pre-wrap;margin:0;">${escapeHtml(content)}</p>
+          </div>`;
+        }
+        return `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;min-height:${lines * 20}px;"></div>`;
+      }
+
+      case 'checkbox_group': {
+        const options = (config.options as string[]) || [];
+        const selected = Array.isArray(value) ? value : [];
+        if (options.length === 0) return '';
+        let html = `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;"><table style="width:100%;border-collapse:collapse;"><tr>`;
+        html += `<td style="width:80px;font-weight:600;font-size:13px;vertical-align:top;">จุดประสงค์</td>`;
+        html += `<td style="font-size:13px;"><div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+        for (const opt of options) {
+          const checked = selected.includes(opt) ? '✓' : '☐';
+          html += `<span>${checked} ${escapeHtml(opt)}</span>`;
+        }
+        html += `</div></td></tr></table></div>`;
+        return html;
+      }
+
+      case 'dropdown_select': {
+        const options = (config.options as string[]) || [];
+        const selectedVal = typeof value === 'string' ? value : '';
+        if (options.length === 0) return '';
+        let html = `<div style="padding:10px 0;margin-bottom:12px;"><table style="width:100%;border-collapse:collapse;"><tr>`;
+        html += `<td style="width:80px;font-weight:600;font-size:13px;vertical-align:top;">${escapeHtml(field.label)}</td>`;
+        html += `<td style="font-size:13px;"><div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+        for (const opt of options) {
+          const selected = opt === selectedVal ? '✓ ' : '';
+          html += `<span>${selected}${escapeHtml(opt)}</span>`;
+        }
+        html += `</div></td></tr></table></div>`;
+        return html;
+      }
+
+      case 'approval_grid': {
+        const gridData = (typeof value === 'object' && value !== null) ? value as Record<string, Record<string, string>> : {};
+        const colKeys = Object.keys(gridData).filter((k) => k.startsWith('col_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
+        if (colKeys.length === 0) return '';
+
+        const showTime = config.showTime as boolean;
+        const maxPerRow = colKeys.length === 4 ? 2 : 3;
+
+        const renderCol = (colKey: string, i: number): string => {
+          const col = gridData[colKey] || {};
+          const isFirst = i === 0;
+          const isLast = i === colKeys.length - 1;
+          const colTitle = col.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : isLast ? 'อนุมัติ' : 'ตรวจสอบ');
+          const displayName = col.name || '';
+          const displayTitle = col.signerTitle || '';
+          const signed = col.signed;
+          const signIcon = signed ? '<span style="color:#16a34a;font-weight:bold;">✓</span>' : '';
+
+          return `<td style="width:${100 / maxPerRow}%;padding:10px;border:1px solid #000;vertical-align:top;">
+            <div style="text-align:center;margin-bottom:8px;"><p style="font-weight:600;font-size:13px;margin:0;">${escapeHtml(colTitle)}</p></div>
+            <div style="font-size:12px;">
+              <p style="margin:3px 0;">ลงชื่อ</p>
+              <p style="border-bottom:1px dashed #999;padding-bottom:3px;margin:3px 0;min-height:18px;">${signIcon} ${displayName ? `( ${escapeHtml(displayName)} )` : '(  )'}</p>
+              <p style="margin:3px 0;">ตำแหน่ง</p>
+              <p style="border-bottom:1px dashed #999;padding-bottom:3px;margin:3px 0;min-height:18px;">${escapeHtml(displayTitle)}</p>
+              <div style="display:flex;gap:6px;">
+                <div style="flex:1;"><p style="margin:3px 0;">วันที่</p><p style="border-bottom:1px dashed #999;padding-bottom:3px;margin:3px 0;">${escapeHtml(col.date || '')}</p></div>
+                ${showTime ? `<div style="flex:1;"><p style="margin:3px 0;">เวลา</p><p style="border-bottom:1px dashed #999;padding-bottom:3px;margin:3px 0;">${escapeHtml(col.time || '')}</p></div>` : ''}
+              </div>
+            </div>
+          </td>`;
+        };
+
+        const rows: string[][] = [];
+        for (let i = 0; i < colKeys.length; i += maxPerRow) {
+          rows.push(colKeys.slice(i, i + maxPerRow).map((key, j) => renderCol(key, i + j)));
+        }
+
+        return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">${rows.map((row) => `<tr>${row.join('')}</tr>`).join('')}</table>`;
+      }
+
+      default:
+        return '';
+    }
   };
 
-  let previewContent = '';
-
-  if (emailFormatPreview && emailFormatPreview.trim()) {
-    let rendered = replaceVariables(emailFormatPreview, vars);
-
-    if (rendered.includes('{form_fields}')) {
-      let formFieldsHtml = '';
-      for (const field of templateFields) {
-        if (field.type === 'section_title' || field.type === 'company_header' || field.type === 'approval_grid') continue;
-        const value = formData[field.id];
-        if (value === undefined || value === null) continue;
-
-        let fieldHtml = '';
-        if (field.type === 'form_row' && typeof value === 'object' && !Array.isArray(value)) {
-          fieldHtml = renderFormRowHtml(value as Record<string, string>, field.fieldConfig || {});
-        } else if (field.type === 'body_text' && typeof value === 'string') {
-          fieldHtml = `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderBodyTextHtml(value, field.fieldConfig || {})}</div>`;
-        } else if (field.type === 'checkbox_group' && Array.isArray(value)) {
-          fieldHtml = `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderCheckboxGroupHtml(value, field.fieldConfig || {})}</div>`;
-        } else if (field.type === 'dropdown_select' && typeof value === 'string') {
-          fieldHtml = `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderDropdownSelectHtml(value, field.fieldConfig || {})}</div>`;
-        }
-        if (fieldHtml) formFieldsHtml += fieldHtml;
-      }
-      rendered = rendered.replace('{form_fields}', formFieldsHtml || '<p style="color:#94a3b8;font-size:13px;">(ไม่มีข้อมูลฟอร์ม)</p>');
-    }
-
-    if (rendered.includes('{body_text}')) {
-      const bodyTextValue = formData.body_text as string || '';
-      rendered = rendered.replace('{body_text}', bodyTextValue ? `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">เนื้อหา</p>${renderBodyTextHtml(bodyTextValue, {})}</div>` : '');
-    }
-
-    if (rendered.includes('{approval_grid}')) {
-      const gridValue = formData.approval_grid_1 as Record<string, Record<string, string>> || {};
-      rendered = rendered.replace('{approval_grid}', renderApprovalGridHtml(gridValue));
-    }
-
-    previewContent = rendered;
-  } else {
-    let formFieldsHtml = '';
-    for (const field of templateFields) {
-      if (field.type === 'section_title' || field.type === 'company_header' || field.type === 'approval_grid') continue;
-      const value = formData[field.id];
-      if (value === undefined || value === null) continue;
-
-      if (field.type === 'form_row' && typeof value === 'object' && !Array.isArray(value)) {
-        formFieldsHtml += renderFormRowHtml(value as Record<string, string>, field.fieldConfig || {});
-      } else if (field.type === 'body_text' && typeof value === 'string' && value) {
-        formFieldsHtml += `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderBodyTextHtml(value, field.fieldConfig || {})}</div>`;
-      } else if (field.type === 'checkbox_group' && Array.isArray(value) && value.length > 0) {
-        formFieldsHtml += `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderCheckboxGroupHtml(value, field.fieldConfig || {})}</div>`;
-      } else if (field.type === 'dropdown_select' && typeof value === 'string' && value) {
-        formFieldsHtml += `<div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">${escapeHtml(field.label)}</p>${renderDropdownSelectHtml(value, field.fieldConfig || {})}</div>`;
-      }
-    }
-
-    const gridValue = formData.approval_grid_1 as Record<string, Record<string, string>> || {};
-    const gridHtml = renderApprovalGridHtml(gridValue);
-
-    previewContent = `
-      <div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">ผู้สร้าง</p><span style="font-size:13px;">${escapeHtml((memo.ownerName as string) || '')} (${escapeHtml((memo.department as string) || '')})</span></div>
-      <div style="margin:8px 0;"><p style="font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px;">Deadline</p><span style="font-size:13px;">${deadlineStr}</span></div>
-      ${formFieldsHtml}
-      ${gridHtml}
-    `;
-  }
-
+  const isApproved = memo.status === 'approved';
   const memoNumber = (memo.memoNumber as string) || '';
   const memoTitle = (memo.title as string) || '';
   const statusText = memo.status === 'approved' ? 'อนุมัติแล้ว' : memo.status === 'rejected' ? 'ถูกปฏิเสธ' : 'รออนุมัติ';
   const statusColor = memo.status === 'approved' ? '#16a34a' : memo.status === 'rejected' ? '#dc2626' : '#2563eb';
 
+  let sectionsHtml = '';
+  for (const field of templateFields) {
+    sectionsHtml += renderSection(field);
+  }
+
+  const stampHtml = isApproved ? `
+    <div style="position:relative;margin:-60px 0 0 auto;width:120px;height:120px;border:3px solid #16a34a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
+      <div style="font-size:11px;font-weight:800;color:#16a34a;letter-spacing:1px;">APPROVED</div>
+      <div style="font-size:9px;color:#16a34a;margin-top:2px;">อนุมัติแล้ว</div>
+      <div style="width:80%;height:1px;background:#16a34a;margin:4px 0;"></div>
+      <div style="font-size:8px;color:#16a34a;">MemoHub</div>
+    </div>
+  ` : '';
+
   return `
-    <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0;">
-      <div style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <strong style="font-size:14px;">${escapeHtml(memoNumber)}</strong> — <span style="font-size:14px;">${escapeHtml(memoTitle)}</span>
-        </div>
-        <span style="color:${statusColor};font-size:12px;font-weight:600;">${statusText}</span>
+    <div style="border:1px solid #000;margin:16px 0;font-family:Arial,sans-serif;background:#fff;">
+      <div style="padding:12px;text-align:center;border-bottom:2px solid #000;">
+        <h1 style="font-size:20px;font-weight:bold;margin:0;letter-spacing:2px;">MEMO</h1>
       </div>
-      <div style="padding:16px;">
-        ${previewContent}
+      <div style="padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:14px;">${escapeHtml(memoNumber)}</strong>
+          <span style="color:${statusColor};font-size:12px;font-weight:600;">${statusText}</span>
+        </div>
+        ${sectionsHtml}
+        ${stampHtml}
       </div>
     </div>
   `;
@@ -402,7 +474,7 @@ MemoHub Digital Memo & Approval System`;
           .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
           .join('');
 
-        const previewHtml = renderMemoPreviewHtml(memo, templateFields, emailFormat?.preview);
+        const previewHtml = renderMemoPreviewHtml(memo, templateFields);
 
         const htmlEmail = `<!DOCTYPE html>
 <html>
