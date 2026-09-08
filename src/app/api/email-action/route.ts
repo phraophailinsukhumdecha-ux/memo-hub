@@ -97,6 +97,22 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
     const formData = memo.formData || {};
+
+    // Look up user by email for more robust matching
+    let matchUserId = tokenData.approverId || '';
+    let matchUserName = tokenData.approverName || '';
+    const toEmail = tokenData.toEmail || '';
+
+    if (toEmail) {
+      const usersSnap = await getDocs(query(collection(db, 'users'), where('email', '==', toEmail)));
+      if (!usersSnap.empty) {
+        const userDoc = usersSnap.docs[0];
+        const userData = userDoc.data();
+        matchUserId = userDoc.id;
+        matchUserName = userData.displayName || matchUserName;
+      }
+    }
+
     let approverColKey: string | null = null;
 
     for (const fieldKey of Object.keys(formData)) {
@@ -105,12 +121,18 @@ export async function GET(request: NextRequest) {
         for (const colKey of Object.keys(fieldValue)) {
           if (colKey.startsWith('col_') && colKey !== 'col_0') {
             const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
-            if (col?.userId === tokenData.approverId || col?.name === tokenData.approverName) {
+            if (!col) continue;
+            if (matchUserId && col.userId === matchUserId) {
+              approverColKey = colKey;
+              break;
+            }
+            if (matchUserName && col.name && col.name === matchUserName) {
               approverColKey = colKey;
               break;
             }
           }
         }
+        if (approverColKey) break;
       }
     }
 
