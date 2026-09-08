@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail } from 'lucide-react';
+import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, cancelMemo, createMemo, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
@@ -548,25 +548,37 @@ export default function HomePage() {
 
       {/* Memo Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
             <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo?.title}</DialogTitle>
-          </DialogHeader>
+            <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
           {selectedMemo && detailTemplate && (
-            <div className="space-y-4">
-              {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
-                <SectionRenderer
-                  key={field.id}
-                  field={field}
-                  value={selectedMemo.formData?.[field.id]}
-                  readonly={true}
-                  ownerUser={detailOwnerUser}
-                  users={allUsers}
-                />
-              ))}
+            <div className="p-6">
+              <div className="border-2 border-slate-900">
+                {/* MEMO Header */}
+                <div className="border-b-2 border-slate-900 py-3 text-center">
+                  <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
+                </div>
+                {/* Document Body */}
+                <div className="p-6 space-y-0">
+                  {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                    <SectionRenderer
+                      key={field.id}
+                      field={field}
+                      value={selectedMemo.formData?.[field.id]}
+                      readonly={true}
+                      ownerUser={detailOwnerUser}
+                      users={allUsers}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
-          <DialogFooter className="flex-row gap-2 sm:gap-0">
+          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
             {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
                 <CheckCircle className="h-4 w-4 mr-1" />
@@ -574,7 +586,7 @@ export default function HomePage() {
               </Button>
             )}
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

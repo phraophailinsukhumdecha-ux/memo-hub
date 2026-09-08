@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -26,7 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Download, Printer, XCircle } from 'lucide-react';
+import { Plus, Search, Download, Printer, XCircle, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToMemos, createMemo, cancelMemo } from '@/lib/memos';
@@ -36,6 +37,7 @@ import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { MemoDocumentForm } from '@/components/memo-document-form';
+import { SectionRenderer } from '@/components/memo-sections';
 
 export default function MemosPage() {
   const { user, isAdmin } = useAuth();
@@ -50,6 +52,8 @@ export default function MemosPage() {
   const [creating, setCreating] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => { setTitle('Memo ทั้งหมด'); }, [setTitle]);
 
@@ -242,8 +246,8 @@ export default function MemosPage() {
               ) : (
                 filteredMemos.map((memo) => (
                   <TableRow key={memo.id}>
-                    <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
-                    <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
+                    <TableCell className="font-mono text-sm whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{memo.id}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{memo.title}</TableCell>
                     <TableCell className="whitespace-nowrap">{memo.templateName}</TableCell>
                     <TableCell>{getStatusBadge(memo.status)}</TableCell>
                     <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
@@ -289,6 +293,47 @@ export default function MemosPage() {
             </TableBody>
           </Table>
       </div>
+
+      {/* Memo Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+            <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo?.title}</DialogTitle>
+            <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          {selectedMemo && (() => {
+            const detailTemplate = templates.find((t) => t.id === selectedMemo.templateId) || null;
+            const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
+            if (!detailTemplate) return <p className="p-6 text-slate-500">ไม่พบเทมเพลต</p>;
+            return (
+              <div className="p-6">
+                <div className="border-2 border-slate-900">
+                  <div className="border-b-2 border-slate-900 py-3 text-center">
+                    <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
+                  </div>
+                  <div className="p-6 space-y-0">
+                    {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                      <SectionRenderer
+                        key={field.id}
+                        field={field}
+                        value={selectedMemo.formData?.[field.id]}
+                        readonly={true}
+                        ownerUser={detailOwnerUser}
+                        users={allUsers}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end">
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Memo - Full Page Form */}
       {isCreating && (
