@@ -37,9 +37,7 @@ export function MemoDocumentForm({
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-slate-900">
-            {selectedTemplate ? 'สร้าง Memo ใหม่' : 'เลือกประเภท Memo'}
-          </h2>
+          <h2 className="text-lg font-bold text-slate-900">สร้าง Memo ใหม่</h2>
           <Button variant="ghost" size="icon" onClick={onCancel}>
             <X className="h-5 w-5" />
           </Button>
@@ -48,27 +46,25 @@ export function MemoDocumentForm({
         {/* Content */}
         <div className="p-6">
           {/* Template Selector */}
-          {!selectedTemplate && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">เลือกประเภท Memo ที่ต้องการสร้าง</p>
-              {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
-              {templates.length > 0 && (
-                <Select onValueChange={(val) => {
-                  const t = templates.find((x) => x.id === val);
-                  if (t) onSelectTemplate(t);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกเทมเพลต" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
+          <div className="mb-4">
+            <label className="text-sm font-medium text-slate-700 mb-1 block">เลือกประเภท Memo ที่ต้องการสร้าง</label>
+            <Select
+              value={selectedTemplate?.id || ''}
+              onValueChange={(val) => {
+                const t = templates.find((x) => x.id === val);
+                if (t) onSelectTemplate(t);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกเทมเพลต" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Memo Document */}
           {selectedTemplate && (
