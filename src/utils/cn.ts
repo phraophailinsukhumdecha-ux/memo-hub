@@ -49,8 +49,7 @@ export function formatRelativeTime(date: Date): string {
 
 export function DateTimeCell({ date }: { date: Date }) {
   return React.createElement('span', { className: 'inline-block leading-tight' },
-    React.createElement('span', { className: 'block' }, formatDate(date), ' ', date.getFullYear() + 543),
-    React.createElement('span', { className: 'block text-slate-500' }, formatTime(date))
+    React.createElement('span', null, formatDate(date), ' ', date.getFullYear() + 543, ' ', formatTime(date))
   );
 }
 
