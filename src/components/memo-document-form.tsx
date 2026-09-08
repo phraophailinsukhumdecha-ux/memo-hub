@@ -213,7 +213,7 @@ export function MemoDocumentForm({
                 <h1 className="text-lg font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
               </div>
               <div className="p-4 space-y-0">
-                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (
                   <SectionRenderer
                     key={field.id}
                     field={field}

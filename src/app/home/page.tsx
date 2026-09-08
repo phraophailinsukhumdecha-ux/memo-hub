@@ -564,7 +564,7 @@ export default function HomePage() {
                 </div>
                 {/* Document Body */}
                 <div className="p-6 space-y-0">
-                  {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                  {detailTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (
                     <SectionRenderer
                       key={field.id}
                       field={field}
