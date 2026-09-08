@@ -58,7 +58,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           </div>
 
           {/* Right: Memo Details Table */}
-          <div className="w-72 p-4">
+          <div className="w-60 p-4">
             <table className="w-full text-sm">
               <tbody>
                 <tr>
