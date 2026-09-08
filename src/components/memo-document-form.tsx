@@ -152,6 +152,7 @@ export function MemoDocumentForm({
         return null;
 
       case 'dropdown_select': {
+        if (field.label === 'จุดประสงค์') return null;
         const options = (config?.options as string[]) || [];
         const placeholder = (config?.placeholder as string) || 'เลือก';
         const value = (formData[field.id] as string) || '';
@@ -241,7 +242,7 @@ export function MemoDocumentForm({
             <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
             <div className="bg-white border-2 border-slate-900 text-sm">
               <div className="p-4 space-y-0">
-                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'checkbox_group').map((field) => (
+                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'checkbox_group' && !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์')).map((field) => (
                   <SectionRenderer
                     key={field.id}
                     field={field}
