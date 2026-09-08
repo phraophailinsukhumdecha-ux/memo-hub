@@ -38,7 +38,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
     return requiredByType.includes(memoType);
   };
 
-  const skipFields = readonly ? ['quotationNo', 'jobNo'] : [];
+  const skipFields = readonly ? ['quotationNo', 'jobNo', 'date'] : [];
   const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
   const filteredFields = cfg.fields.filter((f) => !skipFields.includes(f.name));
   for (let i = 0; i < filteredFields.length; i += 2) {
