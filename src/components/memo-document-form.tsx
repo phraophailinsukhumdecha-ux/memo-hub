@@ -241,7 +241,7 @@ export function MemoDocumentForm({
             <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
             <div className="bg-white border-2 border-slate-900 text-sm">
               <div className="p-4 space-y-0">
-                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (
+                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header' && f.type !== 'checkbox_group').map((field) => (
                   <SectionRenderer
                     key={field.id}
                     field={field}
