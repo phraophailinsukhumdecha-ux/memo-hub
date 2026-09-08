@@ -79,6 +79,28 @@ export async function cancelMemo(memoId: string): Promise<void> {
   }
 }
 
+export async function deleteMemo(memoId: string): Promise<void> {
+  const res = await fetch(`/api/memos/${memoId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to delete memo');
+  }
+}
+
+export async function deleteMemos(memoIds: string[]): Promise<void> {
+  const res = await fetch('/api/memos/batch-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memoIds }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to delete memos');
+  }
+}
+
 export async function updateMemoDeadline(): Promise<void> {
   await fetch('/api/memos/deadline', { method: 'POST' });
 }

@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { subscribeToMemos, approveMemo, cancelMemo, createMemo } from '@/lib/memos';
+import { subscribeToMemos, approveMemo, cancelMemo, createMemo, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
@@ -35,6 +35,9 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [selectedMemos, setSelectedMemos] = useState<Set<string>>(new Set());
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
@@ -226,8 +229,50 @@ export default function HomePage() {
   };
 
   const handleDelete = async (memoId: string) => {
-    if (!confirm('คุณต้องการลบ memo นี้ใช่หรือไม่?')) return;
-    await cancelMemo(memoId);
+    if (!confirm('คุณต้องการลบ memo นี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้')) return;
+    try {
+      const { deleteMemo } = await import('@/lib/memos');
+      await deleteMemo(memoId);
+    } catch (e) {
+      console.error(e);
+      alert('ลบไม่สำเร็จ');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMemos.size === 0) return;
+    if (!confirm(`คุณต้องการลบ ${selectedMemos.size} memo ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้`)) return;
+    setDeleting(true);
+    try {
+      await deleteMemos(Array.from(selectedMemos));
+      setSelectedMemos(new Set());
+      setIsSelectMode(false);
+    } catch (e) {
+      console.error(e);
+      alert('ลบไม่สำเร็จ');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelectMemo = (memoId: string) => {
+    setSelectedMemos((prev) => {
+      const next = new Set(prev);
+      if (next.has(memoId)) {
+        next.delete(memoId);
+      } else {
+        next.add(memoId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (items: Memo[]) => {
+    if (selectedMemos.size === items.length) {
+      setSelectedMemos(new Set());
+    } else {
+      setSelectedMemos(new Set(items.map((m) => m.id)));
+    }
   };
 
   const handleDownload = async (memo: Memo) => {
@@ -356,17 +401,44 @@ export default function HomePage() {
           <p className="text-sm">ไม่มีรายการ</p>
         </div>
       )}
+      {isSelectMode && items.length > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={selectedMemos.size === items.length}
+            onChange={() => toggleSelectAll(items)}
+            className="h-4 w-4 rounded"
+          />
+          <span className="text-slate-600">เลือกทั้งหมด ({selectedMemos.size}/{items.length})</span>
+          {selectedMemos.size > 0 && (
+            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 ml-auto" onClick={handleBulkDelete} disabled={deleting}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              {deleting ? 'กำลังลบ...' : `ลบ ${selectedMemos.size} รายการ`}
+            </Button>
+          )}
+        </div>
+      )}
       {items.map((memo) => (
         <div key={memo.id} className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors">
-          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openDetail(memo)}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{memo.memoNumber}</span>
-              <span className="text-sm text-slate-600 truncate">{memo.title}</span>
-              {getStatusBadge(memo)}
-            </div>
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
-              <span>{memo.ownerName}</span>
-              <span>{formatDateStr(memo.createdAt)} {formatTimeStr(memo.createdAt)}</span>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {isSelectMode && (
+              <input
+                type="checkbox"
+                checked={selectedMemos.has(memo.id)}
+                onChange={() => toggleSelectMemo(memo.id)}
+                className="h-4 w-4 rounded shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openDetail(memo)}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm">{memo.memoNumber}</span>
+                <span className="text-sm text-slate-600 truncate">{memo.title}</span>
+                {getStatusBadge(memo)}
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
+                <span>{memo.ownerName}</span>
+                <span>{formatDateStr(memo.createdAt)} {formatTimeStr(memo.createdAt)}</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
@@ -405,6 +477,14 @@ export default function HomePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={isSelectMode ? 'default' : 'outline'}
+            size="sm"
+            className={isSelectMode ? 'bg-slate-900 text-white' : 'text-slate-700'}
+            onClick={() => { setIsSelectMode(!isSelectMode); setSelectedMemos(new Set()); }}
+          >
+            {isSelectMode ? 'ยกเลิกเลือก' : 'เลือก'}
+          </Button>
           {isAdmin && (
             <Button variant="outline" size="sm" className="text-slate-700" onClick={() => router.push('/dashboard')}>
               <FileText className="h-4 w-4 mr-1" />
