@@ -45,7 +45,7 @@ export function MemoDocumentForm({
   useEffect(() => {
     if (selectedTemplate) {
       const now = new Date();
-      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       for (const field of selectedTemplate.fields) {
         if (field.type === 'form_row') {
           const config = (field.fieldConfig || {}) as Record<string, unknown>;
