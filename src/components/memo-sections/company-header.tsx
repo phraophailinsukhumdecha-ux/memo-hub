@@ -45,9 +45,9 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
 
       {/* MEMORANDUM Header + Memo Details */}
       <div className="border border-slate-900">
-        <div className="flex">
+      <div className="flex">
           {/* Left: MEMORANDUM + Address */}
-          <div className="flex-1 border-r border-slate-900 py-4 pl-0 pr-3">
+          <div className="border-r border-slate-900 py-4 px-3">
             <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
             <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
               <p>{cfg.companyName}</p>
@@ -58,7 +58,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           </div>
 
           {/* Right: Memo Details Table */}
-          <div className="w-60 p-4">
+          <div className="flex-1 p-4">
             <table className="w-full text-sm">
               <tbody>
                 <tr>
