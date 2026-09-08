@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoTemplate, User } from '@/types';
 import { Mail, Save, X } from 'lucide-react';
@@ -32,6 +31,23 @@ export function MemoDocumentForm({
   ownerUser,
   users,
 }: MemoDocumentFormProps) {
+  useEffect(() => {
+    if (!selectedTemplate && templates.length > 0) {
+      onSelectTemplate(templates[0]);
+    }
+  }, [selectedTemplate, templates, onSelectTemplate]);
+
+  if (!selectedTemplate) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
+          <p className="text-slate-500">ไม่มีเทมเพลตให้เลือก</p>
+          <Button variant="outline" className="mt-4" onClick={onCancel}>ปิด</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onCancel}>
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -43,53 +59,29 @@ export function MemoDocumentForm({
           </Button>
         </div>
 
-        {/* Content */}
+        {/* Memo Document */}
         <div className="p-6">
-          {/* Template Selector */}
-          <div className="mb-4">
-            <label className="text-sm font-medium text-slate-700 mb-1 block">เลือกประเภท Memo ที่ต้องการสร้าง</label>
-            <Select
-              value={selectedTemplate?.id || ''}
-              onValueChange={(val) => {
-                const t = templates.find((x) => x.id === val);
-                if (t) onSelectTemplate(t);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="เลือกเทมเพลต" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Memo Document */}
-          {selectedTemplate && (
-            <div className="border-2 border-slate-900">
-              {/* MEMO Header */}
-              <div className="border-b-2 border-slate-900 py-3 text-center">
-                <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
-              </div>
-
-              {/* Document Body */}
-              <div className="p-6 space-y-0">
-                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
-                  <SectionRenderer
-                    key={field.id}
-                    field={field}
-                    value={formData[field.id]}
-                    readonly={false}
-                    ownerUser={ownerUser}
-                    users={users}
-                    onChange={(val) => onChange(field.id, val)}
-                  />
-                ))}
-              </div>
+          <div className="border-2 border-slate-900">
+            {/* MEMO Header */}
+            <div className="border-b-2 border-slate-900 py-3 text-center">
+              <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
             </div>
-          )}
+
+            {/* Document Body */}
+            <div className="p-6 space-y-0">
+              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                <SectionRenderer
+                  key={field.id}
+                  field={field}
+                  value={formData[field.id]}
+                  readonly={false}
+                  ownerUser={ownerUser}
+                  users={users}
+                  onChange={(val) => onChange(field.id, val)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -97,18 +89,14 @@ export function MemoDocumentForm({
           <Button variant="outline" onClick={onCancel} disabled={creating}>
             ยกเลิก
           </Button>
-          {selectedTemplate && (
-            <>
-              <Button variant="outline" onClick={() => onSubmit(true)} disabled={creating}>
-                <Mail className="h-4 w-4 mr-1" />
-                {creating ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
-              </Button>
-              <Button onClick={() => onSubmit(false)} disabled={creating} className="bg-slate-900 hover:bg-slate-800">
-                <Save className="h-4 w-4 mr-1" />
-                {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
-              </Button>
-            </>
-          )}
+          <Button variant="outline" onClick={() => onSubmit(true)} disabled={creating}>
+            <Mail className="h-4 w-4 mr-1" />
+            {creating ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
+          </Button>
+          <Button onClick={() => onSubmit(false)} disabled={creating} className="bg-slate-900 hover:bg-slate-800">
+            <Save className="h-4 w-4 mr-1" />
+            {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
+          </Button>
         </div>
       </div>
     </div>
