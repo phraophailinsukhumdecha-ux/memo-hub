@@ -510,6 +510,70 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Email Format */}
+        <TabsContent value="smtp">
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>ตั้งค่าฟอร์แมทอีเมล</CardTitle>
+              <CardDescription>กำหนดรูปแบบอีเมลที่จะส่งแจ้งเตือน (ใช้ตัวแปร {'{variable}'} ได้)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>หัวข้ออีเมล (Subject)</Label>
+                <Input
+                  value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}'}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '' } })}
+                  placeholder="[MemoHub] {memo_number} - {title}"
+                />
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>เนื้อหาอีเมล (Body)</Label>
+                <Textarea
+                  rows={8}
+                  value={settings?.emailFormat?.body || ''}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value } })}
+                  placeholder={`สวัสดีค่ะ/ครับ,
+
+มี Memo ใหม่รอการอนุมัติของท่าน
+
+เลขที่: {memo_number}
+เรื่อง: {title}
+ผู้สร้าง: {owner_name}
+สถานะ: {status}
+Deadline: {deadline}
+
+กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้
+
+MemoHub Digital Memo & Approval System`}
+                />
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleSaveSMTP} disabled={saving}>
+                  <Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกฟอร์แมท'}
+                </Button>
+              </div>
+              <div className="rounded-lg border bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-700 mb-2">ตัวอย่างอีเมลที่จะส่ง:</p>
+                <div className="text-sm text-slate-600 space-y-1 bg-white rounded-md p-3 border">
+                  <p className="font-medium">Subject: [MemoHub] MH-20260903-0001 - จัดซื้อ/จัดจ้าง</p>
+                  <hr className="my-2" />
+                  <p>สวัสดีค่ะ/ครับ</p>
+                  <p className="mt-2">มี Memo ใหม่รอการอนุมัติของท่าน</p>
+                  <p className="mt-2">เลขที่: MH-20260903-0001</p>
+                  <p>เรื่อง: จัดซื้อ/จัดจ้าง</p>
+                  <p>ผู้สร้าง: พระโฮลิน สุขmanaช</p>
+                  <p>สถานะ: รออนุมัติ</p>
+                  <p>Deadline: 10 กันยายน 2569</p>
+                  <p className="mt-2">กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้</p>
+                  <p className="mt-2 text-slate-400">MemoHub Digital Memo & Approval System</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Deadline */}
         <TabsContent value="deadline">
           <Card>

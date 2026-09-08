@@ -169,6 +169,10 @@ export interface GlobalSettings {
     fromEmail: string;
     fromName: string;
   };
+  emailFormat?: {
+    subject: string;
+    body: string;
+  };
   deadlineDays: number;
   positionOptions: string[];
   departmentOptions: string[];
