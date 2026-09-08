@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,10 +13,9 @@ interface MemoData {
   department: string;
   deadlineAt: string;
   status: string;
-  formData: Record<string, unknown>;
 }
 
-export default function EmailCancelPage() {
+function EmailCancelContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [memo, setMemo] = useState<MemoData | null>(null);
@@ -169,5 +168,13 @@ export default function EmailCancelPage() {
         <p className="text-xs text-slate-400 text-center mt-6">MemoHub Digital Memo & Approval System</p>
       </div>
     </div>
+  );
+}
+
+export default function EmailCancelPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-slate-500">กำลังโหลด...</p></div>}>
+      <EmailCancelContent />
+    </Suspense>
   );
 }
