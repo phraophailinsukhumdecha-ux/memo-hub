@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil } from 'lucide-react';
+import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getSettings, saveSettings } from '@/lib/settings';
 import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, duplicateTemplate } from '@/lib/templates';
@@ -85,6 +85,9 @@ export default function SettingsPage() {
   const [testEmailTo, setTestEmailTo] = useState('');
   const [testEmailSending, setTestEmailSending] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; error?: string; code?: string } | null>(null);
+
+  // Server status
+  const [serverStatus, setServerStatus] = useState('');
 
   // Syslog state
   const [syslogs, setSyslogs] = useState<Syslog[]>([]);
@@ -143,6 +146,21 @@ export default function SettingsPage() {
       setTestEmailResult({ success: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', code: 'EUNKNOWN' });
     } finally {
       setTestEmailSending(false);
+    }
+  };
+
+  const handleCheckServer = async () => {
+    setServerStatus('ตรวจสอบ...');
+    try {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      if (data.ok) {
+        setServerStatus('เชื่อมต่อ server สำเร็จ — พร้อมส่งอีเมล');
+      } else {
+        setServerStatus('Server ตอบกลับไม่ปกติ');
+      }
+    } catch {
+      setServerStatus('ไม่สามารถเชื่อมต่อ server ได้ — ตรวจสอบว่า API ทำงานปกติ');
     }
   };
 
@@ -476,35 +494,99 @@ export default function SettingsPage() {
         {/* SMTP */}
         <TabsContent value="smtp">
           <Card>
-            <CardHeader><CardTitle>ตั้งค่า SMTP Server</CardTitle><CardDescription>ตั้งค่าข้อมูล SMTP สำหรับส่งอีเมลแจ้งเตือน</CardDescription></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>SMTP Host</Label><Input value={settings?.smtp.host || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, host: e.target.value } })} /></div>
-                <div className="space-y-2"><Label>SMTP Port</Label><Input type="number" value={settings?.smtp.port || 587} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, port: parseInt(e.target.value) } })} /></div>
+            <CardContent className="p-6">
+              {/* Server Status */}
+              {serverStatus && !serverStatus.startsWith('เชื่อมต่อ') && (
+                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
+                  <WifiOff className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-red-600">Server ส่งเมลยังไม่พร้อมใช้งาน</div>
+                    <div className="text-xs text-red-500 mt-1">{serverStatus}</div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleCheckServer}><RefreshCw className="h-3 w-3 mr-1" />ตรวจสอบอีกครั้ง</Button>
+                </div>
+              )}
+
+              {/* SMTP Card */}
+              <div className="border rounded-xl overflow-hidden mb-4">
+                <div className="flex items-center gap-3 p-4 bg-slate-50 border-b">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center"><Settings className="h-5 w-5" /></div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Mail Server (SMTP)</div>
+                    <div className="text-xs text-slate-500">ตั้งค่า server สำหรับส่งอีเมล</div>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><Label className="text-xs">SMTP Host</Label><Input value={settings?.smtp.host || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, host: e.target.value } })} placeholder="smtp.gmail.com" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">SMTP Port</Label><Input value={settings?.smtp.port || 587} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, port: parseInt(e.target.value) || 587 } })} placeholder="587" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Username</Label><Input type="email" value={settings?.smtp.user || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, user: e.target.value } })} placeholder="user@gmail.com" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Password</Label><Input type="password" value={settings?.smtp.password || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, password: e.target.value } })} placeholder="รหัสผ่านหรือ App Password" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">From Name</Label><Input value={settings?.smtp.fromName || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, fromName: e.target.value } })} placeholder="MemoHub" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">From Email Address</Label><Input type="email" value={settings?.smtp.fromEmail || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, fromEmail: e.target.value } })} placeholder="noreply@company.com" /></div>
+                  </div>
+
+                  {/* Gmail hint */}
+                  {/(gmail|googlemail)\./.test((settings?.smtp.host || '').toLowerCase()) && (
+                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                      Gmail ต้องใช้ <strong>App Password</strong> (16 หลัก เช่น <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px]">abcd efgh ijkl mnop</code>) แทนรหัสผ่านปกติ —
+                      เปิด <strong>2-Step Verification</strong> แล้วไปที่ <strong>Google Account → Security → App passwords</strong> เพื่อสร้าง
+                    </div>
+                  )}
+
+                  {/* Encryption */}
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs whitespace-nowrap">Encryption:</Label>
+                    <Select
+                      value={settings?.smtp.encryption || 'TLS'}
+                      onValueChange={(v) => {
+                        const port = v === 'SSL' ? 465 : 587;
+                        setSettings({ ...settings!, smtp: { ...settings!.smtp, encryption: v, secure: v === 'SSL', port } });
+                      }}
+                    >
+                      <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TLS">TLS</SelectItem>
+                        <SelectItem value="SSL">SSL</SelectItem>
+                        <SelectItem value="None">None</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-slate-400">Port <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px]">465</code> = SSL (implicit TLS) | Port <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px]">587</code> = TLS (STARTTLS) — ระบบปรับ Encryption ให้อัตโนมัติตาม Port</p>
+
+                  <div className="flex justify-end">
+                    <Button onClick={handleSaveSMTP} disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'Save Configuration'}</Button>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Encryption</Label>
-                <Select
-                  value={settings?.smtp.encryption || (settings?.smtp.secure ? 'SSL' : 'TLS')}
-                  onValueChange={(v) => setSettings({ ...settings!, smtp: { ...settings!.smtp, encryption: v, secure: v === 'SSL', port: v === 'SSL' ? 465 : 587 } })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SSL">SSL (Port 465)</SelectItem>
-                    <SelectItem value="TLS">TLS / STARTTLS (Port 587)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-slate-500">SSL = Port 465 | TLS = Port 587</p>
-              </div>
-              <div className="space-y-2"><Label>ชื่อผู้ใช้</Label><Input value={settings?.smtp.user || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, user: e.target.value } })} /></div>
-              <div className="space-y-2"><Label>รหัสผ่าน</Label><Input type="password" value={settings?.smtp.password || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, password: e.target.value } })} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>From Email</Label><Input value={settings?.smtp.fromEmail || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, fromEmail: e.target.value } })} /></div>
-                <div className="space-y-2"><Label>From Name</Label><Input value={settings?.smtp.fromName || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, fromName: e.target.value } })} /></div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button onClick={handleSaveSMTP} disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึก'}</Button>
-                <Button variant="outline" onClick={() => { setTestEmailResult(null); setTestEmailTo(''); setIsTestEmailDialogOpen(true); }}><Send className="mr-2 h-4 w-4" />ทดสอบส่งอีเมล</Button>
+
+              {/* Test Configuration Card */}
+              <div className="border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 p-4 bg-slate-50 border-b">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center"><Mail className="h-5 w-5" /></div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Test Configuration</div>
+                    <div className="text-xs text-slate-500">ส่งอีเมลทดสอบเพื่อตรวจสอบการตั้งค่า</div>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="space-y-1.5"><Label className="text-xs">Recipient Email</Label><Input type="email" value={testEmailTo} onChange={(e) => { setTestEmailTo(e.target.value); setTestEmailResult(null); }} placeholder="user@company.com" /></div>
+                  {testEmailResult && (
+                    <div className={`p-3 rounded-lg text-sm ${testEmailResult.success ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                      {testEmailResult.code && <span className="font-mono text-xs mr-1">[{testEmailResult.code}]</span>}
+                      {testEmailResult.error || (testEmailResult.success && 'ส่งอีเมลสำเร็จ!')}
+                    </div>
+                  )}
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                    สำหรับ <strong>Gmail</strong>: ถ้าเปิด 2-Step Verification ต้องใช้ <strong>App Password</strong> (Google Account → Security → App passwords) ไม่ใช้รหัสผ่านปกติ; ถ้ายังส่งไม่ได้ให้ไปเปิด
+                    <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px]">Allow less secure apps</code> หรือใช้ SMTP Port <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px]">587</code> (TLS)
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="outline" onClick={handleTestEmail} disabled={testEmailSending || !testEmailTo}>
+                      <Send className="mr-2 h-4 w-4" />{testEmailSending ? 'กำลังส่ง...' : 'Send Test Email'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
