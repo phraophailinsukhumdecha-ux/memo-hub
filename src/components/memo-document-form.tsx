@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ApprovalGrid, SectionRenderer } from '@/components/memo-sections';
 import { MemoTemplate, User, Group, ApprovalGridConfig } from '@/types';
 import { Mail, Save, X } from 'lucide-react';
+import { generateMemoIdClient } from '@/utils/cn';
 
 interface MemoDocumentFormProps {
   templates: MemoTemplate[];
@@ -215,7 +216,10 @@ export function MemoDocumentForm({
                     key={field.id}
                     field={field}
                     value={formData[field.id]}
-                    formData={formData}
+                    formData={{
+                      ...formData as Record<string, unknown>,
+                      memoNumber: generateMemoIdClient(ownerUser?.department || ''),
+                    }}
                     readonly={true}
                     ownerUser={ownerUser}
                     users={users}

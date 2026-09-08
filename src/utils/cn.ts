@@ -53,13 +53,33 @@ export function DateTimeCell({ date }: { date: Date }) {
   );
 }
 
-export function generateMemoId(): string {
+const DEPT_MAP: Record<string, string> = {
+  'ไอที': 'IT', 'IT': 'IT',
+  'บัญชี': 'AC', 'AC': 'AC',
+  'เซล': 'SA', 'SA': 'SA',
+  'การตลาด': 'MK', 'MK': 'MK',
+  'ทรัพยากรบุคคล': 'HR', 'HR': 'HR',
+  'บุคลากร': 'HR',
+  'คลังสินค้า': 'WH', 'WH': 'WH',
+  'จัดซื้อ': 'PD', 'PD': 'PD',
+  'ขาย': 'SA',
+  'บริหาร': 'MG', 'MG': 'MG',
+};
+
+export function getDeptAbbr(department: string): string {
+  if (!department) return 'XX';
+  if (DEPT_MAP[department]) return DEPT_MAP[department];
+  return department.substring(0, 2).toUpperCase();
+}
+
+export function generateMemoIdClient(department: string): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `MH-${year}${month}${day}-${random}`;
+  const dateStr = `${year}${month}${day}`;
+  const dept = getDeptAbbr(department);
+  return `${dept}${dateStr}_00`;
 }
 
 export function getStatusColor(status: string): string {
