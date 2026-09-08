@@ -39,7 +39,7 @@ export default function HomePage() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [createStep, setCreateStep] = useState<'select-template' | 'edit-memo' | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
@@ -353,7 +353,7 @@ export default function HomePage() {
       const formData = { ...sectionFormData };
 
       const memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
-      setCreateStep(null);
+      setIsCreating(false);
       setSelectedTemplate(null);
       setSectionFormData({});
 
@@ -535,9 +535,9 @@ export default function HomePage() {
              <Card>
                <CardHeader className="flex flex-row items-center justify-between pb-3">
                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
-                  <Button size="sm" onClick={() => setCreateStep('select-template')}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    สร้าง Memo
+                   <Button size="sm" onClick={() => setIsCreating(true)}>
+                     <Plus className="h-4 w-4 mr-1" />
+                     สร้าง Memo
                   </Button>
                </CardHeader>
                <CardContent>{renderMemoList(myMemos, false)}</CardContent>
@@ -577,53 +577,20 @@ export default function HomePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Create Memo - Select Template */}
-      {createStep === 'select-template' && (
-        <Dialog open={true} onOpenChange={() => setCreateStep(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-slate-600">เลือกประเภท Memo</p>
-            {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
-            {templates.length > 0 && (
-              <div className="space-y-3">
-                <Select
-                  value={selectedTemplate?.id || ''}
-                  onValueChange={(val) => {
-                    const t = templates.find((x) => x.id === val);
-                    if (t) { setSelectedTemplate(t); setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกเทมเพลต" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 
   // Show create flow - edit memo (full page)
-  if (createStep === 'edit-memo' && selectedTemplate) {
-    const tmpl = selectedTemplate;
+  if (isCreating) {
     return (
       <MemoDocumentForm
-        template={tmpl!}
+        templates={templates}
+        selectedTemplate={selectedTemplate}
         formData={sectionFormData}
+        onSelectTemplate={(t) => { setSelectedTemplate(t); setSectionFormData(initFormData(t)); }}
         onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
         onSubmit={handleCreateMemo}
-        onCancel={() => { setCreateStep(null); setSelectedTemplate(null); setSectionFormData({}); }}
+        onCancel={() => { setIsCreating(false); setSelectedTemplate(null); setSectionFormData({}); }}
         creating={creating}
         ownerUser={user}
         users={allUsers}
@@ -685,7 +652,7 @@ export default function HomePage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base">Memo ของฉัน</CardTitle>
-                  <Button size="sm" onClick={() => setCreateStep('select-template')}>
+                  <Button size="sm" onClick={() => setIsCreating(true)}>
                     <Plus className="h-4 w-4 mr-1" />
                     สร้าง Memo
                   </Button>

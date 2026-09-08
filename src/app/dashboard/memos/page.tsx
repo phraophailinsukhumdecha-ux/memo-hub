@@ -44,8 +44,8 @@ export default function MemosPage() {
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [createStep, setCreateStep] = useState<'select-template' | 'edit-memo' | null>(null);
-  const [selectedMemoType, setSelectedMemoType] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedTemplateObj, setSelectedTemplateObj] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -75,7 +75,14 @@ export default function MemosPage() {
     };
   }, [user]);
 
-  const selectedTemplateObj = templates.find((t) => t.id === selectedMemoType);
+  const filteredMemos = memos.filter((memo) => {
+    const matchesSearch =
+      memo.title.includes(searchQuery) ||
+      memo.id.includes(searchQuery) ||
+      memo.ownerName.includes(searchQuery);
+    const matchesStatus = statusFilter === 'all' || memo.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const initFormData = (t: MemoTemplate) => {
     const now = new Date();
@@ -121,15 +128,6 @@ export default function MemosPage() {
     return initialData;
   };
 
-  const filteredMemos = memos.filter((memo) => {
-    const matchesSearch =
-      memo.title.includes(searchQuery) ||
-      memo.id.includes(searchQuery) ||
-      memo.ownerName.includes(searchQuery);
-    const matchesStatus = statusFilter === 'all' || memo.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
   const handleCreateMemo = async (sendEmail = false) => {
     if (!selectedTemplateObj || !user) return;
 
@@ -137,8 +135,8 @@ export default function MemosPage() {
     try {
       const formData = { ...sectionFormData };
       await createMemo(selectedTemplateObj.id, selectedTemplateObj.name, formData, user.id, user.displayName, user.department);
-      setCreateStep(null);
-      setSelectedMemoType('');
+      setIsCreating(false);
+      setSelectedTemplateObj(null);
       setSectionFormData({});
     } catch (error) {
       console.error('Error creating memo:', error);
@@ -213,46 +211,11 @@ export default function MemosPage() {
           </Select>
         </div>
 
-        <Button onClick={() => setCreateStep('select-template')}>
+        <Button onClick={() => setIsCreating(true)}>
           <Plus className="mr-2 h-4 w-4" />
           สร้าง Memo ใหม่
         </Button>
       </div>
-
-      {/* Create Memo - Select Template */}
-      {createStep === 'select-template' && (
-        <Dialog open={true} onOpenChange={() => setCreateStep(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-slate-600">เลือกประเภท Memo</p>
-            {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
-            {templates.length > 0 && (
-              <div className="space-y-3">
-                <Select
-                  value={selectedMemoType}
-                  onValueChange={(val) => {
-                    setSelectedMemoType(val);
-                    const t = templates.find((x) => x.id === val);
-                    if (t) { setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกเทมเพลต" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
-          </DialogContent>
-        </Dialog>
-      )}
 
       <div className="rounded-lg border bg-white">
           <Table>
@@ -330,14 +293,16 @@ export default function MemosPage() {
   );
 
   // Show create flow - edit memo (full page)
-  if (createStep === 'edit-memo' && selectedTemplateObj) {
+  if (isCreating) {
     return (
       <MemoDocumentForm
-        template={selectedTemplateObj!}
+        templates={templates}
+        selectedTemplate={selectedTemplateObj}
         formData={sectionFormData}
+        onSelectTemplate={(t) => { setSelectedTemplateObj(t); setSectionFormData(initFormData(t)); }}
         onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
         onSubmit={handleCreateMemo}
-        onCancel={() => { setCreateStep(null); setSelectedMemoType(''); setSectionFormData({}); }}
+        onCancel={() => { setIsCreating(false); setSelectedTemplateObj(null); setSectionFormData({}); }}
         creating={creating}
         ownerUser={user}
         users={allUsers}
