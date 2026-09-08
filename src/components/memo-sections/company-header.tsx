@@ -24,7 +24,7 @@ const DEFAULT_CONFIG: CompanyHeaderConfig = {
 };
 
 export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo, jobNo, date }: CompanyHeaderProps) {
-  const cfg = { ...DEFAULT_CONFIG, ...config };
+  const cfg = { ...DEFAULT_CONFIG, ...config, companyName: 'Digital Factory Company Limited' };
 
   return (
     <div className="mb-4">
