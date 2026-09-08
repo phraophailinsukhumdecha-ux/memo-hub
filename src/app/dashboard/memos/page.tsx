@@ -295,15 +295,15 @@ export default function MemosPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-40">เลขที่ Memo</TableHead>
-                <TableHead>หัวข้อ</TableHead>
-                <TableHead className="w-32">เทมเพลต</TableHead>
-                <TableHead className="w-24">สถานะ</TableHead>
-                <TableHead className="w-48">ผู้สร้าง</TableHead>
-                <TableHead className="w-32">ผู้อนุมัติปัจจุบัน</TableHead>
-                <TableHead className="w-36">วันที่สร้าง</TableHead>
-                <TableHead className="w-36">Deadline</TableHead>
-                <TableHead className="w-24"></TableHead>
+                <TableHead className="w-44 whitespace-nowrap">เลขที่ Memo</TableHead>
+                <TableHead className="w-48 whitespace-nowrap">หัวข้อ</TableHead>
+                <TableHead className="w-40 whitespace-nowrap">เทมเพลต</TableHead>
+                <TableHead className="w-32 whitespace-nowrap">สถานะ</TableHead>
+                <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
+                <TableHead className="w-40 whitespace-nowrap">ผู้อนุมัติปัจจุบัน</TableHead>
+                <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
+                <TableHead className="w-32"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -316,14 +316,14 @@ export default function MemosPage() {
               ) : (
                 filteredMemos.map((memo) => (
                   <TableRow key={memo.id}>
-                    <TableCell className="font-mono text-sm">{memo.id}</TableCell>
-                    <TableCell className="font-medium">{memo.title}</TableCell>
-                    <TableCell>{memo.templateName}</TableCell>
+                    <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
+                    <TableCell className="whitespace-nowrap">{memo.templateName}</TableCell>
                     <TableCell>{getStatusBadge(memo.status)}</TableCell>
-                    <TableCell>{memo.ownerName}</TableCell>
-                    <TableCell>{memo.currentApprovalLevel || '-'}</TableCell>
-                    <TableCell><DateTimeCell date={memo.createdAt} /></TableCell>
-                    <TableCell><DateTimeCell date={memo.deadlineAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
+                    <TableCell className="whitespace-nowrap">{memo.currentApprovalLevel || '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.deadlineAt} /></TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
                         <Button
