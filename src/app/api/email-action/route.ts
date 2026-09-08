@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Then check approver columns (col_1, col_2, etc.)
+    // Then check approver columns (col_1, col_2, etc.) — skip already signed
     for (const fieldKey of Object.keys(formData)) {
       const fieldValue = formData[fieldKey];
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
@@ -140,6 +140,7 @@ export async function GET(request: NextRequest) {
           if (colKey.startsWith('col_') && colKey !== 'col_0') {
             const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
             if (!col) continue;
+            if (col.signed) continue;
             if (matchUserId && col.userId === matchUserId) {
               approverColKey = colKey;
               break;
