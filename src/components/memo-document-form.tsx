@@ -209,9 +209,6 @@ export function MemoDocumentForm({
           <div className="w-1/2 overflow-y-auto bg-slate-100 p-6">
             <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
             <div className="bg-white border-2 border-slate-900 text-sm">
-              <div className="border-b-2 border-slate-900 py-2 text-center">
-                <h1 className="text-lg font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
-              </div>
               <div className="p-4 space-y-0">
                 {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (
                   <SectionRenderer
