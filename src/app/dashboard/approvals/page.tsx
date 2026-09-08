@@ -25,13 +25,18 @@ import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToPendingMemos, approveMemo, rejectMemo } from '@/lib/memos';
-import { Memo } from '@/types';
+import { subscribeToTemplates } from '@/lib/templates';
+import { subscribeToUsers } from '@/lib/users';
+import { Memo, MemoTemplate, User } from '@/types';
 import { formatDate, DateTimeCell } from '@/utils/cn';
+import { SectionRenderer } from '@/components/memo-sections';
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
   const { setTitle } = useDashboardTitle();
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [templates, setTemplates] = useState<MemoTemplate[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => { setTitle('รออนุมัติ'); }, [setTitle]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
@@ -48,7 +53,14 @@ export default function ApprovalsPage() {
       setMemos(data);
     });
 
-    return () => unsubscribe();
+    const unsubTemplates = subscribeToTemplates(setTemplates);
+    const unsubUsers = subscribeToUsers(setAllUsers);
+
+    return () => {
+      unsubscribe();
+      unsubTemplates();
+      unsubUsers();
+    };
   }, [user]);
 
   const handleViewDetail = (memo: Memo) => {
@@ -174,31 +186,29 @@ export default function ApprovalsPage() {
 
       {/* View Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>รายละเอียด Memo</DialogTitle>
-            <DialogDescription>เลขที่ {selectedMemo?.id}</DialogDescription>
+            <DialogTitle>{selectedMemo?.id} - {selectedMemo?.title}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div><Label>หัวข้อ</Label><p className="text-sm">{selectedMemo?.title}</p></div>
-            <div><Label>เทมเพลต</Label><p className="text-sm">{selectedMemo?.templateName}</p></div>
-            <div><Label>ผู้สร้าง</Label><p className="text-sm">{selectedMemo?.ownerName}</p></div>
-            <div><Label>วันที่สร้าง</Label><p className="text-sm">{selectedMemo && `${formatDate(selectedMemo.createdAt)} ${selectedMemo.createdAt.getFullYear() + 543}`}</p></div>
-            <div><Label>Deadline</Label><p className="text-sm">{selectedMemo && `${formatDate(selectedMemo.deadlineAt)} ${selectedMemo.deadlineAt.getFullYear() + 543}`}</p></div>
-            {selectedMemo?.approvals && selectedMemo.approvals.length > 0 && (
-              <div>
-                <Label>ประวัติการอนุมัติ</Label>
-                <div className="mt-2 space-y-2">
-                  {selectedMemo.approvals.map((h, i) => (
-                    <div key={i} className="rounded border p-2 text-sm">
-                      <p><strong>{h.approverName}</strong> - {h.action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ'}</p>
-                      {h.comment && <p className="text-slate-600">{h.comment}</p>}
-                    </div>
-                  ))}
-                </div>
+          {selectedMemo && (() => {
+            const detailTemplate = templates.find((t) => t.id === selectedMemo.templateId) || null;
+            const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
+            if (!detailTemplate) return <p className="text-sm text-slate-500">ไม่พบเทมเพลต</p>;
+            return (
+              <div className="space-y-4">
+                {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                  <SectionRenderer
+                    key={field.id}
+                    field={field}
+                    value={selectedMemo.formData?.[field.id]}
+                    readonly={true}
+                    ownerUser={detailOwnerUser}
+                    users={allUsers}
+                  />
+                ))}
               </div>
-            )}
-          </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>ปิด</Button>
           </DialogFooter>
