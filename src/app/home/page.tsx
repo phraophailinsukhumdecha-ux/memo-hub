@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -23,6 +22,7 @@ import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
 import { SectionRenderer } from '@/components/memo-sections';
+import { MemoDocumentForm } from '@/components/memo-document-form';
 
 export default function HomePage() {
   const { user, logout } = useAuth();
@@ -39,7 +39,7 @@ export default function HomePage() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createStep, setCreateStep] = useState<'select-template' | 'edit-memo' | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
@@ -353,7 +353,7 @@ export default function HomePage() {
       const formData = { ...sectionFormData };
 
       const memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
-      setIsCreateDialogOpen(false);
+      setCreateStep(null);
       setSelectedTemplate(null);
       setSectionFormData({});
 
@@ -535,10 +535,10 @@ export default function HomePage() {
              <Card>
                <CardHeader className="flex flex-row items-center justify-between pb-3">
                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
-                 <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
-                   <Plus className="h-4 w-4 mr-1" />
-                   สร้าง Memo
-                 </Button>
+                  <Button size="sm" onClick={() => setCreateStep('select-template')}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    สร้าง Memo
+                  </Button>
                </CardHeader>
                <CardContent>{renderMemoList(myMemos, false)}</CardContent>
              </Card>
@@ -578,25 +578,24 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Memo Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-        setIsCreateDialogOpen(open);
-        if (!open) { setSelectedTemplate(null); setSectionFormData({}); }
-      }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>สร้าง Memo</DialogTitle>
-            <DialogDescription>เลือกประเภท Memo</DialogDescription>
-          </DialogHeader>
-          {templates.length === 0 && <p className="text-center text-slate-600 py-4 text-sm">ยังไม่มีเทมเพลต</p>}
+    </div>
+  );
+
+  // Show create flow
+  if (createStep === 'select-template') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">สร้าง Memo ใหม่</h2>
+          <p className="text-sm text-slate-600 mb-4">เลือกประเภท Memo</p>
+          {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
           {templates.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">เลือกประเภท Memo</label>
+            <div className="space-y-3">
               <Select
                 value={selectedTemplate?.id || ''}
                 onValueChange={(val) => {
                   const t = templates.find((x) => x.id === val);
-                  if (t) { setSelectedTemplate(t); setSectionFormData(initFormData(t)); }
+                  if (t) { setSelectedTemplate(t); setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
                 }}
               >
                 <SelectTrigger>
@@ -608,37 +607,94 @@ export default function HomePage() {
                   ))}
                 </SelectContent>
               </Select>
+              <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
             </div>
           )}
-          {selectedTemplate && (
-            <div className="space-y-4">
-              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
-                <SectionRenderer
-                  key={field.id}
-                  field={field}
-                  value={sectionFormData[field.id]}
-                  readonly={false}
-                  ownerUser={user}
-                  users={allUsers}
-                  onChange={(val) => setSectionFormData({ ...sectionFormData, [field.id]: val })}
-                />
-              ))}
-            </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (createStep === 'edit-memo' && selectedTemplate) {
+    const tmpl = selectedTemplate;
+    return (
+      <MemoDocumentForm
+        template={tmpl!}
+        formData={sectionFormData}
+        onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
+        onSubmit={handleCreateMemo}
+        onCancel={() => { setCreateStep(null); setSelectedTemplate(null); setSectionFormData({}); }}
+        creating={creating}
+        ownerUser={user}
+        users={allUsers}
+      />
+    );
+  }
+
+  // Main page
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">M</div>
+          <div>
+            <h1 className="font-bold text-lg text-slate-900">MemoHub</h1>
+            <p className="text-xs text-slate-600">{user?.displayName} ({user?.department || '-'})</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isSelectMode ? 'default' : 'outline'}
+            size="sm"
+            className={isSelectMode ? 'bg-slate-900 text-white' : 'text-slate-700'}
+            onClick={() => { setIsSelectMode(!isSelectMode); setSelectedMemos(new Set()); }}
+          >
+            {isSelectMode ? 'ยกเลิกเลือก' : 'เลือก'}
+          </Button>
+          {isAdmin && (
+            <Button variant="outline" size="sm" className="text-slate-700" onClick={() => router.push('/dashboard')}>
+              <FileText className="h-4 w-4 mr-1" />
+              Admin
+            </Button>
           )}
-          {selectedTemplate && (
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setSelectedTemplate(null); setSectionFormData({}); }}>ยกเลิก</Button>
-              <Button variant="outline" onClick={() => handleCreateMemo(true)} disabled={creating}>
-                <Mail className="h-4 w-4 mr-1" />
-                {creating ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
-              </Button>
-              <Button onClick={() => handleCreateMemo()} disabled={creating}>
-                {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+          <Button variant="outline" size="sm" className="text-slate-700" onClick={() => { logout(); router.push('/auth/login'); }}>
+            <LogOut className="h-4 w-4 mr-1" />
+            ออกจากระบบ
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 py-6">
+        <Tabs defaultValue={user?.isApprover ? 'pending' : 'mine'} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            {isApprover && <TabsTrigger value="pending" className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />รออนุมัติ <span className="text-xs text-blue-600">({pendingCount})</span></TabsTrigger>}
+            <TabsTrigger value="mine" className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" />Memo ของฉัน <span className="text-xs text-slate-500">({myCount})</span></TabsTrigger>
+          </TabsList>
+
+            {isApprover && (
+            <TabsContent value="pending">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">รายการรออนุมัติ</CardTitle>
+                </CardHeader>
+                <CardContent>{renderMemoList(pendingMemos, true)}</CardContent>
+              </Card>
+            </TabsContent>
+            )}
+            <TabsContent value="mine">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
+                  <Button size="sm" onClick={() => setCreateStep('select-template')}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    สร้าง Memo
+                  </Button>
+                </CardHeader>
+                <CardContent>{renderMemoList(myMemos, false)}</CardContent>
+              </Card>
+            </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
