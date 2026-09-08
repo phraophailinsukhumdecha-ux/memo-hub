@@ -67,7 +67,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
                 </tr>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">REF. NO.</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {refNo || ''}</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {refNo || '-'}</td>
                 </tr>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation no.</td>
