@@ -15,7 +15,7 @@ interface CompanyHeaderProps {
 
 const DEFAULT_CONFIG: CompanyHeaderConfig = {
   logoUrl: '/logo-df.png',
-  companyName: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
+  companyName: 'Digital Factory Company Limited',
   addressLines: [
     'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
     'ถนนรัชดาภิเษก แขวงสามเสนนอก',
