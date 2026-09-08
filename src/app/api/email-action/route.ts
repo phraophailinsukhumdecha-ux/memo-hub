@@ -113,6 +113,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Debug: log what we're trying to match
+    const debugInfo = { matchUserId, matchUserName, toEmail, gridKeys: Object.keys(formData) };
+
     let approverColKey: string | null = null;
 
     for (const fieldKey of Object.keys(formData)) {
@@ -137,13 +140,30 @@ export async function GET(request: NextRequest) {
     }
 
     if (!approverColKey) {
+      const allCols: Record<string, unknown> = {};
+      for (const fieldKey of Object.keys(formData)) {
+        const fieldValue = formData[fieldKey];
+        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+          for (const colKey of Object.keys(fieldValue)) {
+            if (colKey.startsWith('col_')) {
+              allCols[colKey] = fieldValue[colKey];
+            }
+          }
+        }
+      }
       return new Response(`
         <!DOCTYPE html>
         <html><head><meta charset="utf-8"><title>MemoHub</title></head>
         <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
-          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:400px;">
+          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:500px;">
             <h2 style="color:#dc2626;">ไม่มีสิทธิ์ดำเนินการ</h2>
-            <p style="color:#64748b;">คุณไม่ได้เป็นผู้อนุมัติใน Memo นี้</p>
+            <p style="color:#64748b;margin-bottom:12px;">คุณไม่ได้เป็นผู้อนุมัติใน Memo นี้</p>
+            <div style="text-align:left;background:#f8fafc;padding:12px;border-radius:8px;font-size:12px;color:#64748b;">
+              <p><strong>Email:</strong> ${toEmail}</p>
+              <p><strong>UserId:</strong> ${matchUserId || '(not found)'}</p>
+              <p><strong>Name:</strong> ${matchUserName || '(not found)'}</p>
+              <p><strong>Grid columns:</strong> ${JSON.stringify(allCols, null, 2)}</p>
+            </div>
           </div>
         </body></html>
       `, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
