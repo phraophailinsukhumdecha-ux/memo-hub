@@ -80,6 +80,11 @@ export function MemoDocumentForm({
       case 'form_row': {
         const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string }>) || [];
         const value = (formData[field.id] as Record<string, string>) || {};
+        const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
+        const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
+        const checkboxOptions = (checkboxConfig?.options as string[]) || [];
+        const checkboxValue = checkboxField ? (formData[checkboxField.id] as string[]) || [] : [];
+
         return (
           <div key={field.id} className="space-y-3">
             {fields.map((f) => (
@@ -100,6 +105,26 @@ export function MemoDocumentForm({
                 )}
               </div>
             ))}
+            {checkboxField && checkboxOptions.length > 0 && (
+              <div className="flex flex-wrap gap-3 mt-2">
+                {checkboxOptions.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={checkboxValue.includes(opt)}
+                      onChange={() => {
+                        const newVal = checkboxValue.includes(opt)
+                          ? checkboxValue.filter((v) => v !== opt)
+                          : [...checkboxValue, opt];
+                        onChange(checkboxField.id, newVal);
+                      }}
+                      className="h-4 w-4 rounded"
+                    />
+                    <span className="text-sm">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         );
       }
@@ -121,33 +146,8 @@ export function MemoDocumentForm({
         );
       }
 
-      case 'checkbox_group': {
-        const options = (config?.options as string[]) || [];
-        const selected = (formData[field.id] as string[]) || [];
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
-            <div className="flex flex-wrap gap-3">
-              {options.map((opt) => (
-                <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(opt)}
-                    onChange={() => {
-                      const newVal = selected.includes(opt)
-                        ? selected.filter((v) => v !== opt)
-                        : [...selected, opt];
-                      onChange(field.id, newVal);
-                    }}
-                    className="h-4 w-4 rounded"
-                  />
-                  <span className="text-sm">{opt}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        );
-      }
+      case 'checkbox_group':
+        return null;
 
       case 'dropdown_select': {
         const options = (config?.options as string[]) || [];
