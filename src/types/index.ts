@@ -173,6 +173,7 @@ export interface GlobalSettings {
   emailFormat?: {
     subject: string;
     body: string;
+    preview?: string;
   };
   deadlineDays: number;
   positionOptions: string[];

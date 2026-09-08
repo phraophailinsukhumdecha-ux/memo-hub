@@ -611,12 +611,12 @@ export default function SettingsPage() {
               <CardTitle>ตั้งค่าฟอร์แมทอีเมล</CardTitle>
               <CardDescription>กำหนดรูปแบบอีเมลที่จะส่งแจ้งเตือน (ใช้ตัวแปร {'{variable}'} ได้)</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label>หัวข้ออีเมล (Subject)</Label>
                 <Input
                   value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}'}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '' } })}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '' } })}
                   placeholder="[MemoHub] {memo_number} - {title}"
                 />
                 <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
@@ -624,24 +624,35 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>เนื้อหาอีเมล (Body)</Label>
                 <Textarea
-                  rows={8}
+                  rows={6}
                   value={settings?.emailFormat?.body || ''}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value } })}
-                  placeholder={`สวัสดีค่ะ/ครับ,
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
+                  placeholder={`สวัสดีค่ะ/ครับ
 
 มี Memo ใหม่รอการอนุมัติของท่าน
 
-เลขที่: {memo_number}
-เรื่อง: {title}
-ผู้สร้าง: {owner_name}
-สถานะ: {status}
-Deadline: {deadline}
-
-กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้
-
-MemoHub Digital Memo & Approval System`}
+กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้`}
                 />
                 <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>ตัวอย่าง Memo ในอีเมล (Preview Template)</Label>
+                <Textarea
+                  rows={10}
+                  value={settings?.emailFormat?.preview || ''}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: settings?.emailFormat?.body || '', preview: e.target.value } })}
+                  placeholder={`เลขที่: {memo_number}
+หัวข้อ: {title}
+ผู้สร้าง: {owner_name} ({department})
+Deadline: {deadline}
+
+{form_fields}
+
+{body_text}
+
+{approval_grid}`}
+                />
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button onClick={handleSaveSMTP} disabled={saving}>
@@ -655,13 +666,27 @@ MemoHub Digital Memo & Approval System`}
                   <hr className="my-2" />
                   <p>สวัสดีค่ะ/ครับ</p>
                   <p className="mt-2">มี Memo ใหม่รอการอนุมัติของท่าน</p>
-                  <p className="mt-2">เลขที่: MH-20260903-0001</p>
-                  <p>เรื่อง: จัดซื้อ/จัดจ้าง</p>
-                  <p>ผู้สร้าง: พระโฮลิน สุขmanaช</p>
-                  <p>สถานะ: รออนุมัติ</p>
-                  <p>Deadline: 10 กันยายน 2569</p>
-                  <p className="mt-2">กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้: <span className="text-blue-600 underline">http://localhost:3000/home</span></p>
-                  <p className="mt-2 text-slate-400">MemoHub Digital Memo & Approval System</p>
+                  <div className="mt-3 border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                      <span className="font-medium">MH-20260903-0001</span> — <span>จัดซื้อ/จัดจ้าง</span>
+                      <span className="ml-2 text-xs text-blue-600">รออนุมัติ</span>
+                    </div>
+                    <div className="p-3 space-y-1 text-xs">
+                      <p><strong>ผู้สร้าง:</strong> พราวไพลิน สุขุมเดชะ (ไอที)</p>
+                      <p><strong>Deadline:</strong> 10 กันยายน 2569</p>
+                      <div className="mt-2 border-t pt-2">
+                        <p className="font-medium mb-1">สถานะการอนุมัติ:</p>
+                        <p className="text-green-600">✓ ผู้ขออนุมัติ — พราวไพลิน สุขุมเดชะ</p>
+                        <p className="text-orange-500">○ ตรวจสอบ — ผู้ดูแลระบบ</p>
+                        <p className="text-orange-500">○ อนุมัติ — จิรพล ยาวะพันธุ์</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    <span className="inline-block px-6 py-2 bg-green-600 text-white text-xs rounded-lg font-semibold">อนุมัติ</span>
+                    <span className="inline-block px-6 py-2 bg-red-600 text-white text-xs rounded-lg font-semibold ml-2">ปฏิเสธ</span>
+                  </div>
+                  <p className="mt-2 text-slate-400 text-center text-xs">MemoHub Digital Memo & Approval System</p>
                 </div>
               </div>
             </CardContent>
