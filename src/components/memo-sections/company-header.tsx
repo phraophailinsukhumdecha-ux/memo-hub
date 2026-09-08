@@ -49,7 +49,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           {/* Left: MEMORANDUM + Address */}
           <div className="flex-1 border-r border-slate-900 p-4">
             <h2 className="text-xl font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
-            <div className="text-sm leading-relaxed text-slate-900 space-y-0.5">
+            <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
               <p>{cfg.companyName}</p>
               {cfg.addressLines.map((line, i) => (
                 <p key={i}>{line}</p>
@@ -58,7 +58,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           </div>
 
           {/* Right: Memo Details Table */}
-          <div className="w-64 p-4">
+          <div className="w-72 p-4">
             <table className="w-full text-sm">
               <tbody>
                 <tr>
