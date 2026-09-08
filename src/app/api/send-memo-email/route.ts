@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 
 interface SmtpConfig {
   host: string;
@@ -31,20 +32,20 @@ function classifyError(e: Error, port: number, host: string) {
   const msg = String(e?.message || '');
   if (/Unexpected socket close|socket hang up|ECONNRESET/i.test(msg)) {
     const hint = port === 465
-      ? 'Port 465 ต้องใช้ SSL — ตรวจสอบว่าใน Settings เลือก Encryption เป็น SSL'
+      ? 'Port 465 ต้องใช้ SSL'
       : port === 587
-        ? 'Port 587 ต้องใช้ TLS — ตรวจสอบว่าใน Settings เลือก Encryption เป็น TLS'
-        : 'ตรวจสอบ Port (465=SSL / 587=TLS) และ Encryption ให้สอดคล้องกัน';
-    return { code: ERR.ESOCKET, message: `การเชื่อมต่อ SMTP ถูกตัด (Unexpected socket close) — ${hint}` };
+        ? 'Port 587 ต้องใช้ TLS'
+        : 'ตรวจสอบ Port และ Encryption';
+    return { code: ERR.ESOCKET, message: `การเชื่อมต่อ SMTP ถูกตัด — ${hint}` };
   }
   if (/Invalid login|Username and Password not accepted|535|EAUTH/i.test(msg)) {
-    return { code: ERR.EAUTH, message: 'ยืนยันตัวตน SMTP ไม่ผ่าน (EAUTH) — ตรวจสอบ Username / Password (Gmail ต้องใช้ App Password)' };
+    return { code: ERR.EAUTH, message: 'ยืนยันตัวตน SMTP ไม่ผ่าน (EAUTH)' };
   }
   if (/ENOTFOUND|getaddrinfo|ECONNREFUSED/i.test(msg)) {
-    return { code: ERR.ECONNREFUSED, message: `ติดต่อ SMTP Host ไม่ได้ (ECONNREFUSED) — ตรวจสอบ Host (${host || 'ไม่ระบุ'}) และเน็ตเวิร์ก` };
+    return { code: ERR.ECONNREFUSED, message: `ติดต่อ SMTP Host ไม่ได้ (${host || '-'})` };
   }
   if (/connect ETIMEDOUT|Timeout/i.test(msg)) {
-    return { code: ERR.ECONNREFUSED, message: 'เชื่อมต่อ SMTP timeout — ตรวจสอบ Port / Firewall / เน็ตเวิร์ก' };
+    return { code: ERR.ECONNREFUSED, message: 'เชื่อมต่อ SMTP timeout' };
   }
   return { code: ERR.EUNKNOWN, message: msg };
 }
@@ -96,6 +97,10 @@ function replaceVariables(template: string, vars: Record<string, string>): strin
   return result;
 }
 
+function generateToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { memoId, toEmails } = await request.json() as { memoId: string; toEmails: string[] };
@@ -123,6 +128,7 @@ export async function POST(request: NextRequest) {
     const memo = memoDoc.data()!;
 
     const usersSnapshot = await getDocs(collection(db, 'users'));
+    const allUsersData: Array<{ id: string; email?: string; displayName?: string }> = usersSnapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as { id: string; email?: string; displayName?: string }));
 
     const deadlineDate = memo.deadlineAt?.toDate?.() || new Date(memo.deadlineAt);
     const buddhistYear = deadlineDate.getFullYear() + 543;
@@ -132,7 +138,7 @@ export async function POST(request: NextRequest) {
     const sendDate = now.toLocaleDateString('th-TH');
     const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-    const vars: Record<string, string> = {
+    const baseVars: Record<string, string> = {
       memo_number: memo.memoNumber || memoId,
       title: memo.title || '',
       owner_name: memo.ownerName || '',
@@ -158,17 +164,41 @@ Deadline: {deadline}
 
 MemoHub Digital Memo & Approval System`;
 
-    const subject = replaceVariables(subjectTemplate, vars);
-    const bodyText = replaceVariables(bodyTemplate, vars);
+    const transporter = createTransporter(smtp!);
+    const sender = buildSender(smtp!);
 
-    const approveUrl = `${baseUrl}/home?memo=${memoId}&action=approve`;
-    const cancelUrl = `${baseUrl}/home?memo=${memoId}&action=cancel`;
-    const bodyHtml = bodyText
-      .split('\n')
-      .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
-      .join('');
+    const sendOne = async (to: string) => {
+      try {
+        const approver = allUsersData.find((u) => u.email === to);
+        const approverId = (approver?.id as string) || '';
+        const approverName = (approver?.displayName as string) || to;
 
-    const htmlEmail = `<!DOCTYPE html>
+        const token = generateToken();
+        await addDoc(collection(db, 'emailTokens'), {
+          token,
+          memoId,
+          approverId,
+          approverName,
+          toEmail: to,
+          action: null,
+          used: false,
+          createdAt: now,
+          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        });
+
+        const approveUrl = `${baseUrl}/api/email-action?token=${token}&action=approve`;
+        const cancelUrl = `${baseUrl}/api/email-action?token=${token}&action=reject`;
+
+        const vars = { ...baseVars, approver_name: approverName };
+        const subject = replaceVariables(subjectTemplate, vars);
+        const bodyText = replaceVariables(bodyTemplate, vars);
+
+        const bodyHtml = bodyText
+          .split('\n')
+          .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
+          .join('');
+
+        const htmlEmail = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
@@ -179,16 +209,13 @@ MemoHub Digital Memo & Approval System`;
     <a href="${cancelUrl}" style="display:inline-block;padding:12px 32px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">ปฏิเสธ</a>
   </div>
   <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
+  <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
   <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
 </body>
 </html>`;
 
-    const transporter = createTransporter(smtp!);
-    const sender = buildSender(smtp!);
-    const content = processContent(bodyText);
+        const content = processContent(bodyText);
 
-    const sendOne = async (to: string) => {
-      try {
         await transporter.sendMail({
           from: sender,
           to,
