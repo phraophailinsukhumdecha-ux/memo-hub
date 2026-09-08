@@ -48,7 +48,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
         <div className="flex">
           {/* Left: MEMORANDUM + Address */}
           <div className="flex-1 border-r border-slate-900 p-4">
-            <h2 className="text-xl font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
+            <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
             <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
               <p>{cfg.companyName}</p>
               {cfg.addressLines.map((line, i) => (
@@ -62,24 +62,24 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
             <table className="w-full text-sm">
               <tbody>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-2 py-1">MEMO NO.</td>
-                  <td className="text-slate-900 py-1">: {memoNumber || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">MEMO NO.</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {memoNumber || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-2 py-1">REF. NO.</td>
-                  <td className="text-slate-900 py-1">: {refNo || '(if any)'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">REF. NO.</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {refNo || '(if any)'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-2 py-1">Quotation no.</td>
-                  <td className="text-slate-900 py-1">: {quotationNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation no.</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {quotationNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-2 py-1">Job no.</td>
-                  <td className="text-slate-900 py-1">: {jobNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job no.</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {jobNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-2 py-1">DATE</td>
-                  <td className="text-slate-900 py-1">: {date || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">DATE</td>
+                  <td className="text-slate-900 py-1 whitespace-nowrap">: {date || '-'}</td>
                 </tr>
               </tbody>
             </table>
