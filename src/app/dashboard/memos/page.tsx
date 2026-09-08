@@ -289,24 +289,24 @@ export default function MemosPage() {
             </TableBody>
           </Table>
       </div>
+
+      {/* Create Memo - Full Page Form */}
+      {isCreating && (
+        <div className="fixed inset-0 z-50 bg-slate-200 overflow-y-auto">
+          <MemoDocumentForm
+            templates={templates}
+            selectedTemplate={selectedTemplateObj}
+            formData={sectionFormData}
+            onSelectTemplate={(t) => { setSelectedTemplateObj(t); setSectionFormData(initFormData(t)); }}
+            onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
+            onSubmit={handleCreateMemo}
+            onCancel={() => { setIsCreating(false); setSelectedTemplateObj(null); setSectionFormData({}); }}
+            creating={creating}
+            ownerUser={user}
+            users={allUsers}
+          />
+        </div>
+      )}
     </div>
   );
-
-  // Show create flow - edit memo (full page)
-  if (isCreating) {
-    return (
-      <MemoDocumentForm
-        templates={templates}
-        selectedTemplate={selectedTemplateObj}
-        formData={sectionFormData}
-        onSelectTemplate={(t) => { setSelectedTemplateObj(t); setSectionFormData(initFormData(t)); }}
-        onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
-        onSubmit={handleCreateMemo}
-        onCancel={() => { setIsCreating(false); setSelectedTemplateObj(null); setSectionFormData({}); }}
-        creating={creating}
-        ownerUser={user}
-        users={allUsers}
-      />
-    );
-  }
 }

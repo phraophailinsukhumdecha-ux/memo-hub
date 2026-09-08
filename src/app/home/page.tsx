@@ -577,91 +577,24 @@ export default function HomePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
 
-  // Show create flow - edit memo (full page)
-  if (isCreating) {
-    return (
-      <MemoDocumentForm
-        templates={templates}
-        selectedTemplate={selectedTemplate}
-        formData={sectionFormData}
-        onSelectTemplate={(t) => { setSelectedTemplate(t); setSectionFormData(initFormData(t)); }}
-        onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
-        onSubmit={handleCreateMemo}
-        onCancel={() => { setIsCreating(false); setSelectedTemplate(null); setSectionFormData({}); }}
-        creating={creating}
-        ownerUser={user}
-        users={allUsers}
-      />
-    );
-  }
-
-  // Main page
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">M</div>
-          <div>
-            <h1 className="font-bold text-lg text-slate-900">MemoHub</h1>
-            <p className="text-xs text-slate-600">{user?.displayName} ({user?.department || '-'})</p>
-          </div>
+      {/* Create Memo - Full Page Form */}
+      {isCreating && (
+        <div className="fixed inset-0 z-50 bg-slate-200 overflow-y-auto">
+          <MemoDocumentForm
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            formData={sectionFormData}
+            onSelectTemplate={(t) => { setSelectedTemplate(t); setSectionFormData(initFormData(t)); }}
+            onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
+            onSubmit={handleCreateMemo}
+            onCancel={() => { setIsCreating(false); setSelectedTemplate(null); setSectionFormData({}); }}
+            creating={creating}
+            ownerUser={user}
+            users={allUsers}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isSelectMode ? 'default' : 'outline'}
-            size="sm"
-            className={isSelectMode ? 'bg-slate-900 text-white' : 'text-slate-700'}
-            onClick={() => { setIsSelectMode(!isSelectMode); setSelectedMemos(new Set()); }}
-          >
-            {isSelectMode ? 'ยกเลิกเลือก' : 'เลือก'}
-          </Button>
-          {isAdmin && (
-            <Button variant="outline" size="sm" className="text-slate-700" onClick={() => router.push('/dashboard')}>
-              <FileText className="h-4 w-4 mr-1" />
-              Admin
-            </Button>
-          )}
-          <Button variant="outline" size="sm" className="text-slate-700" onClick={() => { logout(); router.push('/auth/login'); }}>
-            <LogOut className="h-4 w-4 mr-1" />
-            ออกจากระบบ
-          </Button>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        <Tabs defaultValue={user?.isApprover ? 'pending' : 'mine'} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            {isApprover && <TabsTrigger value="pending" className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />รออนุมัติ <span className="text-xs text-blue-600">({pendingCount})</span></TabsTrigger>}
-            <TabsTrigger value="mine" className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" />Memo ของฉัน <span className="text-xs text-slate-500">({myCount})</span></TabsTrigger>
-          </TabsList>
-
-            {isApprover && (
-            <TabsContent value="pending">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">รายการรออนุมัติ</CardTitle>
-                </CardHeader>
-                <CardContent>{renderMemoList(pendingMemos, true)}</CardContent>
-              </Card>
-            </TabsContent>
-            )}
-            <TabsContent value="mine">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
-                  <Button size="sm" onClick={() => setIsCreating(true)}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    สร้าง Memo
-                  </Button>
-                </CardHeader>
-                <CardContent>{renderMemoList(myMemos, false)}</CardContent>
-              </Card>
-            </TabsContent>
-        </Tabs>
-      </div>
+      )}
     </div>
   );
 }
