@@ -280,16 +280,46 @@ export default function HomePage() {
     return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleCreateMemo = async () => {
+  const handleCreateMemo = async (sendEmail = false) => {
     if (!selectedTemplate || !user) return;
     setCreating(true);
     try {
       const formData = { ...sectionFormData };
 
-      await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
+      const memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
       setIsCreateDialogOpen(false);
       setSelectedTemplate(null);
       setSectionFormData({});
+
+      if (sendEmail && memoId) {
+        const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
+        if (grid) {
+          const toEmails: string[] = [];
+          for (const colKey of Object.keys(grid)) {
+            if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
+              const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
+              if (approver?.email) toEmails.push(approver.email);
+            }
+          }
+          if (toEmails.length > 0) {
+            try {
+              const res = await fetch('/api/send-memo-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memoId, toEmails }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                alert('สร้าง Memo และส่งอีเมลสำเร็จ!');
+              } else {
+                alert('สร้าง Memo สำเร็จ แต่ส่งอีเมลไม่สำเร็จ: ' + (data.error || ''));
+              }
+            } catch {
+              alert('สร้าง Memo สำเร็จ แต่ไม่สามารถส่งอีเมลได้');
+            }
+          }
+        }
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -327,6 +357,9 @@ export default function HomePage() {
             )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(memo)} disabled={downloadingId === memo.id}>
               <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleSendEmail(memo)} title="ส่งอีเมล">
+              <Mail className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)}>
               <Printer className="h-4 w-4" />
@@ -439,12 +472,6 @@ export default function HomePage() {
                 อนุมัติ
               </Button>
             )}
-            {selectedMemo && selectedMemo.ownerId === user?.id && (
-              <Button variant="outline" onClick={() => handleSendEmail(selectedMemo)}>
-                <Mail className="h-4 w-4 mr-1" />
-                ส่งอีเมล
-              </Button>
-            )}
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
           </DialogFooter>
         </DialogContent>
@@ -500,7 +527,11 @@ export default function HomePage() {
           {selectedTemplate && (
             <DialogFooter>
               <Button variant="outline" onClick={() => { setSelectedTemplate(null); setSectionFormData({}); }}>ยกเลิก</Button>
-              <Button onClick={handleCreateMemo} disabled={creating}>
+              <Button variant="outline" onClick={() => handleCreateMemo(true)} disabled={creating}>
+                <Mail className="h-4 w-4 mr-1" />
+                {creating ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
+              </Button>
+              <Button onClick={() => handleCreateMemo()} disabled={creating}>
                 {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
               </Button>
             </DialogFooter>
