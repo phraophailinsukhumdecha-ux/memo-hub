@@ -132,13 +132,25 @@ export default function SettingsPage() {
 
   const handleTestEmail = async () => {
     if (!settings || !testEmailTo) return;
+
+    const smtp = settings.smtp;
+    if (!smtp.host || !smtp.user || !smtp.password) {
+      setTestEmailResult({ success: false, error: 'กรุณากรอกข้อมูล SMTP (Host / Username / Password) ให้ครบก่อน', code: 'EVALIDATE' });
+      return;
+    }
+
     setTestEmailSending(true);
     setTestEmailResult(null);
     try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { smtp }, updatedBy: user?.id || 'system' }),
+      });
       const res = await fetch('/api/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ smtp: settings.smtp, to: testEmailTo }),
+        body: JSON.stringify({ smtp, to: testEmailTo }),
       });
       const data = await res.json();
       setTestEmailResult({ success: data.ok, error: data.message, code: data.code });
