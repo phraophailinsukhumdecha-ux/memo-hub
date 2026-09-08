@@ -35,7 +35,7 @@ export function CheckboxGroup({ config, value = [], onChange, readonly }: Checkb
   const gridCols = columns === 2 ? 'grid-cols-2' : columns === 3 ? 'grid-cols-3' : 'grid-cols-4';
 
   return (
-    <div className="border border-slate-900 p-3">
+    <div className="py-1">
       <div className={`grid ${gridCols} gap-x-6 gap-y-1`}>
         {options.map((option) => (
           <label
