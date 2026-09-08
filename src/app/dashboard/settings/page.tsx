@@ -84,7 +84,7 @@ export default function SettingsPage() {
   const [isTestEmailDialogOpen, setIsTestEmailDialogOpen] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState('');
   const [testEmailSending, setTestEmailSending] = useState(false);
-  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; error?: string } | null>(null);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; error?: string; code?: string } | null>(null);
 
   // Syslog state
   const [syslogs, setSyslogs] = useState<Syslog[]>([]);
@@ -138,9 +138,9 @@ export default function SettingsPage() {
         body: JSON.stringify({ smtp: settings.smtp, to: testEmailTo }),
       });
       const data = await res.json();
-      setTestEmailResult(data);
-    } catch (err) {
-      setTestEmailResult({ success: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
+      setTestEmailResult({ success: data.ok, error: data.message, code: data.code });
+    } catch {
+      setTestEmailResult({ success: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', code: 'EUNKNOWN' });
     } finally {
       setTestEmailSending(false);
     }
@@ -482,19 +482,19 @@ export default function SettingsPage() {
                 <div className="space-y-2"><Label>SMTP Host</Label><Input value={settings?.smtp.host || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, host: e.target.value } })} /></div>
                 <div className="space-y-2"><Label>SMTP Port</Label><Input type="number" value={settings?.smtp.port || 587} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, port: parseInt(e.target.value) } })} /></div>
               </div>
-              <div className="flex items-center space-x-3">
-                <Label className="cursor-pointer select-none">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                      checked={settings?.smtp.secure || false}
-                      onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, secure: e.target.checked } })}
-                    />
-                    <span>ใช้ SSL/TLS</span>
-                  </div>
-                </Label>
-                <span className="text-sm text-slate-500">(Port 465 = SSL, Port 587 = STARTTLS)</span>
+              <div className="space-y-2">
+                <Label>Encryption</Label>
+                <Select
+                  value={settings?.smtp.encryption || (settings?.smtp.secure ? 'SSL' : 'TLS')}
+                  onValueChange={(v) => setSettings({ ...settings!, smtp: { ...settings!.smtp, encryption: v, secure: v === 'SSL', port: v === 'SSL' ? 465 : 587 } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SSL">SSL (Port 465)</SelectItem>
+                    <SelectItem value="TLS">TLS / STARTTLS (Port 587)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-slate-500">SSL = Port 465 | TLS = Port 587</p>
               </div>
               <div className="space-y-2"><Label>ชื่อผู้ใช้</Label><Input value={settings?.smtp.user || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, user: e.target.value } })} /></div>
               <div className="space-y-2"><Label>รหัสผ่าน</Label><Input type="password" value={settings?.smtp.password || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, password: e.target.value } })} /></div>
@@ -926,7 +926,7 @@ MemoHub Digital Memo & Approval System`}
                 {testEmailResult.success ? (
                   <><CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0" /><span>ส่งอีเมลสำเร็จ! ตรวจสอบกล่องจดหมายของผู้รับ</span></>
                 ) : (
-                  <><XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" /><span>ส่งไม่สำเร็จ: {testEmailResult.error}</span></>
+                  <><XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" /><span>{testEmailResult.code && `[${testEmailResult.code}] `}{testEmailResult.error}</span></>
                 )}
               </div>
             )}

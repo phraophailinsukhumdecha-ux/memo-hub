@@ -255,10 +255,10 @@ export default function HomePage() {
         body: JSON.stringify({ memoId: memo.id, toEmails }),
       });
       const data = await res.json();
-      if (data.success) {
-        alert('ส่งอีเมลสำเร็จ!');
+      if (data.ok) {
+        alert(data.message || 'ส่งอีเมลสำเร็จ!');
       } else {
-        alert('ส่งอีเมลไม่สำเร็จ: ' + (data.error || 'เกิดข้อผิดพลาด'));
+        alert(`${data.code ? `[${data.code}] ` : ''}${data.message || 'ส่งอีเมลไม่สำเร็จ'}`);
       }
     } catch {
       alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');

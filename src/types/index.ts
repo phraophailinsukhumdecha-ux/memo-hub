@@ -168,6 +168,7 @@ export interface GlobalSettings {
     password: string;
     fromEmail: string;
     fromName: string;
+    encryption?: string;
   };
   emailFormat?: {
     subject: string;
