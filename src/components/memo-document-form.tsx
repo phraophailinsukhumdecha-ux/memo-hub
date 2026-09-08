@@ -42,6 +42,26 @@ export function MemoDocumentForm({
     }
   }, [selectedTemplate, templates, onSelectTemplate]);
 
+  useEffect(() => {
+    if (selectedTemplate) {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      for (const field of selectedTemplate.fields) {
+        if (field.type === 'form_row') {
+          const config = (field.fieldConfig || {}) as Record<string, unknown>;
+          const fields = (config?.fields as Array<{ name: string }>) || [];
+          const hasDate = fields.some((f) => f.name.toLowerCase().includes('date') || f.name === 'date');
+          if (hasDate) {
+            const currentVal = (formData[field.id] as Record<string, string>) || {};
+            if (!currentVal.date) {
+              onChange(field.id, { ...currentVal, date: dateStr });
+            }
+          }
+        }
+      }
+    }
+  }, [selectedTemplate]);
+
   if (!selectedTemplate) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
