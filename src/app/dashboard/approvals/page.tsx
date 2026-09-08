@@ -110,13 +110,13 @@ export default function ApprovalsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-40">เลขที่ Memo</TableHead>
-                <TableHead>หัวข้อ</TableHead>
-                <TableHead className="w-32">เทมเพลต</TableHead>
-                <TableHead className="w-32">ผู้สร้าง</TableHead>
-                <TableHead className="w-36">วันที่สร้าง</TableHead>
-                <TableHead className="w-36">Deadline</TableHead>
-                <TableHead className="w-32">การดำเนินการ</TableHead>
+                <TableHead className="w-44 whitespace-nowrap">เลขที่ Memo</TableHead>
+                <TableHead className="whitespace-nowrap">หัวข้อ</TableHead>
+                <TableHead className="w-40 whitespace-nowrap">เทมเพลต</TableHead>
+                <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
+                <TableHead className="w-32 whitespace-nowrap">การดำเนินการ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,12 +129,12 @@ export default function ApprovalsPage() {
               ) : (
                 memos.map((memo) => (
                   <TableRow key={memo.id}>
-                    <TableCell className="font-mono text-sm">{memo.id}</TableCell>
-                    <TableCell className="font-medium">{memo.title}</TableCell>
-                    <TableCell>{memo.templateName}</TableCell>
-                    <TableCell>{memo.ownerName}</TableCell>
-                    <TableCell><DateTimeCell date={memo.createdAt} /></TableCell>
-                    <TableCell><DateTimeCell date={memo.deadlineAt} /></TableCell>
+                    <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
+                    <TableCell className="whitespace-nowrap">{memo.templateName}</TableCell>
+                    <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
+                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.deadlineAt} /></TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
                         <Button
