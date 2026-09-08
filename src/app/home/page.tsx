@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut } from 'lucide-react';
+import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, cancelMemo, createMemo } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
@@ -231,6 +231,40 @@ export default function HomePage() {
     printMemo(memo, memoTemplate, [], memoOwner, allUsers);
   };
 
+  const handleSendEmail = async (memo: Memo) => {
+    const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; email?: string }> | undefined;
+    if (!grid) return alert('ไม่พบข้อมูลผู้อนุมัติ');
+
+    const toEmails: string[] = [];
+    for (const colKey of Object.keys(grid)) {
+      if (colKey.startsWith('col_') && colKey !== 'col_0') {
+        const col = grid[colKey];
+        if (col?.userId) {
+          const approver = allUsers.find((u) => u.id === col.userId);
+          if (approver?.email) toEmails.push(approver.email);
+        }
+      }
+    }
+
+    if (toEmails.length === 0) return alert('ไม่พบอีเมลผู้อนุมัติ');
+
+    try {
+      const res = await fetch('/api/send-memo-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memoId: memo.id, toEmails }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('ส่งอีเมลสำเร็จ!');
+      } else {
+        alert('ส่งอีเมลไม่สำเร็จ: ' + (data.error || 'เกิดข้อผิดพลาด'));
+      }
+    } catch {
+      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    }
+  };
+
   const openDetail = (memo: Memo) => {
     setSelectedMemo(memo);
     setIsDetailOpen(true);
@@ -403,6 +437,12 @@ export default function HomePage() {
               <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ
+              </Button>
+            )}
+            {selectedMemo && selectedMemo.ownerId === user?.id && (
+              <Button variant="outline" onClick={() => handleSendEmail(selectedMemo)}>
+                <Mail className="h-4 w-4 mr-1" />
+                ส่งอีเมล
               </Button>
             )}
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
