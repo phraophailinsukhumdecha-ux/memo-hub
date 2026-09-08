@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -23,12 +22,11 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, XCircle, Download, Printer } from 'lucide-react';
+import { Plus, Search, Download, Printer, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToMemos, createMemo, cancelMemo } from '@/lib/memos';
@@ -37,7 +35,7 @@ import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
 import { formatDate, DateTimeCell } from '@/utils/cn';
-import { SectionRenderer } from '@/components/memo-sections';
+import { MemoDocumentForm } from '@/components/memo-document-form';
 
 export default function MemosPage() {
   const { user, isAdmin } = useAuth();
@@ -46,9 +44,8 @@ export default function MemosPage() {
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createStep, setCreateStep] = useState<'select-template' | 'edit-memo' | null>(null);
   const [selectedMemoType, setSelectedMemoType] = useState('');
-  const [memoTitle, setMemoTitle] = useState('');
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -80,52 +77,49 @@ export default function MemosPage() {
 
   const selectedTemplateObj = templates.find((t) => t.id === selectedMemoType);
 
-  useEffect(() => {
-    if (selectedTemplateObj) {
-      setMemoTitle(selectedTemplateObj.name);
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().slice(0, 5);
-      const initialData: Record<string, unknown> = {};
-      selectedTemplateObj.fields.forEach((field) => {
-        if (field.type === 'checkbox_group') {
-          initialData[field.id] = [];
-        } else if (field.type === 'dropdown_select') {
-          initialData[field.id] = '';
-        } else if (field.type === 'memo_type') {
-          initialData[field.id] = selectedTemplateObj.name;
-        } else if (field.type === 'form_row') {
-          const rowValue: Record<string, string> = {};
-          const cfgFields = (field.fieldConfig as { fields?: { name: string; type: string; label?: string }[] })?.fields || [];
-          cfgFields.forEach((f) => {
-            const isDateField = f.type === 'date' || f.name.toLowerCase().includes('date') || (f.label || '').includes('วันที่');
-            rowValue[f.name] = isDateField ? todayStr : '';
-          });
-          initialData[field.id] = rowValue;
-        } else if (field.type === 'approval_grid') {
-          const gridCfg = field.fieldConfig as { columns?: { title: string }[]; showTime?: boolean } | undefined;
-          const cols = gridCfg?.columns || [];
-          const gridValue: Record<string, { date: string; time: string; name: string; signerTitle: string }> = {};
-          cols.forEach((_, i) => {
-            if (i === 0) {
-              gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '' };
-            } else if (i === cols.length - 1) {
-              const ceoUser = allUsers.find((u) => u.position === 'CEO');
-              gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: ceoUser?.displayName || '', signerTitle: ceoUser?.position || 'CEO' };
-            } else {
-              gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
-            }
-          });
-          initialData[field.id] = gridValue;
-        } else if (field.type === 'body_text') {
-          initialData[field.id] = (field.fieldConfig as Record<string, unknown>)?.defaultValue || '';
-        } else {
-          initialData[field.id] = '';
-        }
-      });
-      setSectionFormData(initialData);
-    }
-  }, [selectedTemplateObj, selectedMemoType]);
+  const initFormData = (t: MemoTemplate) => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().slice(0, 5);
+    const initialData: Record<string, unknown> = {};
+    t.fields.forEach((field) => {
+      if (field.type === 'checkbox_group') {
+        initialData[field.id] = [];
+      } else if (field.type === 'dropdown_select') {
+        initialData[field.id] = '';
+      } else if (field.type === 'memo_type') {
+        initialData[field.id] = t.name;
+      } else if (field.type === 'form_row') {
+        const rowValue: Record<string, string> = {};
+        const cfgFields = (field.fieldConfig as { fields?: { name: string; type: string; label?: string }[] })?.fields || [];
+        cfgFields.forEach((f) => {
+          const isDateField = f.type === 'date' || f.name.toLowerCase().includes('date') || (f.label || '').includes('วันที่');
+          rowValue[f.name] = isDateField ? todayStr : '';
+        });
+        initialData[field.id] = rowValue;
+      } else if (field.type === 'approval_grid') {
+        const gridCfg = field.fieldConfig as { columns?: { title: string }[]; showTime?: boolean } | undefined;
+        const cols = gridCfg?.columns || [];
+        const gridValue: Record<string, { date: string; time: string; name: string; signerTitle: string }> = {};
+        cols.forEach((_, i) => {
+          if (i === 0) {
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '' };
+          } else if (i === cols.length - 1) {
+            const ceoUser = allUsers.find((u) => u.position === 'CEO');
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: ceoUser?.displayName || '', signerTitle: ceoUser?.position || 'CEO' };
+          } else {
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
+          }
+        });
+        initialData[field.id] = gridValue;
+      } else if (field.type === 'body_text') {
+        initialData[field.id] = (field.fieldConfig as Record<string, unknown>)?.defaultValue || '';
+      } else {
+        initialData[field.id] = '';
+      }
+    });
+    return initialData;
+  };
 
   const filteredMemos = memos.filter((memo) => {
     const matchesSearch =
@@ -136,20 +130,14 @@ export default function MemosPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreateMemo = async () => {
-    if (!user || !selectedTemplateObj || !memoTitle) return;
+  const handleCreateMemo = async (sendEmail = false) => {
+    if (!selectedTemplateObj || !user) return;
 
     setCreating(true);
     try {
-      await createMemo(
-        selectedTemplateObj.id,
-        memoTitle,
-        sectionFormData,
-        user.id,
-        user.displayName,
-        user.department
-      );
-      setIsCreateDialogOpen(false);
+      const formData = { ...sectionFormData };
+      await createMemo(selectedTemplateObj.id, selectedTemplateObj.name, formData, user.id, user.displayName, user.department);
+      setCreateStep(null);
       setSelectedMemoType('');
       setSectionFormData({});
     } catch (error) {
@@ -225,71 +213,46 @@ export default function MemosPage() {
           </Select>
         </div>
 
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              สร้าง Memo ใหม่
-            </Button>
-          </DialogTrigger>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
-            <DialogDescription>เลือกประเภท Memo และกรอกข้อมูล Memo</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>ประเภท Memo *</Label>
-              <Select value={selectedMemoType} onValueChange={setSelectedMemoType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกประเภท" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <Button onClick={() => setCreateStep('select-template')}>
+          <Plus className="mr-2 h-4 w-4" />
+          สร้าง Memo ใหม่
+        </Button>
+      </div>
 
-            {selectedTemplateObj && (
-              <div className="space-y-3 border-t pt-4">
-                <Label className="text-sm font-semibold">ข้อมูลในเทมเพลต</Label>
-                {selectedTemplateObj.fields.map((field) => {
-                  if (field.type === 'memo_type') return null;
-
-                  return (
-                    <div key={field.id}>
-                      {field.type !== 'section_title' && field.type !== 'company_header' && (
-                        <Label className="text-xs text-slate-600 mb-1 block">{field.label}</Label>
-                      )}
-                      <SectionRenderer
-                        field={field}
-                        value={sectionFormData[field.id]}
-                        onChange={(value) => handleSectionChange(field.id, value)}
-                        readonly={false}
-                        memoType={selectedTemplateObj.name}
-                        ownerUser={user}
-                        users={allUsers}
-                        groups={[]}
-                      />
-                    </div>
-                  );
-                })}
+      {/* Create Memo - Select Template */}
+      {createStep === 'select-template' && (
+        <Dialog open={true} onOpenChange={() => setCreateStep(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-600">เลือกประเภท Memo</p>
+            {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
+            {templates.length > 0 && (
+              <div className="space-y-3">
+                <Select
+                  value={selectedMemoType}
+                  onValueChange={(val) => {
+                    setSelectedMemoType(val);
+                    const t = templates.find((x) => x.id === val);
+                    if (t) { setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกเทมเพลต" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-          </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={handleCreateMemo}
-              disabled={!selectedMemoType || creating}
-            >
-              {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      </div>
+            <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="rounded-lg border bg-white">
           <Table>
@@ -365,4 +328,20 @@ export default function MemosPage() {
       </div>
     </div>
   );
+
+  // Show create flow - edit memo (full page)
+  if (createStep === 'edit-memo' && selectedTemplateObj) {
+    return (
+      <MemoDocumentForm
+        template={selectedTemplateObj!}
+        formData={sectionFormData}
+        onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
+        onSubmit={handleCreateMemo}
+        onCancel={() => { setCreateStep(null); setSelectedMemoType(''); setSectionFormData({}); }}
+        creating={creating}
+        ownerUser={user}
+        users={allUsers}
+      />
+    );
+  }
 }

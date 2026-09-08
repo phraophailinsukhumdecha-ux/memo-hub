@@ -578,43 +578,43 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Memo - Select Template */}
+      {createStep === 'select-template' && (
+        <Dialog open={true} onOpenChange={() => setCreateStep(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>สร้าง Memo ใหม่</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-600">เลือกประเภท Memo</p>
+            {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
+            {templates.length > 0 && (
+              <div className="space-y-3">
+                <Select
+                  value={selectedTemplate?.id || ''}
+                  onValueChange={(val) => {
+                    const t = templates.find((x) => x.id === val);
+                    if (t) { setSelectedTemplate(t); setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกเทมเพลต" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 
-  // Show create flow
-  if (createStep === 'select-template') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">สร้าง Memo ใหม่</h2>
-          <p className="text-sm text-slate-600 mb-4">เลือกประเภท Memo</p>
-          {templates.length === 0 && <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>}
-          {templates.length > 0 && (
-            <div className="space-y-3">
-              <Select
-                value={selectedTemplate?.id || ''}
-                onValueChange={(val) => {
-                  const t = templates.find((x) => x.id === val);
-                  if (t) { setSelectedTemplate(t); setSectionFormData(initFormData(t)); setCreateStep('edit-memo'); }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกเทมเพลต" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="w-full" onClick={() => setCreateStep(null)}>ยกเลิก</Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
+  // Show create flow - edit memo (full page)
   if (createStep === 'edit-memo' && selectedTemplate) {
     const tmpl = selectedTemplate;
     return (
