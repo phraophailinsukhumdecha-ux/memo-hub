@@ -36,25 +36,22 @@ export function CheckboxGroup({ config, value = [], onChange, readonly }: Checkb
 
   return (
     <div className="border border-slate-900 p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="font-semibold text-sm text-slate-900">จุดประสงค์</span>
-        <div className={`grid ${gridCols} flex-1 gap-x-6 gap-y-1`}>
-          {options.map((option) => (
-            <label
-              key={option}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={value.includes(option)}
-                onChange={() => handleToggle(option)}
-                disabled={readonly}
-                className="h-4 w-4 rounded border-slate-300"
-              />
-              <span className="text-sm text-slate-900">{option}</span>
-            </label>
-          ))}
-        </div>
+      <div className={`grid ${gridCols} gap-x-6 gap-y-1`}>
+        {options.map((option) => (
+          <label
+            key={option}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={value.includes(option)}
+              onChange={() => handleToggle(option)}
+              disabled={readonly}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            <span className="text-sm text-slate-900">{option}</span>
+          </label>
+        ))}
       </div>
     </div>
   );
