@@ -188,7 +188,7 @@ function renderApprovalGridHtml(value: Record<string, Record<string, string>>): 
   return html;
 }
 
-function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>): string {
+function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>, baseUrl: string): string {
   const formData = (memo.formData || {}) as Record<string, unknown>;
 
   const renderSection = (field: { id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }): string => {
@@ -202,14 +202,15 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
         </div>`;
 
       case 'company_header': {
-        const logoUrl = (config.logoUrl as string) || '';
+        const logoUrlRaw = (config.logoUrl as string) || '';
+        const logoUrl = logoUrlRaw.startsWith('http') ? logoUrlRaw : `${baseUrl}${logoUrlRaw.startsWith('/') ? '' : '/'}${logoUrlRaw}`;
         const companyName = (config.companyName as string) || '';
         const addressLines = (config.addressLines as string[]) || [];
         return `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;">
           <table style="width:100%;border-collapse:collapse;">
             <tr>
               <td style="width:150px;vertical-align:top;">
-                ${logoUrl ? `<img src="${logoUrl}" style="max-width:140px;max-height:50px;" />` : ''}
+                ${logoUrl ? `<img src="${logoUrl}" style="max-width:140px;max-height:50px;" alt="logo" />` : ''}
               </td>
               <td style="text-align:right;vertical-align:top;font-size:11px;line-height:1.5;">
                 <p style="margin:0;font-weight:600;">${escapeHtml(companyName)}</p>
@@ -474,7 +475,7 @@ MemoHub Digital Memo & Approval System`;
           .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
           .join('');
 
-        const previewHtml = renderMemoPreviewHtml(memo, templateFields);
+        const previewHtml = renderMemoPreviewHtml(memo, templateFields, baseUrl);
 
         const htmlEmail = `<!DOCTYPE html>
 <html>
