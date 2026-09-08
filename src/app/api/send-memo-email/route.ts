@@ -154,12 +154,34 @@ export async function POST(request: NextRequest) {
 สถานะ: {status}
 Deadline: {deadline}
 
-กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้: {memo_url}
+กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้
 
 MemoHub Digital Memo & Approval System`;
 
     const subject = replaceVariables(subjectTemplate, vars);
     const bodyText = replaceVariables(bodyTemplate, vars);
+
+    const approveUrl = `${baseUrl}/home?memo=${memoId}&action=approve`;
+    const cancelUrl = `${baseUrl}/home?memo=${memoId}&action=cancel`;
+    const bodyHtml = bodyText
+      .split('\n')
+      .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
+      .join('');
+
+    const htmlEmail = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+  <h2 style="color:#1e293b;">${subject}</h2>
+  ${bodyHtml}
+  <div style="margin:24px 0;text-align:center;">
+    <a href="${approveUrl}" style="display:inline-block;padding:12px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">อนุมัติ</a>
+    <a href="${cancelUrl}" style="display:inline-block;padding:12px 32px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">ปฏิเสธ</a>
+  </div>
+  <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
+  <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
+</body>
+</html>`;
 
     const transporter = createTransporter(smtp!);
     const sender = buildSender(smtp!);
@@ -173,7 +195,7 @@ MemoHub Digital Memo & Approval System`;
           subject,
           replyTo: smtp!.fromEmail || undefined,
           text: content.text,
-          html: content.html,
+          html: htmlEmail,
         });
         return { to, ok: true, message: 'ส่งสำเร็จ' };
       } catch (e) {

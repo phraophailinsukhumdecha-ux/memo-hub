@@ -110,6 +110,24 @@ export default function HomePage() {
     }
   }, [user, router]);
 
+  useEffect(() => {
+    if (!user || memos.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const memoId = params.get('memo');
+    const action = params.get('action');
+    if (memoId) {
+      const memo = memos.find((m) => m.id === memoId || m.memoNumber === memoId);
+      if (memo) {
+        setSelectedMemo(memo);
+        setIsDetailOpen(true);
+        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && isApprover && !hasUserSigned(memo, user.id)) {
+          setTimeout(() => handleApprove(memo.id), 500);
+        }
+        window.history.replaceState({}, '', '/home');
+      }
+    }
+  }, [user, memos]);
+
   const detailTemplate = useMemo((): MemoTemplate | null => {
     if (!selectedMemo?.templateId) return null;
     return templates.find((t) => t.id === selectedMemo.templateId) || null;
