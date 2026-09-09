@@ -833,35 +833,26 @@ Deadline: {deadline}
                       <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>
                     ) : (
                       <div className="space-y-6">
-                        {templates.map((t) => {
-                          const formRowField = t.fields?.find((f) => f.type === 'form_row');
-                          if (!formRowField) return null;
-                          const config = formRowField.fieldConfig as { fields?: Array<{ name: string; label: string; type: string; options?: string[] }> } | undefined;
-                          const formFields = config?.fields || [];
-                          return (
-                            <div key={t.id} className="border rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-semibold text-slate-900">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  แก้ไข Sections
-                                </Button>
-                              </div>
-                              <div className="space-y-2">
-                                {formFields.map((f, i) => (
-                                  <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border">
-                                    <span className="text-sm font-medium text-slate-700 w-28">{f.label}</span>
-                                    <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
-                                    {f.type === 'dropdown' && f.options && (
-                                      <span className="text-xs text-slate-500 truncate">({f.options.join(', ')})</span>
-                                    )}
-                                    <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
-                                  </div>
-                                ))}
-                              </div>
+                        {templates.map((t) => (
+                          <div key={t.id} className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-semibold text-slate-900">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
+                                <Settings className="h-4 w-4 mr-1" />
+                                แก้ไข Sections
+                              </Button>
                             </div>
-                          );
-                        })}
+                            <div className="space-y-2">
+                              {(t.fields || []).filter((f) => f.type !== 'section_title' && f.type !== 'company_header').map((f, i) => (
+                                <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border">
+                                  <span className="text-sm font-medium text-slate-700 w-32">{f.label}</span>
+                                  <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
+                                  <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </CardContent>
