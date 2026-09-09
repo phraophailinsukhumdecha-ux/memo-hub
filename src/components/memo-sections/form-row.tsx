@@ -39,14 +39,11 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
     return requiredByType.includes(memoType);
   };
 
-  const skipFields = readonly ? ['quotationNo', 'jobNo', 'date', 'to'] : [];
-  const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
-  const filteredFields = cfg.fields.filter((f) => !skipFields.includes(f.name));
-
   if (readonly) {
+    // Show all fields from config - no filtering
     return (
       <div className="space-y-1">
-        {filteredFields.map((f) => (
+        {cfg.fields.map((f) => (
           <div key={f.name} className="flex items-center gap-2 text-sm">
             <span className="font-semibold text-slate-900">{f.label}</span>
             <span className="text-slate-900">: {value[f.name] || '-'}</span>
@@ -56,10 +53,12 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
     );
   }
 
-  for (let i = 0; i < filteredFields.length; i += 2) {
+  // Editable mode - pair fields into rows of 2
+  const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
+  for (let i = 0; i < cfg.fields.length; i += 2) {
     rows.push({
-      left: filteredFields[i],
-      right: filteredFields[i + 1] || null,
+      left: cfg.fields[i],
+      right: cfg.fields[i + 1] || null,
     });
   }
 
@@ -75,9 +74,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
               )}
             </Label>
             <div className="flex-1">
-              {readonly ? (
-                <span className="text-sm text-slate-900">{value[row.left.name] || ''}</span>
-              ) : row.left.type === 'date' ? (
+              {row.left.type === 'date' ? (
                 <input
                   type="date"
                   value={value[row.left.name] || ''}
@@ -114,9 +111,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
                 )}
               </Label>
               <div className="flex-1">
-                {readonly ? (
-                  <span className="text-sm text-slate-900">{value[row.right?.name || ''] || ''}</span>
-                ) : row.right?.type === 'date' ? (
+                {row.right?.type === 'date' ? (
                   <input
                     type="date"
                     value={value[row.right?.name || ''] || ''}
