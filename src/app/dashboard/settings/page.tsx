@@ -826,7 +826,7 @@ Deadline: {deadline}
                 <Card>
                   <CardHeader>
                     <CardTitle>ตั้งค่าช่องกรอกข้อมูล</CardTitle>
-                    <CardDescription>แก้ไข Label, Type, Options และลำดับของช่องกรอกข้อมูลใน Memo</CardDescription>
+                    <CardDescription>แก้ไข Label, Type, Options และลำดับของช่องกรอกข้อมูลใน Memo — กดแก้ไข Sections เพื่อบันทึก</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {templates.length === 0 ? (
@@ -850,7 +850,7 @@ Deadline: {deadline}
                               <div className="space-y-3">
                                 {formFields.map((f, i) => (
                                   <div key={i} className="border rounded-lg p-3 bg-slate-50">
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-3 mb-2">
                                       <div>
                                         <Label className="text-xs">Label</Label>
                                         <p className="text-sm font-medium text-slate-700">{f.label}</p>
@@ -865,9 +865,35 @@ Deadline: {deadline}
                                       </div>
                                     </div>
                                     {f.type === 'dropdown' && f.options && (
-                                      <div className="mt-2 pt-2 border-t">
+                                      <div className="pt-2 border-t">
                                         <Label className="text-xs">Options</Label>
-                                        <p className="text-xs text-slate-500">{f.options.join(', ')}</p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {f.options.map((opt, oi) => (
+                                            <span key={oi} className="text-xs bg-white border px-2 py-0.5 rounded">{opt}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {f.type === 'text' && (
+                                      <div className="pt-2 border-t">
+                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center">
+                                          <span className="text-xs text-slate-400">ตัวอย่าง input</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {f.type === 'date' && (
+                                      <div className="pt-2 border-t">
+                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center">
+                                          <span className="text-xs text-slate-400">09/09/2026</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {f.type === 'dropdown' && (
+                                      <div className="pt-2 border-t">
+                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center justify-between">
+                                          <span className="text-xs text-slate-400">เลือก</span>
+                                          <span className="text-xs text-slate-400">▼</span>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
