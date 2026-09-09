@@ -78,16 +78,26 @@ export function MemoDocumentForm({
 
     switch (field.type) {
       case 'form_row': {
-        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string }>) || [];
+        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[] }>) || [];
         const value = (formData[field.id] as Record<string, string>) || {};
         const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
         const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
         const checkboxOptions = (checkboxConfig?.options as string[]) || [];
         const checkboxValue = checkboxField ? (formData[checkboxField.id] as string[]) || [] : [];
 
+        const sortOrder = ['quotationNo', 'jobNo', 'date', 'subject'];
+        const sortedFields = [...fields].sort((a, b) => {
+          const aIdx = sortOrder.indexOf(a.name);
+          const bIdx = sortOrder.indexOf(b.name);
+          if (aIdx === -1 && bIdx === -1) return 0;
+          if (aIdx === -1) return 1;
+          if (bIdx === -1) return -1;
+          return aIdx - bIdx;
+        });
+
         return (
           <div key={field.id} className="space-y-3">
-            {fields.map((f, idx) => (
+            {sortedFields.map((f, idx) => (
               <div key={f.name}>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-slate-700">{f.label}</Label>
@@ -236,15 +246,15 @@ export function MemoDocumentForm({
           <div className="w-1/2 overflow-y-auto border-r">
             <div className="p-6 space-y-4">
               <h3 className="text-sm font-semibold text-slate-700">กรอกข้อมูล Memo</h3>
-              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header').map((field) => renderField(field))}
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-slate-700">REF. NO.</Label>
+                <Label className="text-sm font-medium text-slate-700">REF. No.</Label>
                 <Input
                   value={(formData.refNo as string) || ''}
                   onChange={(e) => onChange('refNo', e.target.value)}
                   placeholder="เลขที่อ้างอิง (ถ้ามี)"
                 />
               </div>
+              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header').map((field) => renderField(field))}
             </div>
           </div>
 
