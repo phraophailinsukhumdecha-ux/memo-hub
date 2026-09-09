@@ -14,12 +14,11 @@ export async function POST() {
     const now = new Date();
     let totalDocs = 0;
 
-    // Clear all collections first
+    // Clear collections (except memos - เก็บข้อมูลจริงไว้)
     await Promise.all([
       clearCollection('users'),
       clearCollection('memoConditions'),
       clearCollection('memoTemplates'),
-      clearCollection('memos'),
       clearCollection('notifications'),
       clearCollection('eventLogs'),
       clearCollection('syslogs'),
