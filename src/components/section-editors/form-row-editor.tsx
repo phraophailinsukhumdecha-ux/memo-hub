@@ -48,6 +48,25 @@ export function FormRowEditor({ config, onChange }: FormRowEditorProps) {
     updateField(index, { requiredByType: updated });
   };
 
+  const addOption = (index: number) => {
+    const field = fields[index];
+    const current = field.options || [];
+    updateField(index, { options: [...current, ''] });
+  };
+
+  const updateOption = (fieldIndex: number, optionIndex: number, value: string) => {
+    const field = fields[fieldIndex];
+    const options = [...(field.options || [])];
+    options[optionIndex] = value;
+    updateField(fieldIndex, { options });
+  };
+
+  const removeOption = (fieldIndex: number, optionIndex: number) => {
+    const field = fields[fieldIndex];
+    const options = (field.options || []).filter((_, i) => i !== optionIndex);
+    updateField(fieldIndex, { options });
+  };
+
   return (
     <div className="space-y-3">
       <Label className="text-sm font-semibold">Fields ในแถว</Label>
@@ -91,7 +110,7 @@ export function FormRowEditor({ config, onChange }: FormRowEditorProps) {
                 <Label className="text-xs">Type</Label>
                 <Select
                   value={field.type}
-                  onValueChange={(v) => updateField(index, { type: v as 'text' | 'date' })}
+                  onValueChange={(v) => updateField(index, { type: v as 'text' | 'date' | 'dropdown' })}
                 >
                   <SelectTrigger className="h-8">
                     <SelectValue />
@@ -99,6 +118,7 @@ export function FormRowEditor({ config, onChange }: FormRowEditorProps) {
                   <SelectContent>
                     <SelectItem value="text">Text</SelectItem>
                     <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="dropdown">Dropdown</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -112,6 +132,18 @@ export function FormRowEditor({ config, onChange }: FormRowEditorProps) {
                 />
               </div>
             </div>
+            {field.type === 'dropdown' && (
+              <div className="space-y-1">
+                <Label className="text-xs">Options (แยกด้วย comma)</Label>
+                <Input
+                  value={(field.options || []).join(', ')}
+                  onChange={(e) => updateField(index, { options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="ขออนุมัติ, ขอให้ดำเนินการ, ให้ข้อคิดเห็น, แจ้งให้ทราบ"
+                  className="h-8"
+                />
+                <p className="text-xs text-slate-400">แยกตัวเลือกด้วย comma (,)</p>
+              </div>
+            )}
             <div>
               <Label className="text-xs">บังคับกรอกตามประเภท Memo</Label>
               <div className="flex gap-2 mt-1">
