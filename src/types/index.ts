@@ -84,10 +84,11 @@ export interface FormRowConfig {
   fields: {
     name: string;
     label: string;
-    type: 'text' | 'date';
+    type: 'text' | 'date' | 'dropdown';
     placeholder?: string;
     width?: 'full' | 'half';
     requiredByType?: string[];
+    options?: string[];
   }[];
 }
 

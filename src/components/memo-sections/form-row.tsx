@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormRowConfig } from '@/types';
 
 interface FormRowProps {
@@ -83,6 +84,17 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
                   onChange={(e) => handleChange(row.left.name, e.target.value)}
                   className="w-full text-sm border-0 bg-transparent p-0 focus:outline-none text-slate-900"
                 />
+              ) : row.left.type === 'dropdown' ? (
+                <Select value={value[row.left.name] || ''} onValueChange={(val) => handleChange(row.left.name, val)}>
+                  <SelectTrigger className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0">
+                    <SelectValue placeholder="เลือก" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(row.left.options || []).map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <Input
                   value={value[row.left.name] || ''}
@@ -111,6 +123,17 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
                     onChange={(e) => handleChange(row.right?.name || '', e.target.value)}
                     className="w-full text-sm border-0 bg-transparent p-0 focus:outline-none text-slate-900"
                   />
+                ) : row.right?.type === 'dropdown' ? (
+                  <Select value={value[row.right?.name || ''] || ''} onValueChange={(val) => handleChange(row.right?.name || '', val)}>
+                    <SelectTrigger className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0">
+                      <SelectValue placeholder="เลือก" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(row.right?.options || []).map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <Input
                     value={value[row.right?.name || ''] || ''}
