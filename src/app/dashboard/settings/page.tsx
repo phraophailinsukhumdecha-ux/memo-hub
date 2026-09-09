@@ -188,6 +188,73 @@ export default function SettingsPage() {
     }
   };
 
+  // Form field editing state
+  const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }>>([]);
+  const [fieldSaving, setFieldSaving] = useState(false);
+
+  const handleEditFormFields = (template: MemoTemplate) => {
+    const formRow = (template.fields || []).find((f) => f.type === 'form_row');
+    const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }> };
+    setEditingFormFields(config.fields ? JSON.parse(JSON.stringify(config.fields)) : []);
+    setEditingFieldTemplateId(template.id);
+  };
+
+  const handleSaveFormFields = async () => {
+    if (!editingFieldTemplateId) return;
+    setFieldSaving(true);
+    try {
+      const template = templates.find((t) => t.id === editingFieldTemplateId);
+      if (!template) return;
+      const fields = template.fields ? JSON.parse(JSON.stringify(template.fields)) : [];
+      const formRowIndex = fields.findIndex((f: MemoField) => f.type === 'form_row');
+      if (formRowIndex >= 0) {
+        fields[formRowIndex].fieldConfig = { fields: editingFormFields };
+      } else {
+        fields.push({
+          id: 'form_row_1',
+          name: 'form_data',
+          label: 'ฟอร์ม',
+          type: 'form_row',
+          required: false,
+          fieldConfig: { fields: editingFormFields },
+        });
+      }
+      await updateTemplate(editingFieldTemplateId, { fields });
+      setEditingFieldTemplateId(null);
+    } finally {
+      setFieldSaving(false);
+    }
+  };
+
+  const addFormField = () => {
+    setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text' }]);
+  };
+
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }>) => {
+    const updated = [...editingFormFields];
+    updated[index] = { ...updated[index], ...updates };
+    setEditingFormFields(updated);
+  };
+
+  const removeFormField = (index: number) => {
+    setEditingFormFields(editingFormFields.filter((_, i) => i !== index));
+  };
+
+  const moveFormFieldUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...editingFormFields];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setEditingFormFields(updated);
+  };
+
+  const moveFormFieldDown = (index: number) => {
+    if (index >= editingFormFields.length - 1) return;
+    const updated = [...editingFormFields];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setEditingFormFields(updated);
+  };
+
   // Template CRUD (name + description only)
   const handleCreateTemplate = () => {
     setEditingTemplate(null);
@@ -778,87 +845,137 @@ Deadline: {deadline}
               </CardContent>
             </Card>
           ) : (
-            <Tabs defaultValue="list">
-              <TabsList>
-                <TabsTrigger value="list">เทมเพลต</TabsTrigger>
-                <TabsTrigger value="fields">Form Fields</TabsTrigger>
-              </TabsList>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div><CardTitle>เทมเพลต Memo</CardTitle><CardDescription>จัดการเทมเพลตสำหรับสร้าง Memo</CardDescription></div>
+                <Button onClick={handleCreateTemplate}><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {templates.map((t) => (
+                  <div key={t.id} className="border rounded-lg overflow-hidden">
+                    {/* Template header */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 border-b">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-slate-500" />
+                        <div>
+                          <h4 className="font-semibold text-slate-900">{t.name || <span className="text-slate-400 italic">ไม่มีชื่อ</span>}</h4>
+                          {t.description && <p className="text-xs text-slate-500">{t.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditTemplate(t)}>
+                          <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไขชื่อ
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
+                          <Settings className="h-3.5 w-3.5 mr-1" />Sections
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(t)}>
+                          <Copy className="h-3.5 w-3.5 mr-1" />คัดลอก
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteTemplate(t.id)}>
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />ลบ
+                        </Button>
+                      </div>
+                    </div>
 
-              <TabsContent value="list">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div><CardTitle>เทมเพลต Memo</CardTitle><CardDescription>จัดการเทมเพลตสำหรับสร้าง Memo</CardDescription></div>
-                    <Button onClick={handleCreateTemplate}><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader><TableRow><TableHead>ประเภท Memo</TableHead><TableHead>Sections</TableHead><TableHead className="w-40"></TableHead></TableRow></TableHeader>
-                      <TableBody>
-                        {templates.map((t) => (
-                          <TableRow key={t.id}>
-                            <TableCell className="font-medium">{t.name || <span className="text-slate-400 italic">ไม่มีชื่อ</span>}</TableCell>
-                            <TableCell>{t.fields?.length || 0} sections</TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-1">
-                                <Button variant="ghost" size="icon" onClick={() => handleEditTemplate(t)} title="แก้ไขข้อมูล">
-                                  <FileText className="h-4 w-4" />
+                    {/* Form Fields section */}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="text-sm font-semibold text-slate-700">ช่องกรอกข้อมูล Memo</h5>
+                        {editingFieldTemplateId !== t.id ? (
+                          <Button variant="ghost" size="sm" onClick={() => handleEditFormFields(t)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไข
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setEditingFieldTemplateId(null)}>ยกเลิก</Button>
+                            <Button size="sm" onClick={handleSaveFormFields} disabled={fieldSaving}>
+                              <Save className="h-3.5 w-3.5 mr-1" />{fieldSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {editingFieldTemplateId === t.id ? (
+                        <div className="space-y-2">
+                          {editingFormFields.map((f, i) => (
+                            <div key={i} className="flex items-center gap-2 p-3 border rounded-lg bg-white">
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldUp(i)} disabled={i === 0}>
+                                  <ChevronUp className="h-3 w-3" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenSections(t)} title="จัดการ Sections">
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDuplicateTemplate(t)} title="คัดลอก">
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteTemplate(t.id)} title="ลบ">
-                                  <Trash2 className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldDown(i)} disabled={i === editingFormFields.length - 1}>
+                                  <ChevronDown className="h-3 w-3" />
                                 </Button>
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="fields">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>ตั้งค่าช่องกรอกข้อมูล</CardTitle>
-                    <CardDescription>แก้ไข Label, Type, Options — กดแก้ไข Sections เพื่อบันทึก</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {templates.length === 0 ? (
-                      <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>
-                    ) : (
-                      <div className="space-y-6">
-                        {templates.map((t) => (
-                          <div key={t.id} className="border rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="font-semibold text-slate-900">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
-                              <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
-                                <Settings className="h-4 w-4 mr-1" />
-                                แก้ไข Sections
+                              <Input
+                                className="w-40"
+                                placeholder="Label"
+                                value={f.label}
+                                onChange={(e) => updateFormField(i, { label: e.target.value })}
+                              />
+                              <Select value={f.type} onValueChange={(v) => updateFormField(i, { type: v })}>
+                                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="text">Text</SelectItem>
+                                  <SelectItem value="date">Date</SelectItem>
+                                  <SelectItem value="dropdown">Dropdown</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {f.type === 'dropdown' && (
+                                <Input
+                                  className="flex-1"
+                                  placeholder="Options (คั่นด้วย comma)"
+                                  value={(f.options || []).join(', ')}
+                                  onChange={(e) => updateFormField(i, { options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                                />
+                              )}
+                              <Input
+                                className="w-32"
+                                placeholder="Key"
+                                value={f.name}
+                                onChange={(e) => updateFormField(i, { name: e.target.value })}
+                              />
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeFormField(i)}>
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                            <div className="space-y-2">
-                              {(t.fields || []).filter((f) => f.type !== 'section_title' && f.type !== 'company_header').map((f, i) => (
-                                <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border">
-                                  <span className="text-sm font-medium text-slate-700 w-32">{f.label}</span>
-                                  <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
-                                  <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                          ))}
+                          <Button variant="outline" size="sm" onClick={addFormField}>
+                            <Plus className="h-3.5 w-3.5 mr-1" />เพิ่มช่อง
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {(() => {
+                            const formRow = (t.fields || []).find((f) => f.type === 'form_row');
+                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] }> };
+                            const fields = config.fields || [];
+                            if (fields.length === 0) {
+                              <p className="text-xs text-slate-500 text-center py-2">ยังไม่มีช่องกรอกข้อมูล</p>;
+                            }
+                            return fields.map((f, i) => (
+                              <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
+                                <span className="font-medium text-slate-700 w-32">{f.label || <span className="italic text-slate-400">ไม่มี label</span>}</span>
+                                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
+                                {f.type === 'dropdown' && f.options && (
+                                  <span className="text-xs text-slate-500 ml-1">({f.options.join(', ')})</span>
+                                )}
+                                <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {templates.length === 0 && (
+                  <p className="text-center text-slate-500 py-8">ยังไม่มีเทมเพลต — กด &quot;สร้างเทมเพลตใหม่&quot; เพื่อเริ่มต้น</p>
+                )}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
