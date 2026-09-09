@@ -168,7 +168,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
 
     const displayName = isFirst
       ? (ownerUser?.displayName || colData.name || '')
-      : colData.name || (isLast ? 'จิรพล ยาวะพันธุ์' : '');
+      : colData.name || '';
     const displayTitle = isFirst
       ? (ownerUser?.department || colData.signerTitle || '')
       : colData.signerTitle || (isLast ? 'CEO' : '');
