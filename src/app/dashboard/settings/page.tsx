@@ -832,7 +832,7 @@ Deadline: {deadline}
                     {templates.length === 0 ? (
                       <p className="text-center text-slate-500 py-4">ยังไม่มีเทมเพลต</p>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {templates.map((t) => {
                           const formRowField = t.fields?.find((f) => f.type === 'form_row');
                           if (!formRowField) return null;
@@ -840,35 +840,36 @@ Deadline: {deadline}
                           const formFields = config?.fields || [];
                           return (
                             <div key={t.id} className="border rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center justify-between mb-4">
                                 <h4 className="font-semibold text-slate-900">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
                                 <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
                                   <Settings className="h-4 w-4 mr-1" />
                                   แก้ไข Sections
                                 </Button>
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 {formFields.map((f, i) => (
-                                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded border">
-                                    <div className="flex-1 grid grid-cols-3 gap-2">
+                                  <div key={i} className="border rounded-lg p-3 bg-slate-50">
+                                    <div className="grid grid-cols-2 gap-3">
                                       <div>
-                                        <p className="text-xs text-slate-500 mb-1">Label</p>
+                                        <Label className="text-xs">Label</Label>
                                         <p className="text-sm font-medium text-slate-700">{f.label}</p>
                                       </div>
                                       <div>
-                                        <p className="text-xs text-slate-500 mb-1">Type</p>
+                                        <Label className="text-xs">Type</Label>
                                         <span className="text-xs text-slate-700 bg-slate-200 px-2 py-0.5 rounded">{f.type}</span>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-slate-500 mb-1">Key</p>
-                                        <p className="text-xs text-slate-400">{f.name}</p>
                                       </div>
                                     </div>
                                     {f.type === 'dropdown' && f.options && (
-                                      <div className="text-xs text-slate-500 border-t pt-2 mt-1">
-                                        <span className="font-medium">Options:</span> {f.options.join(', ')}
+                                      <div className="mt-2 pt-2 border-t">
+                                        <Label className="text-xs">Options</Label>
+                                        <p className="text-xs text-slate-500">{f.options.join(', ')}</p>
                                       </div>
                                     )}
+                                    <div className="mt-2 pt-2 border-t">
+                                      <Label className="text-xs">Key</Label>
+                                      <p className="text-xs text-slate-400">{f.name}</p>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
