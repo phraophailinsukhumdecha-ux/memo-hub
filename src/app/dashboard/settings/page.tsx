@@ -850,7 +850,7 @@ Deadline: {deadline}
                               <div className="space-y-3">
                                 {formFields.map((f, i) => (
                                   <div key={i} className="border rounded-lg p-3 bg-slate-50">
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-3 gap-3">
                                       <div>
                                         <Label className="text-xs">Label</Label>
                                         <p className="text-sm font-medium text-slate-700">{f.label}</p>
@@ -859,6 +859,10 @@ Deadline: {deadline}
                                         <Label className="text-xs">Type</Label>
                                         <span className="text-xs text-slate-700 bg-slate-200 px-2 py-0.5 rounded">{f.type}</span>
                                       </div>
+                                      <div>
+                                        <Label className="text-xs">Key</Label>
+                                        <p className="text-xs text-slate-400">{f.name}</p>
+                                      </div>
                                     </div>
                                     {f.type === 'dropdown' && f.options && (
                                       <div className="mt-2 pt-2 border-t">
@@ -866,10 +870,6 @@ Deadline: {deadline}
                                         <p className="text-xs text-slate-500">{f.options.join(', ')}</p>
                                       </div>
                                     )}
-                                    <div className="mt-2 pt-2 border-t">
-                                      <Label className="text-xs">Key</Label>
-                                      <p className="text-xs text-slate-400">{f.name}</p>
-                                    </div>
                                   </div>
                                 ))}
                               </div>
