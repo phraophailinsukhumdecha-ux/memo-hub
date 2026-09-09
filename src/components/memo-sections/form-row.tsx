@@ -41,6 +41,20 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
   const skipFields = readonly ? ['quotationNo', 'jobNo', 'date', 'to'] : [];
   const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
   const filteredFields = cfg.fields.filter((f) => !skipFields.includes(f.name));
+
+  if (readonly) {
+    return (
+      <div className="space-y-1">
+        {filteredFields.map((f) => (
+          <div key={f.name} className="flex items-center gap-2 text-sm">
+            <span className="font-semibold text-slate-900">{f.label}</span>
+            <span className="text-slate-900">: {value[f.name] || '-'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   for (let i = 0; i < filteredFields.length; i += 2) {
     rows.push({
       left: filteredFields[i],
