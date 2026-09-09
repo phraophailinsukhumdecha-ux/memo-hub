@@ -70,11 +70,11 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
                   <td className="text-slate-900 py-1 whitespace-nowrap">: {refNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation no.</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation No.</td>
                   <td className="text-slate-900 py-1 whitespace-nowrap">: {quotationNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job no.</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job No.</td>
                   <td className="text-slate-900 py-1 whitespace-nowrap">: {jobNo || '-'}</td>
                 </tr>
                 <tr>
