@@ -85,19 +85,9 @@ export function MemoDocumentForm({
         const checkboxOptions = (checkboxConfig?.options as string[]) || [];
         const checkboxValue = checkboxField ? (formData[checkboxField.id] as string[]) || [] : [];
 
-        const sortOrder = ['quotationNo', 'jobNo', 'date', 'subject'];
-        const sortedFields = [...fields].sort((a, b) => {
-          const aIdx = sortOrder.indexOf(a.name);
-          const bIdx = sortOrder.indexOf(b.name);
-          if (aIdx === -1 && bIdx === -1) return 0;
-          if (aIdx === -1) return 1;
-          if (bIdx === -1) return -1;
-          return aIdx - bIdx;
-        });
-
         return (
           <div key={field.id} className="space-y-3">
-            {sortedFields.map((f, idx) => (
+            {fields.map((f, idx) => (
               <div key={f.name}>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-slate-700">{f.label}</Label>

@@ -43,7 +43,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           config={field.fieldConfig as CompanyHeaderConfig | undefined}
           readonly={readonly}
           memoNumber={formData?.memoNumber as string}
-          refNo={formRowField?.refNo || (formData?.refNo as string)}
+          refNo={formRowField?.RefNo || formRowField?.refNo || (formData?.RefNo as string) || (formData?.refNo as string)}
           quotationNo={formRowField?.quotationNo}
           jobNo={formRowField?.jobNo}
           date={formRowField?.date}

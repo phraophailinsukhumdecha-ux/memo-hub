@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
+// Default form_row fields matching the creation form
 const DEFAULT_FORM_ROW_FIELDS = [
-  { name: 'refNo', label: 'REF. No.', type: 'text', placeholder: 'เลขที่อ้างอิง (ถ้ามี)' },
+  { name: 'RefNo', label: 'REF. NO.', type: 'text' },
   { name: 'quotationNo', label: 'Quotation No.', type: 'text' },
   { name: 'jobNo', label: 'Job No.', type: 'text' },
   { name: 'date', label: 'Date', type: 'date' },
   { name: 'subject', label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'] },
+  { name: 'detail', label: 'เรื่องขออนุมัติ', type: 'text' },
   { name: 'to', label: 'To', type: 'text' },
 ];
 
@@ -21,12 +23,10 @@ export async function POST() {
     const template = templateDoc.data()!;
     const fields = template.fields || [];
 
-    // Find form_row_1 index
     const formRowIndex = fields.findIndex((f: Record<string, unknown>) => f.id === 'form_row_1');
 
     let updatedFields;
     if (formRowIndex >= 0) {
-      // form_row_1 exists - replace fields entirely with correct ones
       updatedFields = fields.map((field: Record<string, unknown>) => {
         if (field.id === 'form_row_1') {
           return { ...field, fieldConfig: { fields: DEFAULT_FORM_ROW_FIELDS } };
@@ -34,7 +34,6 @@ export async function POST() {
         return field;
       });
     } else {
-      // form_row_1 doesn't exist - create it
       updatedFields = [
         ...fields,
         {
@@ -43,9 +42,7 @@ export async function POST() {
           label: 'กรอกข้อมูล Memo',
           type: 'form_row',
           required: false,
-          fieldConfig: {
-            fields: DEFAULT_FORM_ROW_FIELDS,
-          },
+          fieldConfig: { fields: DEFAULT_FORM_ROW_FIELDS },
         },
       ];
     }
