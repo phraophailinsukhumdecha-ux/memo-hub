@@ -97,6 +97,17 @@ export function MemoDocumentForm({
                       value={value[f.name] || ''}
                       onChange={(e) => onChange(field.id, { ...value, [f.name]: e.target.value })}
                     />
+                  ) : f.type === 'dropdown' ? (
+                    <Select value={value[f.name] || ''} onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="เลือก" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {((f as Record<string, unknown>).options as string[] || []).map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <Input
                       value={value[f.name] || ''}
