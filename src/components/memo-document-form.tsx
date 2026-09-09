@@ -246,14 +246,6 @@ export function MemoDocumentForm({
           <div className="w-1/2 overflow-y-auto border-r">
             <div className="p-6 space-y-4">
               <h3 className="text-sm font-semibold text-slate-700">กรอกข้อมูล Memo</h3>
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-slate-700">REF. No.</Label>
-                <Input
-                  value={(formData.refNo as string) || ''}
-                  onChange={(e) => onChange('refNo', e.target.value)}
-                  placeholder="เลขที่อ้างอิง (ถ้ามี)"
-                />
-              </div>
               {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header').map((field) => renderField(field))}
             </div>
           </div>

@@ -21,7 +21,7 @@ export async function POST() {
     const template = templateDoc.data()!;
     const fields = template.fields || [];
 
-    // Check if form_row_1 exists
+    // Find form_row_1 index
     const formRowIndex = fields.findIndex((f: Record<string, unknown>) => f.id === 'form_row_1');
 
     let updatedFields;
@@ -54,7 +54,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: formRowIndex >= 0 ? 'Template form_row updated with correct fields' : 'form_row_1 created successfully',
+      message: 'Template form_row updated',
       fields: DEFAULT_FORM_ROW_FIELDS,
     });
   } catch (error) {
