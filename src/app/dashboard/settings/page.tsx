@@ -826,7 +826,7 @@ Deadline: {deadline}
                 <Card>
                   <CardHeader>
                     <CardTitle>ตั้งค่าช่องกรอกข้อมูล</CardTitle>
-                    <CardDescription>แก้ไข Label, Type, Options และลำดับของช่องกรอกข้อมูลใน Memo — กดแก้ไข Sections เพื่อบันทึก</CardDescription>
+                    <CardDescription>แก้ไข Label, Type, Options — กดแก้ไข Sections เพื่อบันทึก</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {templates.length === 0 ? (
@@ -847,55 +847,15 @@ Deadline: {deadline}
                                   แก้ไข Sections
                                 </Button>
                               </div>
-                              <div className="space-y-3">
+                              <div className="space-y-2">
                                 {formFields.map((f, i) => (
-                                  <div key={i} className="border rounded-lg p-3 bg-slate-50">
-                                    <div className="grid grid-cols-3 gap-3 mb-2">
-                                      <div>
-                                        <Label className="text-xs">Label</Label>
-                                        <p className="text-sm font-medium text-slate-700">{f.label}</p>
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">Type</Label>
-                                        <span className="text-xs text-slate-700 bg-slate-200 px-2 py-0.5 rounded">{f.type}</span>
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">Key</Label>
-                                        <p className="text-xs text-slate-400">{f.name}</p>
-                                      </div>
-                                    </div>
+                                  <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border">
+                                    <span className="text-sm font-medium text-slate-700 w-28">{f.label}</span>
+                                    <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
                                     {f.type === 'dropdown' && f.options && (
-                                      <div className="pt-2 border-t">
-                                        <Label className="text-xs">Options</Label>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {f.options.map((opt, oi) => (
-                                            <span key={oi} className="text-xs bg-white border px-2 py-0.5 rounded">{opt}</span>
-                                          ))}
-                                        </div>
-                                      </div>
+                                      <span className="text-xs text-slate-500 truncate">({f.options.join(', ')})</span>
                                     )}
-                                    {f.type === 'text' && (
-                                      <div className="pt-2 border-t">
-                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center">
-                                          <span className="text-xs text-slate-400">ตัวอย่าง input</span>
-                                        </div>
-                                      </div>
-                                    )}
-                                    {f.type === 'date' && (
-                                      <div className="pt-2 border-t">
-                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center">
-                                          <span className="text-xs text-slate-400">09/09/2026</span>
-                                        </div>
-                                      </div>
-                                    )}
-                                    {f.type === 'dropdown' && (
-                                      <div className="pt-2 border-t">
-                                        <div className="h-8 border border-slate-300 rounded bg-white px-3 flex items-center justify-between">
-                                          <span className="text-xs text-slate-400">เลือก</span>
-                                          <span className="text-xs text-slate-400">▼</span>
-                                        </div>
-                                      </div>
-                                    )}
+                                    <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
                                   </div>
                                 ))}
                               </div>
