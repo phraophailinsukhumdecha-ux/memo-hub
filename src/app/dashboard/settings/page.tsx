@@ -826,7 +826,7 @@ Deadline: {deadline}
                 <Card>
                   <CardHeader>
                     <CardTitle>ตั้งค่าช่องกรอกข้อมูล</CardTitle>
-                    <CardDescription>แก้ไข Label, Type และลำดับของช่องกรอกข้อมูลใน Memo</CardDescription>
+                    <CardDescription>แก้ไข Label, Type, Options และลำดับของช่องกรอกข้อมูลใน Memo</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {templates.length === 0 ? (
@@ -840,23 +840,38 @@ Deadline: {deadline}
                           const formFields = config?.fields || [];
                           return (
                             <div key={t.id} className="border rounded-lg p-4">
-                              <h4 className="font-semibold text-slate-900 mb-3">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-slate-900">{t.name || 'เทมเพลตไม่มีชื่อ'}</h4>
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
+                                  <Settings className="h-4 w-4 mr-1" />
+                                  แก้ไข Sections
+                                </Button>
+                              </div>
                               <div className="space-y-2">
                                 {formFields.map((f, i) => (
-                                  <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded">
-                                    <span className="text-sm font-medium text-slate-700 w-24">{f.label}</span>
-                                    <span className="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded">{f.type}</span>
+                                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded border">
+                                    <div className="flex-1 grid grid-cols-3 gap-2">
+                                      <div>
+                                        <p className="text-xs text-slate-500 mb-1">Label</p>
+                                        <p className="text-sm font-medium text-slate-700">{f.label}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-slate-500 mb-1">Type</p>
+                                        <span className="text-xs text-slate-700 bg-slate-200 px-2 py-0.5 rounded">{f.type}</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-slate-500 mb-1">Key</p>
+                                        <p className="text-xs text-slate-400">{f.name}</p>
+                                      </div>
+                                    </div>
                                     {f.type === 'dropdown' && f.options && (
-                                      <span className="text-xs text-slate-400">({f.options.join(', ')})</span>
+                                      <div className="text-xs text-slate-500 border-t pt-2 mt-1">
+                                        <span className="font-medium">Options:</span> {f.options.join(', ')}
+                                      </div>
                                     )}
-                                    <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
                                   </div>
                                 ))}
                               </div>
-                              <Button variant="ghost" size="sm" className="mt-2" onClick={() => handleOpenSections(t)}>
-                                <Settings className="h-4 w-4 mr-1" />
-                                แก้ไข Sections
-                              </Button>
                             </div>
                           );
                         })}
