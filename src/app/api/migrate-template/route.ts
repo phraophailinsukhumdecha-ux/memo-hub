@@ -3,11 +3,12 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const DEFAULT_FORM_ROW_FIELDS = [
-  { name: 'subject', label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'] },
-  { name: 'to', label: 'To', type: 'text' },
+  { name: 'refNo', label: 'REF. No.', type: 'text', placeholder: 'เลขที่อ้างอิง (ถ้ามี)' },
   { name: 'quotationNo', label: 'Quotation No.', type: 'text' },
   { name: 'jobNo', label: 'Job No.', type: 'text' },
   { name: 'date', label: 'Date', type: 'date' },
+  { name: 'subject', label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'] },
+  { name: 'to', label: 'To', type: 'text' },
 ];
 
 export async function POST() {
@@ -25,22 +26,10 @@ export async function POST() {
 
     let updatedFields;
     if (formRowIndex >= 0) {
-      // form_row_1 exists - update labels
+      // form_row_1 exists - replace fields entirely with correct ones
       updatedFields = fields.map((field: Record<string, unknown>) => {
-        if (field.id === 'form_row_1' && field.fieldConfig) {
-          const config = field.fieldConfig as Record<string, unknown>;
-          const formFields = (config.fields as Array<Record<string, unknown>>) || [];
-          const updatedFormFields = formFields.map((f: Record<string, unknown>) => {
-            if (f.name === 'subject') {
-              return { ...f, label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'] };
-            }
-            if (f.name === 'to') return { ...f, label: 'To' };
-            if (f.name === 'date') return { ...f, label: 'Date' };
-            if (f.name === 'quotationNo') return { ...f, label: 'Quotation No.' };
-            if (f.name === 'jobNo') return { ...f, label: 'Job No.' };
-            return f;
-          });
-          return { ...field, fieldConfig: { ...config, fields: updatedFormFields } };
+        if (field.id === 'form_row_1') {
+          return { ...field, fieldConfig: { fields: DEFAULT_FORM_ROW_FIELDS } };
         }
         return field;
       });
@@ -51,7 +40,7 @@ export async function POST() {
         {
           id: 'form_row_1',
           name: 'form_data',
-          label: 'ฟอร์ม',
+          label: 'กรอกข้อมูล Memo',
           type: 'form_row',
           required: false,
           fieldConfig: {
@@ -65,7 +54,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: formRowIndex >= 0 ? 'Template updated successfully' : 'form_row_1 created successfully',
+      message: formRowIndex >= 0 ? 'Template form_row updated with correct fields' : 'form_row_1 created successfully',
+      fields: DEFAULT_FORM_ROW_FIELDS,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });

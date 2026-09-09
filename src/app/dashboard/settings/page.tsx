@@ -878,95 +878,46 @@ Deadline: {deadline}
                       </div>
                     </div>
 
-                    {/* Form Fields section */}
+                    {/* Sections list - all sections from template */}
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-semibold text-slate-700">ช่องกรอกข้อมูล Memo</h5>
-                        {editingFieldTemplateId !== t.id ? (
-                          <Button variant="ghost" size="sm" onClick={() => handleEditFormFields(t)}>
-                            <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไข
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => setEditingFieldTemplateId(null)}>ยกเลิก</Button>
-                            <Button size="sm" onClick={handleSaveFormFields} disabled={fieldSaving}>
-                              <Save className="h-3.5 w-3.5 mr-1" />{fieldSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                            </Button>
-                          </div>
-                        )}
+                        <h5 className="text-sm font-semibold text-slate-700">Sections ทั้งหมดใน Memo</h5>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
+                          <Settings className="h-3.5 w-3.5 mr-1" />แก้ไข Sections
+                        </Button>
                       </div>
-
-                      {editingFieldTemplateId === t.id ? (
-                        <div className="space-y-2">
-                          {editingFormFields.map((f, i) => (
-                            <div key={i} className="flex items-center gap-2 p-3 border rounded-lg bg-white">
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldUp(i)} disabled={i === 0}>
-                                  <ChevronUp className="h-3 w-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldDown(i)} disabled={i === editingFormFields.length - 1}>
-                                  <ChevronDown className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <Input
-                                className="w-40"
-                                placeholder="Label"
-                                value={f.label}
-                                onChange={(e) => updateFormField(i, { label: e.target.value })}
-                              />
-                              <Select value={f.type} onValueChange={(v) => updateFormField(i, { type: v })}>
-                                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="text">Text</SelectItem>
-                                  <SelectItem value="date">Date</SelectItem>
-                                  <SelectItem value="dropdown">Dropdown</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {f.type === 'dropdown' && (
-                                <Input
-                                  className="flex-1"
-                                  placeholder="Options (คั่นด้วย comma)"
-                                  value={(f.options || []).join(', ')}
-                                  onChange={(e) => updateFormField(i, { options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-                                />
-                              )}
-                              <Input
-                                className="w-32"
-                                placeholder="Key"
-                                value={f.name}
-                                onChange={(e) => updateFormField(i, { name: e.target.value })}
-                              />
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeFormField(i)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                      <div className="space-y-1">
+                        {(t.fields || []).map((f, i) => {
+                          const typeLabels: Record<string, string> = {
+                            company_header: 'หัวข้อบริษัท',
+                            section_title: '标题',
+                            form_row: 'ฟอร์มกรอกข้อมูล',
+                            body_text: 'เนื้อหา',
+                            file_upload: 'แนบไฟล์',
+                            checkbox_group: 'จุดประสงค์',
+                            dropdown_select: 'เลือกรายการ',
+                            approval_grid: 'ตารางอนุมัติ',
+                          };
+                          const isHidden = f.type === 'memo_type' || f.type === 'section_title' || f.type === 'company_header';
+                          if (isHidden) return null;
+                          return (
+                            <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
+                              <span className="font-medium text-slate-700 w-48">{f.label || typeLabels[f.type] || f.type}</span>
+                              <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{typeLabels[f.type] || f.type}</span>
+                              {f.type === 'form_row' && (() => {
+                                const config = (f.fieldConfig || {}) as { fields?: Array<{ name: string; label: string }> };
+                                const subFields = config.fields || [];
+                                return (
+                                  <span className="text-xs text-slate-500 ml-1">
+                                    ({subFields.length} fields: {subFields.map((sf) => sf.label).join(', ')})
+                                  </span>
+                                );
+                              })()}
+                              <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
                             </div>
-                          ))}
-                          <Button variant="outline" size="sm" onClick={addFormField}>
-                            <Plus className="h-3.5 w-3.5 mr-1" />เพิ่มช่อง
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {(() => {
-                            const formRow = (t.fields || []).find((f) => f.type === 'form_row');
-                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] }> };
-                            const fields = config.fields || [];
-                            if (fields.length === 0) {
-                              <p className="text-xs text-slate-500 text-center py-2">ยังไม่มีช่องกรอกข้อมูล</p>;
-                            }
-                            return fields.map((f, i) => (
-                              <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
-                                <span className="font-medium text-slate-700 w-32">{f.label || <span className="italic text-slate-400">ไม่มี label</span>}</span>
-                                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
-                                {f.type === 'dropdown' && f.options && (
-                                  <span className="text-xs text-slate-500 ml-1">({f.options.join(', ')})</span>
-                                )}
-                                <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      )}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 ))}
