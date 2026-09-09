@@ -36,8 +36,6 @@ export const SECTION_TYPES: { value: MemoFieldType; label: string }[] = [
   { value: 'company_header', label: 'ข้อมูลบริษัท + โลโก้' },
   { value: 'dropdown_select', label: 'Dropdown (เลือกตัวเดียว)' },
   { value: 'checkbox_group', label: 'Checkboxes (เลือกหลายตัว)' },
-  { value: 'memo_type', label: 'ประเภท Memo' },
-  { value: 'form_row', label: 'ฟอร์ม 2 คอลัมน์' },
   { value: 'body_text', label: 'ข้อความ / บรรทัดว่าง' },
   { value: 'approval_grid', label: 'ลงชื่ออนุมัติ' },
 ];

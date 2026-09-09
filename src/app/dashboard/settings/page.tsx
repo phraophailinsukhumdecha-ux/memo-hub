@@ -329,18 +329,6 @@ export default function SettingsPage() {
     } else if (type === 'memo_type') {
       newField.fieldConfig = { options: [{ value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3' }] };
       newField.label = 'ประเภท Memo';
-    } else if (type === 'form_row') {
-      newField.fieldConfig = {
-        fields: [
-          { name: 'subject', label: 'เรื่อง', type: 'text' },
-          { name: 'date', label: 'วันที่', type: 'date' },
-          { name: 'to', label: 'เรียน', type: 'text' },
-          { name: 'quotationNo', label: 'เลขที่ใบเสนอราคา', type: 'text' },
-          { name: 'customerName', label: 'ชื่อลูกค้า', type: 'text' },
-          { name: 'jobNo', label: 'เลข JOB (ถ้ามี)', type: 'text' },
-        ],
-      };
-      newField.label = 'ฟอร์ม';
     } else if (type === 'body_text') {
       newField.fieldConfig = { lines: 12 };
       newField.label = 'เนื้อหา';
@@ -819,28 +807,40 @@ Deadline: {deadline}
                 )}
 
                 <div className="space-y-3">
-                  {sectionFields.map((field, i) => (
-                    <div key={field.id} className="relative group">
-                      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-md shadow-sm border p-1">
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSectionUp(i)} disabled={i === 0}>
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSectionDown(i)} disabled={i === sectionFields.length - 1}>
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeSection(i)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingSectionIndex(i)}>
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                  {sectionFields.map((field, i) => {
+                    const isProtected = field.type === 'form_row' || field.type === 'company_header' || field.type === 'section_title';
+                    return (
+                      <div key={field.id} className="relative group">
+                        {!isProtected && (
+                          <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-md shadow-sm border p-1">
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSectionUp(i)} disabled={i === 0}>
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSectionDown(i)} disabled={i === sectionFields.length - 1}>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeSection(i)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingSectionIndex(i)}>
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        {isProtected && (
+                          <div className="absolute top-2 right-2 z-10">
+                            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded border">
+                              {field.type === 'form_row' ? 'ควบคุมโดยช่องกรอกข้อมูล' : 'ระบบ'}
+                            </span>
+                          </div>
+                        )}
+                        <SectionRenderer
+                          field={field}
+                          readonly
+                        />
                       </div>
-                      <SectionRenderer
-                        field={field}
-                        readonly
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -991,20 +991,26 @@ Deadline: {deadline}
                           };
                           const isHidden = f.type === 'memo_type' || f.type === 'section_title' || f.type === 'company_header';
                           if (isHidden) return null;
+                          const isProtected = f.type === 'form_row';
                           return (
-                            <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
+                            <div key={i} className={`flex items-center gap-3 p-2 rounded border text-sm ${isProtected ? 'bg-blue-50 border-blue-200' : 'bg-slate-50'}`}>
                               <span className="font-medium text-slate-700 w-48">{f.label || typeLabels[f.type] || f.type}</span>
-                              <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{typeLabels[f.type] || f.type}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${isProtected ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-700'}`}>{typeLabels[f.type] || f.type}</span>
                               {f.type === 'form_row' && (() => {
                                 const config = (f.fieldConfig || {}) as { fields?: Array<{ name: string; label: string }> };
                                 const subFields = config.fields || [];
                                 return (
-                                  <span className="text-xs text-slate-500 ml-1">
+                                  <span className="text-xs text-blue-600 ml-1">
                                     ({subFields.length} fields: {subFields.map((sf) => sf.label).join(', ')})
                                   </span>
                                 );
                               })()}
-                              <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
+                              {isProtected && (
+                                <span className="text-xs text-blue-500 ml-auto">ควบคุมโดยช่องกรอกข้อมูล</span>
+                              )}
+                              {!isProtected && (
+                                <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
+                              )}
                             </div>
                           );
                         })}
