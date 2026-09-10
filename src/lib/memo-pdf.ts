@@ -22,12 +22,18 @@ export interface MemoHeaderDetails {
 function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const logoUrl = (config.logoUrl as string) || 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png';
-  const companyName = 'Digital Factory Company Limited';
+  const companyName = (config.companyName as string) || 'Digital Factory Company Limited';
+  const companyNameTh = (config.companyNameTh as string) || 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)';
   const addressLines = ((config.addressLines as string[]) || [
     'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
     'ถนนรัชดาภิเษก แขวงสามเสนนอก',
     'เขตห้วยขวาง กรุงเทพมหานคร 10310',
   ]);
+  const memoNoLabel = (config.memoNoLabel as string) || 'MEMO NO.';
+  const refNoLabel = (config.refNoLabel as string) || 'REF. NO. (if any)';
+  const quotationLabel = (config.quotationLabel as string) || 'Quotation no.';
+  const jobNoLabel = (config.jobNoLabel as string) || 'Job no.';
+  const dateLabel = (config.dateLabel as string) || 'DATE';
   const h = header || {};
 
   return `<div style="margin-bottom:16px;">
@@ -45,16 +51,16 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): stri
       <tr>
         <td style="width:55%;vertical-align:top;border-right:1px solid #0f172a;padding:16px 12px;">
           <p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;text-align:center;">MEMORANDUM</p>
-          <p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;font-weight:600;">บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)</p>
+          <p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;font-weight:600;">${companyNameTh}</p>
           ${addressLines.map(line => `<p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;">${line}</p>`).join('')}
         </td>
         <td style="vertical-align:top;padding:16px;">
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">MEMO NO.</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">REF. NO. (if any)</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">Quotation no.</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">Job no.</td><td style="color:#0f172a;padding:4px 0;">: ${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">DATE</td><td style="color:#0f172a;padding:4px 0;">: ${h.date || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${jobNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${dateLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>

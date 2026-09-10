@@ -11,11 +11,17 @@ const COMPANY_HEADER_FIELD = {
   fieldConfig: {
     logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
     companyName: 'Digital Factory Company Limited',
+    companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
     addressLines: [
       'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
       'ถนนรัชดาภิเษก แขวงสามเสนนอก',
       'เขตห้วยขวาง กรุงเทพมหานคร 10310',
     ],
+    memoNoLabel: 'MEMO NO.',
+    refNoLabel: 'REF. NO. (if any)',
+    quotationLabel: 'Quotation no.',
+    jobNoLabel: 'Job no.',
+    dateLabel: 'DATE',
   },
 };
 

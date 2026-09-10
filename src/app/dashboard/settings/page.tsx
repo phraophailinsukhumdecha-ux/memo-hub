@@ -260,6 +260,77 @@ export default function SettingsPage() {
     setEditingFormFields(updated);
   };
 
+  // Company header editing state
+  const [editingHeaderTemplateId, setEditingHeaderTemplateId] = useState<string | null>(null);
+  const [editingHeader, setEditingHeader] = useState({
+    logoUrl: '',
+    companyName: '',
+    companyNameTh: '',
+    addressText: '',
+    memoNoLabel: '',
+    refNoLabel: '',
+    quotationLabel: '',
+    jobNoLabel: '',
+    dateLabel: '',
+  });
+  const [headerSaving, setHeaderSaving] = useState(false);
+
+  const handleEditHeader = (template: MemoTemplate) => {
+    const headerField = (template.fields || []).find((f) => f.type === 'company_header');
+    const config = (headerField?.fieldConfig || {}) as Record<string, unknown>;
+    const addressLines = (config.addressLines as string[]) || [];
+    setEditingHeader({
+      logoUrl: (config.logoUrl as string) || '',
+      companyName: (config.companyName as string) || '',
+      companyNameTh: (config.companyNameTh as string) || '',
+      addressText: addressLines.join('\n'),
+      memoNoLabel: (config.memoNoLabel as string) || '',
+      refNoLabel: (config.refNoLabel as string) || '',
+      quotationLabel: (config.quotationLabel as string) || '',
+      jobNoLabel: (config.jobNoLabel as string) || '',
+      dateLabel: (config.dateLabel as string) || '',
+    });
+    setEditingHeaderTemplateId(template.id);
+  };
+
+  const handleSaveHeader = async () => {
+    if (!editingHeaderTemplateId) return;
+    setHeaderSaving(true);
+    try {
+      const template = templates.find((t) => t.id === editingHeaderTemplateId);
+      if (!template) return;
+      const fields = template.fields ? JSON.parse(JSON.stringify(template.fields)) : [];
+      const headerIndex = fields.findIndex((f: MemoField) => f.type === 'company_header');
+      const fieldConfig = {
+        logoUrl: editingHeader.logoUrl,
+        companyName: editingHeader.companyName,
+        companyNameTh: editingHeader.companyNameTh,
+        addressLines: editingHeader.addressText.split('\n').map((s) => s.trim()).filter(Boolean),
+        memoNoLabel: editingHeader.memoNoLabel,
+        refNoLabel: editingHeader.refNoLabel,
+        quotationLabel: editingHeader.quotationLabel,
+        jobNoLabel: editingHeader.jobNoLabel,
+        dateLabel: editingHeader.dateLabel,
+      };
+      if (headerIndex >= 0) {
+        fields[headerIndex].fieldConfig = fieldConfig;
+      } else {
+        fields.unshift({
+          id: 'company_header_1',
+          name: 'company_header',
+          label: 'ข้อมูลบริษัท',
+          type: 'company_header',
+          required: false,
+          fieldConfig,
+        });
+      }
+      await updateTemplate(editingHeaderTemplateId, { fields });
+      setEditingHeaderTemplateId(null);
+    } finally {
+      setHeaderSaving(false);
+    }
+  };
+
   // Template CRUD (name + description only)
   const handleCreateTemplate = () => {
     setEditingTemplate(null);
@@ -353,12 +424,18 @@ export default function SettingsPage() {
       newField.label = 'ข้อมูลบริษัท';
       newField.fieldConfig = {
         logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
-        companyName: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
+        companyName: 'Digital Factory Company Limited',
+        companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
         addressLines: [
           'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
           'ถนนรัชดาภิเษก แขวงสามเสนนอก',
           'เขตห้วยขวาง กรุงเทพมหานคร 10310',
         ],
+        memoNoLabel: 'MEMO NO.',
+        refNoLabel: 'REF. NO. (if any)',
+        quotationLabel: 'Quotation no.',
+        jobNoLabel: 'Job no.',
+        dateLabel: 'DATE',
       };
     }
 
@@ -881,6 +958,113 @@ Deadline: {deadline}
                           <Trash2 className="h-3.5 w-3.5 mr-1" />ลบ
                         </Button>
                       </div>
+                    </div>
+
+                    {/* หัวข้อบริษัท (company_header) */}
+                    <div className="p-4 border-b">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="text-sm font-semibold text-slate-700">หัวข้อบริษัท (MEMORANDUM)</h5>
+                        {editingHeaderTemplateId !== t.id ? (
+                          <Button variant="ghost" size="sm" onClick={() => handleEditHeader(t)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไข
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setEditingHeaderTemplateId(null)}>ยกเลิก</Button>
+                            <Button size="sm" onClick={handleSaveHeader} disabled={headerSaving}>
+                              <Save className="h-3.5 w-3.5 mr-1" />{headerSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {editingHeaderTemplateId === t.id ? (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label>URL โลโก้</Label>
+                            <Input
+                              placeholder="https://..."
+                              value={editingHeader.logoUrl}
+                              onChange={(e) => setEditingHeader({ ...editingHeader, logoUrl: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label>ชื่อบริษัท (อังกฤษ, แถบบน)</Label>
+                              <Input
+                                placeholder="Digital Factory Company Limited"
+                                value={editingHeader.companyName}
+                                onChange={(e) => setEditingHeader({ ...editingHeader, companyName: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label>ชื่อบริษัท (ไทย, ในกล่อง MEMORANDUM)</Label>
+                              <Input
+                                placeholder="บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)"
+                                value={editingHeader.companyNameTh}
+                                onChange={(e) => setEditingHeader({ ...editingHeader, companyNameTh: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>ที่อยู่ (บรรทัดละ 1 บรรทัด)</Label>
+                            <Textarea
+                              rows={3}
+                              placeholder={'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444\nถนนรัชดาภิเษก แขวงสามเสนนอก\nเขตห้วยขวาง กรุงเทพมหานคร 10310'}
+                              value={editingHeader.addressText}
+                              onChange={(e) => setEditingHeader({ ...editingHeader, addressText: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label>ป้าย MEMO NO.</Label>
+                              <Input value={editingHeader.memoNoLabel} onChange={(e) => setEditingHeader({ ...editingHeader, memoNoLabel: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label>ป้าย REF. NO.</Label>
+                              <Input value={editingHeader.refNoLabel} onChange={(e) => setEditingHeader({ ...editingHeader, refNoLabel: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label>ป้าย Quotation</Label>
+                              <Input value={editingHeader.quotationLabel} onChange={(e) => setEditingHeader({ ...editingHeader, quotationLabel: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label>ป้าย Job</Label>
+                              <Input value={editingHeader.jobNoLabel} onChange={(e) => setEditingHeader({ ...editingHeader, jobNoLabel: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label>ป้าย DATE</Label>
+                              <Input value={editingHeader.dateLabel} onChange={(e) => setEditingHeader({ ...editingHeader, dateLabel: e.target.value })} />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {(() => {
+                            const headerField = (t.fields || []).find((f) => f.type === 'company_header');
+                            const config = (headerField?.fieldConfig || {}) as Record<string, unknown>;
+                            const addressLines = (config.addressLines as string[]) || [];
+                            return (
+                              <div className="p-2 bg-slate-50 rounded border text-sm space-y-1">
+                                {(config.logoUrl as string) && (
+                                  <div className="flex items-center gap-3">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={config.logoUrl as string} alt="logo" className="h-8 w-auto object-contain" />
+                                  </div>
+                                )}
+                                <p className="font-medium text-slate-700">{(config.companyName as string) || <span className="italic text-slate-400">ไม่มีชื่อบริษัท (อังกฤษ)</span>}</p>
+                                <p className="font-medium text-slate-700">{(config.companyNameTh as string) || <span className="italic text-slate-400">ไม่มีชื่อบริษัท (ไทย)</span>}</p>
+                                {addressLines.map((line, i) => (
+                                  <p key={i} className="text-xs text-slate-500">{line}</p>
+                                ))}
+                                <p className="text-xs text-slate-400">
+                                  ป้าย: {(config.memoNoLabel as string) || 'MEMO NO.'} / {(config.refNoLabel as string) || 'REF. NO.'} / {(config.quotationLabel as string) || 'Quotation'} / {(config.jobNoLabel as string) || 'Job'} / {(config.dateLabel as string) || 'DATE'}
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
 
                     {/* ช่องกรอกข้อมูล Memo (form_row fields) */}

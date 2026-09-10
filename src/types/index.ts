@@ -58,7 +58,13 @@ export interface MemoField {
 export interface CompanyHeaderConfig {
   logoUrl: string;
   companyName: string;
+  companyNameTh?: string;
   addressLines: string[];
+  memoNoLabel?: string;
+  refNoLabel?: string;
+  quotationLabel?: string;
+  jobNoLabel?: string;
+  dateLabel?: string;
 }
 
 export interface CheckboxGroupConfig {

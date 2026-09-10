@@ -13,18 +13,24 @@ interface CompanyHeaderProps {
   date?: string;
 }
 
-const DEFAULT_CONFIG: CompanyHeaderConfig = {
+export const DEFAULT_COMPANY_HEADER: CompanyHeaderConfig = {
   logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
   companyName: 'Digital Factory Company Limited',
+  companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
   addressLines: [
     'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
     'ถนนรัชดาภิเษก แขวงสามเสนนอก',
     'เขตห้วยขวาง กรุงเทพมหานคร 10310',
   ],
+  memoNoLabel: 'MEMO NO.',
+  refNoLabel: 'REF. NO. (if any)',
+  quotationLabel: 'Quotation no.',
+  jobNoLabel: 'Job no.',
+  dateLabel: 'DATE',
 };
 
 export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo, jobNo, date }: CompanyHeaderProps) {
-  const cfg = { ...DEFAULT_CONFIG, ...config, companyName: 'Digital Factory Company Limited' };
+  const cfg = { ...DEFAULT_COMPANY_HEADER, ...config };
 
   return (
     <div className="mb-4">
@@ -50,8 +56,8 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           <div className="border-r border-slate-900 py-4 px-3 w-[55%]">
             <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">MEMORANDUM</h2>
             <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
-              <p className="font-semibold">บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)</p>
-              {cfg.addressLines.map((line, i) => (
+              <p className="font-semibold">{cfg.companyNameTh}</p>
+              {(cfg.addressLines || []).map((line, i) => (
                 <p key={i}>{line}</p>
               ))}
             </div>
@@ -62,23 +68,23 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
             <table className="text-sm w-full">
               <tbody>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">MEMO NO.</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.memoNoLabel}</td>
                   <td className="text-slate-900 py-1">: {memoNumber || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">REF. NO. (if any)</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.refNoLabel}</td>
                   <td className="text-slate-900 py-1">: {refNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation no.</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.quotationLabel}</td>
                   <td className="text-slate-900 py-1">: {quotationNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job no.</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.jobNoLabel}</td>
                   <td className="text-slate-900 py-1">: {jobNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">DATE</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.dateLabel}</td>
                   <td className="text-slate-900 py-1">: {date || '-'}</td>
                 </tr>
               </tbody>
