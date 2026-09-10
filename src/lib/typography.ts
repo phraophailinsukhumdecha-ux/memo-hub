@@ -35,3 +35,23 @@ export function resolveTypography(
 ): Required<MemoTypography> {
   return { ...DEFAULT_TYPOGRAPHY, ...(t || {}) };
 }
+
+/**
+ * Effective typography for one section: field override wins per-key,
+ * falling back to template typography, then defaults.
+ */
+export function resolveFieldTypography(
+  templateTypo?: MemoTypography | null,
+  fieldTypo?: MemoTypography | null
+): Required<MemoTypography> {
+  const base = resolveTypography(templateTypo);
+  const o = fieldTypo || {};
+  const merged: Required<MemoTypography> = { ...base };
+  if (o.fontFamily) merged.fontFamily = o.fontFamily;
+  if (typeof o.baseFontSize === 'number') merged.baseFontSize = o.baseFontSize;
+  if (typeof o.lineHeight === 'number') merged.lineHeight = o.lineHeight;
+  if (o.textAlign) merged.textAlign = o.textAlign;
+  if (typeof o.boldLabels === 'boolean') merged.boldLabels = o.boldLabels;
+  if (typeof o.boldBody === 'boolean') merged.boldBody = o.boldBody;
+  return merged;
+}

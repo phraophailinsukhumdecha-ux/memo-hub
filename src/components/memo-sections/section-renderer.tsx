@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { MemoField, CompanyHeaderConfig, CheckboxGroupConfig, DropdownSelectConfig, MemoTypeConfig, FormRowConfig, BodyTextConfig, ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
+import { resolveFieldTypography } from '@/lib/typography';
 import { SectionTitle } from './section-title';
 import { CompanyHeader } from './company-header';
 import { CheckboxGroup } from './checkbox-group';
@@ -26,6 +27,8 @@ interface SectionRendererProps {
 }
 
 export function SectionRenderer({ field, value, formData, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, groups, typography }: SectionRendererProps) {
+  // Effective typography: per-section override wins per-key, else template default
+  const effectiveTypo = resolveFieldTypography(typography, field.typography);
   switch (field.type) {
     case 'section_title':
       return <SectionTitle label={field.label} readonly={readonly} />;
@@ -48,7 +51,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           quotationNo={formRowField?.quotationNo}
           jobNo={formRowField?.jobNo}
           date={formRowField?.date}
-          typography={typography}
+          typography={effectiveTypo}
         />
       );
     }
@@ -94,7 +97,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           readonly={readonly}
           memoType={memoType}
           users={users}
-          typography={typography}
+          typography={effectiveTypo}
         />
       );
 
@@ -105,7 +108,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           value={value as string | undefined}
           onChange={onChange as ((value: string) => void) | undefined}
           readonly={readonly}
-          typography={typography}
+          typography={effectiveTypo}
         />
       );
 

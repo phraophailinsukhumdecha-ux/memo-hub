@@ -9,7 +9,7 @@ import {
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoAbsolute } from '@/lib/logo';
-import { resolveTypography } from '@/lib/typography';
+import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
 import { MemoTypography } from '@/types';
 
 export interface SmtpConfig {
@@ -158,9 +158,18 @@ export function buildCompactMemoHtml(
     'jobNo',
     'date',
   ]);
+  type SummaryField = {
+    id: string;
+    type: string;
+    label: string;
+    fieldConfig?: Record<string, unknown>;
+    typography?: MemoTypography;
+  };
+  const sFields = templateFields as SummaryField[];
   let detailRows = '';
-  for (const field of templateFields) {
+  for (const field of sFields) {
     if (field.type !== 'form_row') continue;
+    const ft = resolveFieldTypography(typography, field.typography);
     const config = (field.fieldConfig || {}) as Record<string, unknown>;
     const fields = (config.fields as Array<{ name: string; label: string; type: string }>) || [];
     const data = (formData[field.id] as Record<string, unknown>) || {};
@@ -183,17 +192,18 @@ export function buildCompactMemoHtml(
         const str = (raw as string) || '';
         display = str ? escapeHtml(str) : '-';
       }
-      detailRows += `<tr><td style="padding:6px 10px;font-weight:600;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">${display}</td></tr>`;
+      detailRows += `<tr><td style="padding:6px 10px;font-weight:${ft.boldLabels ? 600 : 400};font-size:${ft.baseFontSize}px;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};">${display}</td></tr>`;
     }
   }
 
   // Body text
   let bodyHtml = '';
-  for (const field of templateFields) {
+  for (const field of sFields) {
     if (field.type !== 'body_text') continue;
     const val = (formData[field.id] as string) || '';
     if (val) {
-      bodyHtml += `<p style="font-size:13px;margin:0 0 4px;font-weight:600;">${escapeHtml(field.label || 'เนื้อหา')}</p><div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px;font-size:13px;white-space:pre-wrap;">${escapeHtml(val)}</div>`;
+      const ft = resolveFieldTypography(typography, field.typography);
+      bodyHtml += `<p style="font-size:${ft.baseFontSize}px;margin:0 0 4px;font-weight:${ft.boldLabels ? 600 : 400};">${escapeHtml(field.label || 'เนื้อหา')}</p><div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};white-space:pre-wrap;">${escapeHtml(val)}</div>`;
     }
   }
 

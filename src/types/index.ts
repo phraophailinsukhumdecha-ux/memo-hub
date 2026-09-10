@@ -65,6 +65,8 @@ export interface MemoField {
   options?: string[];
   placeholder?: string;
   fieldConfig?: unknown;
+  /** Per-section typography override. Empty = inherit template typography. */
+  typography?: MemoTypography;
 }
 
 export interface CompanyHeaderConfig {

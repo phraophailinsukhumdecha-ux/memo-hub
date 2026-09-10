@@ -10,6 +10,7 @@ import { MemoTypeEditor } from './memo-type-editor';
 import { FormRowEditor } from './form-row-editor';
 import { BodyTextEditor } from './body-text-editor';
 import { ApprovalGridEditor } from './approval-grid-editor';
+import { TypographyEditor } from './typography-editor';
 
 interface SectionConfigEditorProps {
   field: MemoField;
@@ -66,6 +67,8 @@ export function SectionConfigEditor({ field, onUpdate }: SectionConfigEditorProp
     }
   };
 
+  const showTypography = ['form_row', 'body_text', 'company_header', 'approval_grid', 'section_title'].includes(field.type);
+
   return (
     <div className="space-y-3">
       <div>
@@ -78,6 +81,13 @@ export function SectionConfigEditor({ field, onUpdate }: SectionConfigEditorProp
         />
       </div>
       {renderConfigEditor()}
+      {showTypography && (
+        <TypographyEditor
+          value={field.typography}
+          onChange={(typography) => onUpdate({ typography })}
+          showReset
+        />
+      )}
     </div>
   );
 }

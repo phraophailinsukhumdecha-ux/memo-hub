@@ -39,7 +39,7 @@ import { subscribeToUsers, createUser, updateUser, deleteUser } from '@/lib/user
 import { subscribeToSyslogs } from '@/lib/syslogs';
 import { logSettingUpdated } from '@/lib/event-logs';
 import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog } from '@/types';
-import { SectionConfigEditor, SECTION_TYPES } from '@/components/section-editors';
+import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
 import { SectionRenderer } from '@/components/memo-sections';
 import { DEFAULT_TYPOGRAPHY, FONT_PRESETS } from '@/lib/typography';
 import { MemoTypography } from '@/types';
@@ -205,6 +205,7 @@ export default function SettingsPage() {
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
   const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean }>>([]);
+  const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
 
   const handleEditFormFields = (template: MemoTemplate) => {
@@ -216,6 +217,7 @@ export default function SettingsPage() {
       options: Array.isArray(f.options) ? f.options : typeof f.options === 'string' ? f.options.split(',').map((s) => s.trim()).filter(Boolean) : [],
     }));
     setEditingFormFields(normalized);
+    setEditingFormRowTypo({ ...(formRow?.typography || {}) });
     setEditingFieldTemplateId(template.id);
   };
 
@@ -229,6 +231,7 @@ export default function SettingsPage() {
       const formRowIndex = fields.findIndex((f: MemoField) => f.type === 'form_row');
       if (formRowIndex >= 0) {
         fields[formRowIndex].fieldConfig = { fields: editingFormFields };
+        fields[formRowIndex].typography = editingFormRowTypo;
       } else {
         fields.push({
           id: 'form_row_1',
@@ -297,6 +300,7 @@ export default function SettingsPage() {
 
   // Company header editing state
   const [editingHeaderTemplateId, setEditingHeaderTemplateId] = useState<string | null>(null);
+  const [editingHeaderTypo, setEditingHeaderTypo] = useState<MemoTypography>({});
   const [editingHeader, setEditingHeader] = useState({
     logoUrl: '',
     companyName: '',
@@ -313,6 +317,7 @@ export default function SettingsPage() {
 
   const handleEditHeader = (template: MemoTemplate) => {
     const headerField = (template.fields || []).find((f) => f.type === 'company_header');
+    setEditingHeaderTypo({ ...(headerField?.typography || {}) });
     const config = (headerField?.fieldConfig || {}) as Record<string, unknown>;
     const addressLines = (config.addressLines as string[]) || [];
     setEditingHeader({
@@ -352,6 +357,7 @@ export default function SettingsPage() {
       };
       if (headerIndex >= 0) {
         fields[headerIndex].fieldConfig = fieldConfig;
+        fields[headerIndex].typography = editingHeaderTypo;
       } else {
         fields.unshift({
           id: 'company_header_1',
@@ -360,6 +366,7 @@ export default function SettingsPage() {
           type: 'company_header',
           required: false,
           fieldConfig,
+          typography: editingHeaderTypo,
         });
       }
       await updateTemplate(editingHeaderTemplateId, { fields });
@@ -1212,6 +1219,11 @@ Memo ของท่านมีการดำเนินการ: {action_la
                               onChange={(e) => setEditingHeader({ ...editingHeader, memorandumTitle: e.target.value })}
                             />
                           </div>
+                          <TypographyEditor
+                            value={editingHeaderTypo}
+                            onChange={setEditingHeaderTypo}
+                            showReset
+                          />
                           <div className="space-y-1">
                             <Label>ที่อยู่ (บรรทัดละ 1 บรรทัด)</Label>
                             <Textarea
@@ -1380,6 +1392,11 @@ Memo ของท่านมีการดำเนินการ: {action_la
                           <Button variant="outline" size="sm" onClick={addFormField}>
                             <Plus className="h-3.5 w-3.5 mr-1" />เพิ่มช่องกรอกข้อมูล
                           </Button>
+                          <TypographyEditor
+                            value={editingFormRowTypo}
+                            onChange={setEditingFormRowTypo}
+                            showReset
+                          />
                         </div>
                       ) : (
                         <div className="space-y-1">
