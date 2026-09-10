@@ -631,6 +631,18 @@ export default function HomePage() {
               </div>
             </div>
           )}
+          {selectedMemo?.status === 'rejected' && selectedMemo?.approvals?.filter((a) => a.action === 'reject').length > 0 && (
+            <div className="px-6 pb-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-semibold text-red-700 mb-1">หมายเหตุการไม่อนุมัติ</p>
+                {selectedMemo.approvals.filter((a) => a.action === 'reject').map((a, i) => (
+                  <div key={i} className="text-sm text-red-600">
+                    <p><span className="font-medium">{a.approverName}</span>: {a.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
             {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>

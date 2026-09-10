@@ -109,6 +109,16 @@ function MemoViewContent() {
             ))}
           </div>
         </div>
+        {memo.status === 'rejected' && memo.approvals?.filter((a) => a.action === 'reject').length > 0 && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm font-semibold text-red-700 mb-1">หมายเหตุการไม่อนุมัติ</p>
+            {memo.approvals.filter((a) => a.action === 'reject').map((a, i) => (
+              <div key={i} className="text-sm text-red-600">
+                <p><span className="font-medium">{a.approverName}</span>: {a.comment}</p>
+              </div>
+            ))}
+          </div>
+        )}
         <p className="text-xs text-slate-400 text-center mt-4">MemoHub Digital Memo & Approval System</p>
       </div>
     </div>
