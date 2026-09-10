@@ -14,9 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { subscribeToMemos, approveMemo, cancelMemo, createMemo, deleteMemos } from '@/lib/memos';
+import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
@@ -39,6 +40,9 @@ export default function HomePage() {
   const [selectedMemos, setSelectedMemos] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
@@ -225,6 +229,28 @@ export default function HomePage() {
       console.error(e);
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const handleReject = (memo: Memo) => {
+    setSelectedMemo(memo);
+    setRejectComment('');
+    setIsRejectDialogOpen(true);
+  };
+
+  const confirmReject = async () => {
+    if (!selectedMemo || !user || !rejectComment.trim()) return;
+    setRejecting(true);
+    try {
+      await rejectMemo(selectedMemo.id, user.id, user.displayName, rejectComment.trim());
+      setIsRejectDialogOpen(false);
+      setRejectComment('');
+      setIsDetailOpen(false);
+      setSelectedMemo(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -607,13 +633,43 @@ export default function HomePage() {
           )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
             {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                อนุมัติ
-              </Button>
+              <>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  อนุมัติ
+                </Button>
+                <Button variant="destructive" onClick={() => handleReject(selectedMemo)}>
+                  <XCircle className="h-4 w-4 mr-1" />
+                  ปฏิเสธ
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>ปฏิเสธ Memo {selectedMemo?.memoNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">กรุณาระบุเหตุผลในการปฏิเสธ *</p>
+            <Textarea
+              rows={4}
+              value={rejectComment}
+              onChange={(e) => setRejectComment(e.target.value)}
+              placeholder="กรอกเหตุผลว่าทำไมถึงไม่อนุมัติ Memo นี้..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)} disabled={rejecting}>ยกเลิก</Button>
+            <Button variant="destructive" onClick={confirmReject} disabled={!rejectComment.trim() || rejecting}>
+              {rejecting ? 'กำลังดำเนินการ...' : 'ยืนยันปฏิเสธ'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
