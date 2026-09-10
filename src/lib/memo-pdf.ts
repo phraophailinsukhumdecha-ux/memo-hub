@@ -40,6 +40,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
   const jobNoLabel = (config.jobNoLabel as string) || 'Job no.';
   const dateLabel = (config.dateLabel as string) || 'DATE';
   const h = header || {};
+  const t = typo || resolveTypography(null);
 
   return `<div style="margin-bottom:16px;${typo ? `font-family:${typo.fontFamily};` : ''}">
     <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
@@ -56,11 +57,11 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
       <tr>
         <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;">
           ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;text-align:center;">${memorandumTitle}</p>` : ''}
-          <p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;font-weight:600;">${companyNameTh}</p>
-          ${addressLines.map(line => `<p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;">${line}</p>`).join('')}
+          <p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-weight:600;">${companyNameTh}</p>
+          ${addressLines.map(line => `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;">${line}</p>`).join('')}
         </td>
         <td style="vertical-align:top;padding:16px;">
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
@@ -255,11 +256,12 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     ? (ownerUser?.department || colData.signerTitle || '')
     : resolvedTitle;
 
+    const t = typo || resolveTypography(null);
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
         <p style="font-weight:600;font-size:13px;margin:0;">${colTitle}</p>
       </div>
-      <div style="font-size:12px;">
+      <div style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
         <p style="margin:4px 0;">ลงชื่อ</p>
         <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;min-height:20px;">${displayName ? `( ${displayName} )` : '(  )'}</p>
         <p style="margin:4px 0;">ตำแหน่ง</p>

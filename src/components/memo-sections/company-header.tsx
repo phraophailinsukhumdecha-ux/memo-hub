@@ -62,7 +62,10 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
             {cfg.memorandumTitle ? (
               <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">{cfg.memorandumTitle}</h2>
             ) : null}
-            <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
+            <div
+              className="text-slate-900 space-y-0.5"
+              style={{ fontSize: `${typo.baseFontSize}px`, lineHeight: typo.lineHeight }}
+            >
               <p className="font-semibold">{cfg.companyNameTh}</p>
               {(cfg.addressLines || []).map((line, i) => (
                 <p key={i}>{line}</p>
@@ -72,7 +75,10 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
 
           {/* Right: Memo Details Table */}
           <div className="flex-1 p-4">
-            <table className="text-sm w-full">
+            <table
+              className="w-full"
+              style={{ fontSize: `${typo.baseFontSize}px`, lineHeight: typo.lineHeight }}
+            >
               <tbody>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.memoNoLabel}</td>

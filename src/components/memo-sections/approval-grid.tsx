@@ -2,7 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ApprovalGridConfig, User, Group } from '@/types';
+import { ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { Plus, X } from 'lucide-react';
 
 interface ApprovalGridProps {
@@ -17,6 +18,7 @@ interface ApprovalGridProps {
   groups?: Group[];
   attnToUserId?: string;
   ccUserIds?: string[];
+  typography?: MemoTypography;
 }
 
 const DEFAULT_CONFIG: ApprovalGridConfig = {
@@ -27,8 +29,14 @@ const DEFAULT_CONFIG: ApprovalGridConfig = {
   ],
 };
 
-export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, attnToUserId, ccUserIds = [] }: ApprovalGridProps) {
+export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, attnToUserId, ccUserIds = [], typography }: ApprovalGridProps) {
   const cfg = config || DEFAULT_CONFIG;
+  const typo = resolveTypography(typography);
+  const cellTextStyle: React.CSSProperties = {
+    fontFamily: typo.fontFamily,
+    fontSize: `${typo.baseFontSize}px`,
+    lineHeight: typo.lineHeight,
+  };
 
   let configColumns = cfg.columns;
 
@@ -197,7 +205,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
               <p className="font-semibold text-sm text-slate-900">{colTitle}</p>
             </div>
           )}
-          <div className="space-y-3 text-sm text-slate-900">
+          <div className="text-slate-900" style={{ ...cellTextStyle, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <p className="mb-1">ลงชื่อ</p>
               <p className="border-b border-slate-700 pb-1 min-h-[1.5rem]">
@@ -272,7 +280,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
               </div>
             )}
           </div>
-          <div className="space-y-3 text-sm text-slate-900">
+          <div className="text-slate-900" style={{ ...cellTextStyle, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <p className="mb-1">ลงชื่อ</p>
               {readonly ? (
@@ -356,7 +364,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
             />
           )}
         </div>
-        <div className="space-y-3 text-sm text-slate-900">
+        <div className="text-slate-900" style={{ ...cellTextStyle, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <p className="mb-1">ลงชื่อ</p>
             {readonly ? (
@@ -424,7 +432,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
   }
 
   return (
-    <div>
+    <div style={{ fontFamily: typo.fontFamily }}>
       <div className="border border-slate-900">
         {rows.map((rowIndices, rowIndex) => {
           const colsInRow = rowIndices.length;

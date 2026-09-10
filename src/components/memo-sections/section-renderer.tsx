@@ -136,6 +136,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           groups={groups}
           attnToUserId={attnToUserId}
           ccUserIds={ccUserIds}
+          typography={effectiveTypo}
         />
       );
     }
