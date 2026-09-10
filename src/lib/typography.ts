@@ -30,7 +30,7 @@ export const FONT_PRESETS: Array<{ label: string; value: string }> = [
 
 export const DEFAULT_TYPOGRAPHY: Required<MemoTypography> = {
   fontFamily: TH_SARABUN_STACK,
-  baseFontSize: 14,
+  baseFontSize: 16,
   lineHeight: 1.7,
   textAlign: 'left',
   boldLabels: true,
