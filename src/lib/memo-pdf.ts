@@ -44,7 +44,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): stri
           <img src="${logoUrl}" style="height:56px;width:auto;" />
         </td>
         <td style="text-align:right;vertical-align:middle;">
-          <p style="margin:0;font-size:18px;font-weight:600;color:#475569;letter-spacing:1px;">${companyName}</p>
+          <p style="margin:0;font-size:30px;font-weight:600;color:#475569;letter-spacing:1px;">${companyName}</p>
         </td>
       </tr>
     </table>

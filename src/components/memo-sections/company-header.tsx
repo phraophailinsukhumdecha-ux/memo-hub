@@ -46,7 +46,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           />
         </div>
         <div className="text-right">
-          <p className="text-lg font-semibold text-slate-600 tracking-wide">{cfg.companyName}</p>
+          <p className="text-3xl font-semibold text-slate-600 tracking-wide">{cfg.companyName}</p>
         </div>
       </div>
 
