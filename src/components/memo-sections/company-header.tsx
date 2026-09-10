@@ -54,7 +54,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
       <div className="border border-slate-900">
         <div className="flex">
           {/* Left: MEMORANDUM + Address */}
-          <div className="border-r border-slate-900 py-4 px-3 w-[55%]">
+          <div className="border-r border-slate-900 py-4 px-3 w-[55%] flex flex-col justify-center">
             {cfg.memorandumTitle ? (
               <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">{cfg.memorandumTitle}</h2>
             ) : null}

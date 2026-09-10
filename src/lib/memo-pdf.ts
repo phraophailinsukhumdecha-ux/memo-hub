@@ -50,7 +50,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): stri
     </table>
     <table style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
       <tr>
-        <td style="width:55%;vertical-align:top;border-right:1px solid #0f172a;padding:16px 12px;">
+        <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;">
           ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;text-align:center;">${memorandumTitle}</p>` : ''}
           <p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;font-weight:600;">${companyNameTh}</p>
           ${addressLines.map(line => `<p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;">${line}</p>`).join('')}
