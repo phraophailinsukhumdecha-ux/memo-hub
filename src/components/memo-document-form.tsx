@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ApprovalGrid, SectionRenderer } from '@/components/memo-sections';
 import { MemoTemplate, User, Group, ApprovalGridConfig } from '@/types';
 import { Mail, Save, X } from 'lucide-react';
-import { generateMemoIdClient } from '@/utils/cn';
 
 interface MemoDocumentFormProps {
   templates: MemoTemplate[];
@@ -36,6 +35,8 @@ export function MemoDocumentForm({
   ownerUser,
   users,
 }: MemoDocumentFormProps) {
+  const [memoNumber, setMemoNumber] = useState<string>('');
+
   useEffect(() => {
     if (!selectedTemplate && templates.length > 0) {
       onSelectTemplate(templates[0]);
@@ -49,18 +50,33 @@ export function MemoDocumentForm({
       for (const field of selectedTemplate.fields) {
         if (field.type === 'form_row') {
           const config = (field.fieldConfig || {}) as Record<string, unknown>;
-          const fields = (config?.fields as Array<{ name: string }>) || [];
-          const hasDate = fields.some((f) => f.name.toLowerCase().includes('date') || f.name === 'date');
-          if (hasDate) {
-            const currentVal = (formData[field.id] as Record<string, string>) || {};
-            if (!currentVal.date) {
-              onChange(field.id, { ...currentVal, date: dateStr });
-            }
+          const fields = (config?.fields as Array<{ name: string; type: string }>) || [];
+          const currentVal = (formData[field.id] as Record<string, string>) || {};
+          const updates: Record<string, string> = {};
+          for (const f of fields) {
+            if (f.name === 'date' && !currentVal.date) updates.date = dateStr;
+            if (f.type === 'auto_from' && ownerUser && !currentVal.from) updates.from = ownerUser.displayName;
+            if (f.type === 'auto_dept' && ownerUser && !currentVal.dept) updates.dept = ownerUser.department || '';
+          }
+          if (Object.keys(updates).length > 0) {
+            onChange(field.id, { ...currentVal, ...updates });
           }
         }
       }
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, ownerUser]);
+
+  useEffect(() => {
+    if (!selectedTemplate || !ownerUser) return;
+    const fetchMemoId = async () => {
+      try {
+        const res = await fetch(`/api/memo-id?department=${encodeURIComponent(ownerUser.department || '')}`);
+        const data = await res.json();
+        if (data.memoId) setMemoNumber(data.memoId);
+      } catch { /* ignore */ }
+    };
+    fetchMemoId();
+  }, [selectedTemplate, ownerUser]);
 
   if (!selectedTemplate) {
     return (
@@ -78,7 +94,7 @@ export function MemoDocumentForm({
 
     switch (field.type) {
       case 'form_row': {
-        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[] }>) || [];
+        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[]; required?: boolean }>) || [];
         const value = (formData[field.id] as Record<string, string>) || {};
         const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
         const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
@@ -90,7 +106,10 @@ export function MemoDocumentForm({
             {fields.map((f, idx) => (
               <div key={f.name}>
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-slate-700">{f.label}</Label>
+                  <Label className="text-sm font-medium text-slate-700">
+                    {f.label}
+                    {f.required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
                   {f.type === 'date' ? (
                     <Input
                       type="date"
@@ -108,6 +127,61 @@ export function MemoDocumentForm({
                         ))}
                       </SelectContent>
                     </Select>
+                  ) : f.type === 'user_dropdown' ? (
+                    <Select value={value[f.name] || ''} onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="เลือกผู้อนุมัติ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.filter((u) => u.isApprover).map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : f.type === 'auto_from' ? (
+                    <Input value={ownerUser?.displayName || ''} disabled className="bg-slate-50" />
+                  ) : f.type === 'auto_dept' ? (
+                    <Input value={ownerUser?.department || ''} disabled className="bg-slate-50" />
+                  ) : f.type === 'user_multiselect' ? (
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const raw = value[f.name];
+                          const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
+                          return selected.map((uid) => {
+                            const u = users.find((usr) => usr.id === uid);
+                            return (
+                              <span key={uid} className="inline-flex items-center gap-1 bg-slate-100 border rounded px-2 py-0.5 text-xs text-slate-900 font-medium">
+                                {u?.displayName || uid}
+                                <button type="button" onClick={() => {
+                                  onChange(field.id, { ...value, [f.name]: selected.filter((v) => v !== uid) });
+                                }} className="text-red-400 hover:text-red-600">&times;</button>
+                              </span>
+                            );
+                          });
+                        })()}
+                      </div>
+                      <Select onValueChange={(val) => {
+                        const raw = value[f.name];
+                        const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
+                        if (!selected.includes(val)) {
+                          onChange(field.id, { ...value, [f.name]: [...selected, val] });
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="เลือกผู้รับสำเนา" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(() => {
+                            const raw = value[f.name];
+                            const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
+                            return users.filter((u) => u.isApprover && !selected.includes(u.id)).map((u) => (
+                              <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
+                            ));
+                          })()}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   ) : (
                     <Input
                       value={value[f.name] || ''}
@@ -186,6 +260,10 @@ export function MemoDocumentForm({
 
       case 'approval_grid': {
         const gridConfig = config as unknown as ApprovalGridConfig;
+        const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
+        const formRowData = formRowField ? (formData[formRowField.id] as Record<string, string>) || {} : {};
+        const attnToUserId = formRowData.attnTo || '';
+        const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
         return (
           <div key={field.id} className="space-y-1">
             <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
@@ -196,6 +274,8 @@ export function MemoDocumentForm({
               readonly={false}
               ownerUser={ownerUser}
               users={users}
+              attnToUserId={attnToUserId}
+              ccUserIds={ccUserIds}
             />
           </div>
         );
@@ -236,7 +316,7 @@ export function MemoDocumentForm({
           <div className="w-1/2 overflow-y-auto border-r">
             <div className="p-6 space-y-4">
               <h3 className="text-sm font-semibold text-slate-700">กรอกข้อมูล Memo</h3>
-              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header').map((field) => renderField(field))}
+              {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header' && f.type !== 'approval_grid').map((field) => renderField(field))}
             </div>
           </div>
 
@@ -252,7 +332,7 @@ export function MemoDocumentForm({
                     value={formData[field.id]}
                     formData={{
                       ...formData as Record<string, unknown>,
-                      memoNumber: generateMemoIdClient(ownerUser?.department || ''),
+                      memoNumber: memoNumber,
                     }}
                     readonly={true}
                     ownerUser={ownerUser}

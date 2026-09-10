@@ -97,17 +97,36 @@ function renderMemoType(field: MemoField, value: string): string {
   </div>`;
 }
 
-function renderFormRow(field: MemoField, value: Record<string, string>): string {
+function renderFormRow(field: MemoField, value: Record<string, string>, users?: User[]): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const fields = (config.fields as { name: string; label: string; type: string }[]) || [];
   const data = (typeof value === 'object' && value !== null) ? value : {};
+
+  const resolveUserName = (uid: string) => {
+    if (!users) return uid;
+    const user = users.find((u) => u.id === uid);
+    return user?.displayName || uid;
+  };
 
   const rows: string[] = [];
   for (let i = 0; i < fields.length; i += 2) {
     const left = fields[i];
     const right = fields[i + 1];
-    const leftVal = data[left.name] || '';
-    const rightVal = right ? (data[right.name] || '') : '';
+
+    const getDisplayVal = (f: { name: string; type: string }) => {
+      const raw = data[f.name] || '';
+      const fieldType = f.type as string;
+      if (fieldType === 'user_dropdown') return resolveUserName(raw);
+      if (fieldType === 'user_multiselect') {
+        const ids = Array.isArray(raw) ? raw : [];
+        return ids.length > 0 ? ids.map((id) => resolveUserName(id)).join(', ') : '-';
+      }
+      if (fieldType === 'auto_from' || fieldType === 'auto_dept') return raw || '-';
+      return raw || '-';
+    };
+
+    const leftVal = getDisplayVal(left);
+    const rightVal = right ? getDisplayVal(right) : '';
 
     rows.push(`<tr>
       <td style="width:120px;padding:8px;border:1px solid #000;font-weight:600;font-size:13px;">${left.label}</td>
@@ -166,12 +185,12 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
         ? 'อนุมัติ'
         : configColumns[i]?.title || 'ตรวจสอบ');
 
-    const displayName = isFirst
-      ? (ownerUser?.displayName || colData.name || '')
-      : colData.name || '';
-    const displayTitle = isFirst
-      ? (ownerUser?.department || colData.signerTitle || '')
-      : colData.signerTitle || (isLast ? 'CEO' : '');
+  const displayName = isFirst
+    ? (ownerUser?.displayName || colData.name || '')
+    : colData.name || '';
+  const displayTitle = isFirst
+    ? (ownerUser?.department || colData.signerTitle || '')
+    : colData.signerTitle || '';
 
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
@@ -224,7 +243,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
     case 'memo_type':
       return renderMemoType(field, (value as string) || '');
     case 'form_row':
-      return renderFormRow(field, (value as Record<string, string>) || {});
+      return renderFormRow(field, (value as Record<string, string>) || {}, users);
     case 'body_text':
       return renderBodyTextInner(field, value as string | undefined);
     case 'approval_grid':
@@ -254,6 +273,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
     };
 
     for (const field of template.fields) {
+      if (field.type === 'section_title') continue;
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'body_text') {
         bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups));
