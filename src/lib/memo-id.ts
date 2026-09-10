@@ -30,8 +30,12 @@ export async function generateMemoId(department: string): Promise<string> {
   const prefix = `${dept}${dateStr}`;
 
   try {
+    // Global daily sequence: count ALL memos created today (every department),
+    // reset to 01 when the day changes.
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfNextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const memosRef = collection(db, 'memos');
-    const q = query(memosRef, where('memoNumber', '>=', prefix), where('memoNumber', '<', prefix + '\uf8ff'));
+    const q = query(memosRef, where('createdAt', '>=', startOfDay), where('createdAt', '<', startOfNextDay));
     const snapshot = await getDocs(q);
     const seq = snapshot.size + 1;
     const seqStr = String(seq).padStart(2, '0');
