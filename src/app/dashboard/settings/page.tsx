@@ -41,7 +41,6 @@ import { logSettingUpdated } from '@/lib/event-logs';
 import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog } from '@/types';
 import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
 import { SectionRenderer } from '@/components/memo-sections';
-import { DEFAULT_TYPOGRAPHY, FONT_PRESETS } from '@/lib/typography';
 import { MemoTypography } from '@/types';
 
 export default function SettingsPage() {
@@ -275,27 +274,6 @@ export default function SettingsPage() {
     const updated = [...editingFormFields];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
     setEditingFormFields(updated);
-  };
-
-  // Typography editing state
-  const [editingTypoTemplateId, setEditingTypoTemplateId] = useState<string | null>(null);
-  const [editingTypo, setEditingTypo] = useState<Required<MemoTypography>>({ ...DEFAULT_TYPOGRAPHY });
-  const [typoSaving, setTypoSaving] = useState(false);
-
-  const handleEditTypography = (template: MemoTemplate) => {
-    setEditingTypo({ ...DEFAULT_TYPOGRAPHY, ...(template.typography || {}) });
-    setEditingTypoTemplateId(template.id);
-  };
-
-  const handleSaveTypography = async () => {
-    if (!editingTypoTemplateId) return;
-    setTypoSaving(true);
-    try {
-      await updateTemplate(editingTypoTemplateId, { typography: editingTypo });
-      setEditingTypoTemplateId(null);
-    } finally {
-      setTypoSaving(false);
-    }
   };
 
   // Company header editing state
@@ -1030,139 +1008,6 @@ Memo ของท่านมีการดำเนินการ: {action_la
                           <Trash2 className="h-3.5 w-3.5 mr-1" />ลบ
                         </Button>
                       </div>
-                    </div>
-
-                    {/* รูปแบบตัวอักษร (typography) */}
-                    <div className="p-4 border-b">
-                      <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-semibold text-slate-700">รูปแบบตัวอักษร (ฟอนต์/ขนาด/จัดแนว)</h5>
-                        {editingTypoTemplateId !== t.id ? (
-                          <Button variant="ghost" size="sm" onClick={() => handleEditTypography(t)}>
-                            <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไข
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => setEditingTypoTemplateId(null)}>ยกเลิก</Button>
-                            <Button size="sm" onClick={handleSaveTypography} disabled={typoSaving}>
-                              <Save className="h-3.5 w-3.5 mr-1" />{typoSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {editingTypoTemplateId === t.id ? (
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <Label>ฟอนต์</Label>
-                            <Select
-                              value={FONT_PRESETS.some((p) => p.value === editingTypo.fontFamily) ? editingTypo.fontFamily : '__custom__'}
-                              onValueChange={(v) => {
-                                if (v === '__custom__') {
-                                  setEditingTypo({ ...editingTypo, fontFamily: '' });
-                                } else {
-                                  setEditingTypo({ ...editingTypo, fontFamily: v });
-                                }
-                              }}
-                            >
-                              <SelectTrigger><SelectValue placeholder="เลือกฟอนต์" /></SelectTrigger>
-                              <SelectContent>
-                                {FONT_PRESETS.map((p) => (
-                                  <SelectItem key={p.label} value={p.value}>{p.label}</SelectItem>
-                                ))}
-                                <SelectItem value="__custom__">กำหนดเอง...</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {!FONT_PRESETS.some((p) => p.value === editingTypo.fontFamily) && (
-                              <Input
-                                placeholder='"Sukhumvit Set", sans-serif'
-                                value={editingTypo.fontFamily}
-                                onChange={(e) => setEditingTypo({ ...editingTypo, fontFamily: e.target.value })}
-                              />
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label>ขนาดฟอนต์เนื้อหา (px)</Label>
-                              <Input
-                                type="number" min={10} max={24}
-                                value={editingTypo.baseFontSize}
-                                onChange={(e) => setEditingTypo({ ...editingTypo, baseFontSize: Number(e.target.value) || 14 })}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label>ระยะบรรทัด (line-height)</Label>
-                              <Input
-                                type="number" min={1} max={3} step={0.1}
-                                value={editingTypo.lineHeight}
-                                onChange={(e) => setEditingTypo({ ...editingTypo, lineHeight: Number(e.target.value) || 1.7 })}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label>จัดแนวข้อความเนื้อหา</Label>
-                            <div className="flex gap-1">
-                              {([
-                                { v: 'left', label: 'ชิดซ้าย' },
-                                { v: 'center', label: 'กึ่งกลาง' },
-                                { v: 'right', label: 'ชิดขวา' },
-                                { v: 'justify', label: 'เต็มบรรทัด' },
-                              ] as const).map((o) => (
-                                <Button
-                                  key={o.v}
-                                  type="button"
-                                  variant={editingTypo.textAlign === o.v ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setEditingTypo({ ...editingTypo, textAlign: o.v })}
-                                >
-                                  {o.label}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-6">
-                            <label className="flex items-center gap-2 text-sm cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={editingTypo.boldLabels}
-                                onChange={(e) => setEditingTypo({ ...editingTypo, boldLabels: e.target.checked })}
-                                className="h-4 w-4 rounded"
-                              />
-                              หัวข้อตัวหนา
-                            </label>
-                            <label className="flex items-center gap-2 text-sm cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={editingTypo.boldBody}
-                                onChange={(e) => setEditingTypo({ ...editingTypo, boldBody: e.target.checked })}
-                                className="h-4 w-4 rounded"
-                              />
-                              เนื้อหาตัวหนา
-                            </label>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          className="p-2 bg-slate-50 rounded border text-sm"
-                          style={{
-                            fontFamily: (t.typography?.fontFamily || undefined),
-                          }}
-                        >
-                          <p
-                            style={{
-                              fontSize: `${t.typography?.baseFontSize || 14}px`,
-                              lineHeight: t.typography?.lineHeight || 1.7,
-                              textAlign: (t.typography?.textAlign as 'left' | 'center' | 'right' | 'justify') || 'left',
-                              fontWeight: t.typography?.boldBody ? 700 : 400,
-                            }}
-                          >
-                            <span style={{ fontWeight: t.typography?.boldLabels === false ? 400 : 700 }}>ตัวอย่าง:</span> ฟอนต์ Sukhumvit 123 กขค
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            ฟอนต์: {FONT_PRESETS.find((p) => p.value === t.typography?.fontFamily)?.label || (t.typography?.fontFamily ? 'กำหนดเอง' : 'Sukhumvit (ค่าเริ่มต้น)')}
-                            {' '}· ขนาด {t.typography?.baseFontSize || 14}px · ระยะบรรทัด {t.typography?.lineHeight || 1.7}
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* หัวข้อบริษัท (company_header) */}
