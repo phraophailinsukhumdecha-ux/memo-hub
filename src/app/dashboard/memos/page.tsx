@@ -343,6 +343,7 @@ export default function MemosPage() {
                         readonly={true}
                         ownerUser={detailOwnerUser}
                         users={allUsers}
+                        typography={detailTemplate.typography}
                       />
                     ))}
                   </div>

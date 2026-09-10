@@ -80,7 +80,12 @@ export async function POST() {
       ];
     }
 
-    await updateDoc(doc(db, 'memoTemplates', 'tpl_purchasing'), { fields: updatedFields });
+    const updates: Record<string, unknown> = { fields: updatedFields };
+    if (!template.typography) {
+      const { DEFAULT_TYPOGRAPHY } = await import('@/lib/typography');
+      updates.typography = { ...DEFAULT_TYPOGRAPHY };
+    }
+    await updateDoc(doc(db, 'memoTemplates', 'tpl_purchasing'), updates);
 
     return NextResponse.json({
       success: true,

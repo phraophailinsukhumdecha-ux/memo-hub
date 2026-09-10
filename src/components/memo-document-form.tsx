@@ -362,6 +362,7 @@ export function MemoDocumentForm({
                     readonly={true}
                     ownerUser={ownerUser}
                     users={users}
+                    typography={selectedTemplate.typography}
                   />
                 ))}
               </div>

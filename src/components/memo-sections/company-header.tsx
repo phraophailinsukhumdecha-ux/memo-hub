@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { CompanyHeaderConfig } from '@/types';
+import { CompanyHeaderConfig, MemoTypography } from '@/types';
 import { resolveLogoSrc } from '@/lib/logo';
+import { resolveTypography } from '@/lib/typography';
 
 interface CompanyHeaderProps {
   config?: CompanyHeaderConfig;
@@ -12,6 +13,7 @@ interface CompanyHeaderProps {
   quotationNo?: string;
   jobNo?: string;
   date?: string;
+  typography?: MemoTypography;
 }
 
 export const DEFAULT_COMPANY_HEADER: CompanyHeaderConfig = {
@@ -31,11 +33,12 @@ export const DEFAULT_COMPANY_HEADER: CompanyHeaderConfig = {
   dateLabel: 'DATE',
 };
 
-export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo, jobNo, date }: CompanyHeaderProps) {
+export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo, jobNo, date, typography }: CompanyHeaderProps) {
   const cfg = { ...DEFAULT_COMPANY_HEADER, ...config };
+  const typo = resolveTypography(typography);
 
   return (
-    <div className="mb-4">
+    <div className="mb-4" style={{ fontFamily: typo.fontFamily }}>
       {/* Logo + Company Name */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex-shrink-0">

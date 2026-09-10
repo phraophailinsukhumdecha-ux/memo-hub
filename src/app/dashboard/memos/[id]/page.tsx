@@ -131,6 +131,7 @@ export default function MemoDetailPage() {
                         ownerUser={ownerUserData}
                         users={allUsers}
                         groups={[]}
+                        typography={template.typography}
                       />
                     </div>
                   ));

@@ -1,6 +1,9 @@
-import { Memo, MemoField, MemoTemplate, User, Group } from '@/types';
+import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography } from '@/types';
 import { formatDate } from '@/utils/cn';
 import { resolveLogoSrc } from '@/lib/logo';
+import { resolveTypography } from '@/lib/typography';
+
+type ResolvedTypography = Required<MemoTypography>;
 
 const DEFAULT_LOGO_URL = '/logo-df.png';
 
@@ -139,10 +142,11 @@ function renderMemoType(field: MemoField, value: string): string {
 
 // Mirrors readonly FormRow preview: plain "{label} : {value}" lines,
 // excluding fields already shown in the MEMORANDUM header box.
-function renderFormRow(field: MemoField, value: Record<string, string>, users?: User[]): string {
+function renderFormRow(field: MemoField, value: Record<string, string>, users?: User[], typo?: ResolvedTypography): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const fields = (config.fields as { name: string; label: string; type: string }[]) || [];
   const data = (typeof value === 'object' && value !== null) ? value : {};
+  const t = typo || resolveTypography(null);
 
   const headerFieldNames = ['RefNo', 'refNo', 'quotationNo', 'jobNo', 'date'];
   const bodyFields = fields.filter((f) => !headerFieldNames.includes(f.name));
@@ -172,7 +176,7 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
 
   const renderLine = (f: { name: string; label: string; type: string }) => {
     const displayVal = resolveValue(f, data[f.name]);
-    return `<p style="margin:0 0 4px;font-size:14px;color:#0f172a;"><span style="font-weight:600;">${f.label}</span><span> : ${displayVal}</span></p>`;
+    return `<p style="margin:0 0 4px;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
   };
 
   if (rightFields.length === 0) {
@@ -188,13 +192,14 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
 }
 
 // Mirrors readonly BodyText preview: bordered box, content or ruled lines
-function renderBodyTextInner(field: MemoField, value: string | undefined): string {
+function renderBodyTextInner(field: MemoField, value: string | undefined, typo?: ResolvedTypography): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const lines = (config.lines as number) || 12;
   const content = value || '';
+  const t = typo || resolveTypography(null);
 
   if (content) {
-    return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;"><p style="font-size:14px;color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
+    return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
   }
 
   const ruled = Array.from({ length: lines }).map(() =>
@@ -288,7 +293,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
-function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails): string {
+function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails, typo?: ResolvedTypography): string {
   switch (field.type) {
     case 'section_title':
       return renderSectionTitle(field);
@@ -301,9 +306,9 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
     case 'memo_type':
       return renderMemoType(field, (value as string) || '');
     case 'form_row':
-      return renderFormRow(field, (value as Record<string, string>) || {}, users);
+      return renderFormRow(field, (value as Record<string, string>) || {}, users, typo);
     case 'body_text':
-      return renderBodyTextInner(field, value as string | undefined);
+      return renderBodyTextInner(field, value as string | undefined, typo);
     case 'approval_grid':
       return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds);
     default:
@@ -313,6 +318,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
 
 function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
   const isApproved = memo.status === 'approved';
+  const typo = resolveTypography(template?.typography);
 
   let sectionsHtml = '';
 
@@ -367,10 +373,10 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, typo));
       } else {
         flushBody();
-        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header));
+        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, typo));
       }
     }
     flushBody();
@@ -399,7 +405,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
   ` : '';
 
   return `
-    <div id="memo-print-content" style="font-family:'Sarabun','Noto Sans Thai',Arial,sans-serif;width:210mm;padding:15mm;color:#0f172a;position:relative;background:#fff;">
+    <div id="memo-print-content" style="font-family:${typo.fontFamily};width:210mm;padding:15mm;color:#0f172a;position:relative;background:#fff;">
       ${sectionsHtml}
 
       ${stampHtml}

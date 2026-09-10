@@ -8,6 +8,7 @@ import {
   buildCompactMemoHtml,
   createViewToken,
   buildViewUrl,
+  resolveMailFontFamily,
 } from '@/lib/memo-email';
 
 interface SmtpConfig {
@@ -403,11 +404,13 @@ export async function POST(request: NextRequest) {
 
     // Load template fields for preview rendering
     let templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }> = [];
+    let templateTypo: Record<string, unknown> | undefined;
     if (memo.templateId) {
       const templateDoc = await getDoc(doc(db, 'memoTemplates', memo.templateId));
       if (templateDoc.exists()) {
         const templateData = templateDoc.data();
         templateFields = (templateData.fields || []) as Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>;
+        templateTypo = templateData.typography as Record<string, unknown> | undefined;
       }
     }
 
@@ -493,7 +496,8 @@ MemoHub Digital Memo & Approval System`;
           memo as Record<string, unknown>,
           templateFields,
           userMap,
-          baseUrl
+          baseUrl,
+          templateTypo as import('@/types').MemoTypography | undefined
         );
 
         // Public full-memo view link (no login required)
@@ -503,7 +507,7 @@ MemoHub Digital Memo & Approval System`;
         const htmlEmail = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
-<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+<body style="font-family:${resolveMailFontFamily(templateTypo as import('@/types').MemoTypography | undefined)};max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#1e293b;">${subject}</h2>
   ${bodyHtml}
   ${summaryHtml}

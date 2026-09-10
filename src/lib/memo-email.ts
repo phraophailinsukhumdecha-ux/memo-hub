@@ -9,6 +9,8 @@ import {
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoAbsolute } from '@/lib/logo';
+import { resolveTypography } from '@/lib/typography';
+import { MemoTypography } from '@/types';
 
 export interface SmtpConfig {
   host: string;
@@ -70,6 +72,11 @@ export function createTransporter(smtp: SmtpConfig) {
   });
 }
 
+/** Font stack for email chrome from template typography (Sukhumvit default). */
+export function resolveMailFontFamily(typography?: MemoTypography): string {
+  return resolveTypography(typography || null).fontFamily;
+}
+
 export function buildSender(smtp: SmtpConfig): string {
   const name = (smtp.fromName || '').trim();
   const email = (smtp.fromEmail || '').trim();
@@ -114,8 +121,10 @@ export function buildCompactMemoHtml(
     fieldConfig?: Record<string, unknown>;
   }>,
   userMap: Map<string, { displayName?: string; department?: string }>,
-  baseUrl: string
+  baseUrl: string,
+  typography?: MemoTypography
 ): string {
+  const typo = resolveTypography(typography || null);
   const formData = (memo.formData || {}) as Record<string, unknown>;
   const memoNumber = (memo.memoNumber as string) || '';
   const status = memo.status as string;
@@ -213,7 +222,7 @@ export function buildCompactMemoHtml(
   }
 
   return `
-    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:16px 0;">
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:16px 0;font-family:${typo.fontFamily};">
       <div style="background:#f8fafc;padding:10px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
         ${logoUrl ? `<img src="${logoUrl}" style="max-height:32px;" alt="logo" />` : ''}
         <div>
@@ -292,10 +301,13 @@ export async function sendOwnerNotification(
       label: string;
       fieldConfig?: Record<string, unknown>;
     }> = [];
+    let templateTypo: MemoTypography | undefined;
     if (memo.templateId) {
       const templateDoc = await getDoc(doc(db, 'memoTemplates', memo.templateId));
       if (templateDoc.exists()) {
-        templateFields = (templateDoc.data().fields || []) as typeof templateFields;
+        const templateData = templateDoc.data();
+        templateFields = (templateData.fields || []) as typeof templateFields;
+        templateTypo = templateData.typography as MemoTypography | undefined;
       }
     }
 
@@ -357,13 +369,14 @@ export async function sendOwnerNotification(
       memo as Record<string, unknown>,
       templateFields,
       userMap,
-      baseUrl
+      baseUrl,
+      templateTypo
     );
 
     const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
-<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+<body style="font-family:${resolveMailFontFamily(templateTypo)};max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#1e293b;">${escapeHtml(subject)}</h2>
   <div style="background:${stampBg};border:2px solid ${stampColor};border-radius:8px;padding:14px;margin:16px 0;">
     <p style="margin:0;font-size:16px;font-weight:800;color:${stampColor};">${stampText}</p>

@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormRowConfig } from '@/types';
-import { User } from '@/types';
+import { User, MemoTypography } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 
 interface FormRowProps {
   config?: FormRowConfig;
@@ -14,6 +15,7 @@ interface FormRowProps {
   readonly?: boolean;
   memoType?: string;
   users?: User[];
+  typography?: MemoTypography;
 }
 
 const DEFAULT_CONFIG: FormRowConfig = {
@@ -27,8 +29,9 @@ const DEFAULT_CONFIG: FormRowConfig = {
   ],
 };
 
-export function FormRow({ config, value = {}, onChange, readonly, memoType, users = [] }: FormRowProps) {
+export function FormRow({ config, value = {}, onChange, readonly, memoType, users = [], typography }: FormRowProps) {
   const cfg = config || DEFAULT_CONFIG;
+  const typo = resolveTypography(typography);
 
   const handleChange = (fieldName: string, fieldValue: string) => {
     if (readonly || !onChange) return;
@@ -65,13 +68,20 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     const leftFields = bodyFields.filter((f) => !RIGHT_COLUMN_NAMES.includes(f.name));
     const rightFields = bodyFields.filter((f) => RIGHT_COLUMN_NAMES.includes(f.name));
 
+    const lineStyle: React.CSSProperties = {
+      fontFamily: typo.fontFamily,
+      fontSize: `${typo.baseFontSize}px`,
+      lineHeight: typo.lineHeight,
+      textAlign: typo.textAlign,
+    };
+
     const renderLine = (f: typeof cfg.fields[0]) => {
       const raw = value[f.name];
       const displayVal = resolveValue(f, raw as string);
       return (
-        <div key={f.name} className="flex items-center gap-2 text-sm">
-          <span className="font-semibold text-slate-900">{f.label}</span>
-          <span className="text-slate-900">: {displayVal}</span>
+        <div key={f.name} className="flex items-center gap-2" style={lineStyle}>
+          <span className="text-slate-900" style={{ fontWeight: typo.boldLabels ? 600 : 400 }}>{f.label}</span>
+          <span className="text-slate-900" style={{ fontWeight: typo.boldBody ? 700 : 400 }}>: {displayVal}</span>
         </div>
       );
     };

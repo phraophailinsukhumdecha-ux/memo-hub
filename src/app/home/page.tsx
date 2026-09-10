@@ -595,6 +595,7 @@ export default function HomePage() {
                       readonly={true}
                       ownerUser={detailOwnerUser}
                       users={allUsers}
+                      typography={detailTemplate.typography}
                     />
                   ))}
                 </div>

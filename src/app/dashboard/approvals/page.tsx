@@ -204,6 +204,7 @@ export default function ApprovalsPage() {
                     readonly={true}
                     ownerUser={detailOwnerUser}
                     users={allUsers}
+                    typography={detailTemplate.typography}
                   />
                 ))}
               </div>

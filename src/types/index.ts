@@ -33,10 +33,22 @@ export interface Group {
   updatedAt: Date;
 }
 
+export type MemoTextAlign = 'left' | 'center' | 'right' | 'justify';
+
+export interface MemoTypography {
+  fontFamily?: string;
+  baseFontSize?: number;
+  lineHeight?: number;
+  textAlign?: MemoTextAlign;
+  boldLabels?: boolean;
+  boldBody?: boolean;
+}
+
 export interface MemoTemplate {
   id: string;
   name: string;
   description?: string;
+  typography?: MemoTypography;
   fields: MemoField[];
   conditionId?: string;
   isActive: boolean;

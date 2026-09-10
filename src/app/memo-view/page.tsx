@@ -103,6 +103,7 @@ function MemoViewContent() {
                 readonly={true}
                 ownerUser={owner}
                 users={users}
+                typography={template?.typography}
               />
             ))}
           </div>
