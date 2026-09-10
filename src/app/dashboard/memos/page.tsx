@@ -134,6 +134,32 @@ export default function MemosPage() {
   const handleCreateMemo = async (sendEmail = false) => {
     if (!selectedTemplateObj || !user) return;
 
+    // Validate required fields in form_row
+    const formRowField = selectedTemplateObj.fields.find((f) => f.type === 'form_row');
+    if (formRowField) {
+      const config = (formRowField.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; required?: boolean }> };
+      const fields = config.fields || [];
+      const value = (sectionFormData[formRowField.id] as Record<string, string>) || {};
+      for (const f of fields) {
+        if (f.required && !value[f.name]) {
+          alert(`กรุณากรอก "${f.label}" (จำเป็น)`);
+          return;
+        }
+      }
+    }
+
+    // Validate CLIENT SPECIFIC / VENDOR SPECIFIC mutual exclusion
+    const clientVal = (sectionFormData.form_row_1 as Record<string, string>)?.clientSpecific || '';
+    const vendorVal = (sectionFormData.form_row_1 as Record<string, string>)?.vendorSpecific || '';
+    if (clientVal && vendorVal) {
+      alert('เลือกได้แค่ CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
+      return;
+    }
+    if (!clientVal && !vendorVal) {
+      alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
+      return;
+    }
+
     setCreating(true);
     try {
       const formData = { ...sectionFormData };

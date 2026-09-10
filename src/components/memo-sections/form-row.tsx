@@ -105,6 +105,54 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     });
   }
 
+  // CLIENT SPECIFIC / VENDOR SPECIFIC are mutually exclusive:
+  // selecting one locks the other (clear it to switch).
+  const clientVal = (value['clientSpecific'] as string) || '';
+  const vendorVal = (value['vendorSpecific'] as string) || '';
+  const isExclusivePair = (fieldName: string) =>
+    fieldName === 'clientSpecific' || fieldName === 'vendorSpecific';
+  const isLockedByPair = (fieldName: string) =>
+    (fieldName === 'clientSpecific' && !!vendorVal) ||
+    (fieldName === 'vendorSpecific' && !!clientVal);
+
+  const renderDropdownInput = (f: typeof cfg.fields[0]) => {
+    const currentVal = (value[f.name] as string) || '';
+    const locked = isLockedByPair(f.name);
+    return (
+      <div className="flex items-center gap-1">
+        <div className="flex-1 min-w-0">
+          <Select
+            value={currentVal}
+            onValueChange={(val) => handleChange(f.name, val)}
+            disabled={locked}
+          >
+            <SelectTrigger
+              className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={locked ? 'เลือกได้เพียง CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง — กด × เพื่อล้างอีกฝั่งก่อน' : undefined}
+            >
+              <SelectValue placeholder="เลือก" />
+            </SelectTrigger>
+            <SelectContent>
+              {(f.options || []).map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {isExclusivePair(f.name) && currentVal && (
+          <button
+            type="button"
+            onClick={() => handleChange(f.name, '')}
+            title="ล้างค่า เพื่อเลือกอีกฝั่ง"
+            className="shrink-0 h-5 w-5 rounded-full text-xs leading-none text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="border border-slate-900 divide-y divide-slate-900">
       {rows.map((row, rowIndex) => (
@@ -125,16 +173,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
                   className="w-full text-sm border-0 bg-transparent p-0 focus:outline-none text-slate-900"
                 />
               ) : row.left.type === 'dropdown' ? (
-                <Select value={value[row.left.name] || ''} onValueChange={(val) => handleChange(row.left.name, val)}>
-                  <SelectTrigger className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0">
-                    <SelectValue placeholder="เลือก" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(row.left.options || []).map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                renderDropdownInput(row.left)
               ) : (
                 <Input
                   value={value[row.left.name] || ''}
@@ -162,16 +201,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
                     className="w-full text-sm border-0 bg-transparent p-0 focus:outline-none text-slate-900"
                   />
                 ) : row.right?.type === 'dropdown' ? (
-                  <Select value={value[row.right?.name || ''] || ''} onValueChange={(val) => handleChange(row.right?.name || '', val)}>
-                    <SelectTrigger className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0">
-                      <SelectValue placeholder="เลือก" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(row.right?.options || []).map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  renderDropdownInput(row.right!)
                 ) : (
                   <Input
                     value={value[row.right?.name || ''] || ''}
