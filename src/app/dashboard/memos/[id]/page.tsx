@@ -127,6 +127,7 @@ export default function MemoDetailPage() {
                       <SectionRenderer
                         field={field}
                         value={(memo.formData as Record<string, unknown>)[field.id]}
+                        formData={{ ...(memo.formData as Record<string, unknown>), memoNumber: memo.memoNumber }}
                         readonly={true}
                         memoType={currentMemoType}
                         ownerUser={ownerUserData}

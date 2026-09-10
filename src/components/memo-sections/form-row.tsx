@@ -45,9 +45,6 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
   };
 
   if (readonly) {
-    const headerFieldNames = ['RefNo', 'refNo', 'quotationNo', 'jobNo', 'date'];
-    const bodyFields = cfg.fields.filter((f) => !headerFieldNames.includes(f.name));
-
     const resolveUserName = (uid: string) => {
       const user = users.find((u) => u.id === uid);
       return user?.displayName || uid;
@@ -63,46 +60,39 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
       return val || '-';
     };
 
-    // Two-column layout: ATTN TO / FROM / DEPT / CC on the right, the rest on the left
-    const RIGHT_COLUMN_NAMES = ['attnTo', 'from', 'dept', 'cc'];
-    const leftFields = bodyFields.filter((f) => !RIGHT_COLUMN_NAMES.includes(f.name));
-    const rightFields = bodyFields.filter((f) => RIGHT_COLUMN_NAMES.includes(f.name));
-
-    const lineStyle: React.CSSProperties = {
-      fontFamily: typo.fontFamily,
-      fontSize: `${typo.baseFontSize}px`,
-      lineHeight: typo.lineHeight,
-      textAlign: typo.textAlign,
-    };
-
-    const renderLine = (f: typeof cfg.fields[0]) => {
-      const raw = value[f.name];
-      const displayVal = resolveValue(f, raw as string);
-      const labelSize = Math.round(typo.baseFontSize * 0.88);
-      return (
-        <div key={f.name} className="flex items-center gap-2" style={lineStyle}>
-          <span className="text-slate-900" style={{ fontWeight: typo.boldLabels ? 600 : 400, fontSize: `${labelSize}px` }}>{f.label}</span>
-          <span className="text-slate-900" style={{ fontWeight: typo.boldBody ? 700 : 400 }}>: {displayVal}</span>
-        </div>
-      );
-    };
-
-    if (rightFields.length === 0) {
-      return (
-        <div className="space-y-1">
-          {leftFields.map(renderLine)}
-        </div>
-      );
+    // Bordered table layout matching PDF (pairs of fields per row)
+    const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
+    for (let i = 0; i < cfg.fields.length; i += 2) {
+      rows.push({
+        left: cfg.fields[i],
+        right: cfg.fields[i + 1] || null,
+      });
     }
 
+    const labelSize = Math.round(typo.baseFontSize * 0.88);
+    const cellStyle: React.CSSProperties = {
+      fontFamily: typo.fontFamily,
+      lineHeight: typo.lineHeight,
+    };
+
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          {leftFields.map(renderLine)}
-        </div>
-        <div className="space-y-1">
-          {rightFields.map(renderLine)}
-        </div>
+      <div className="border border-slate-900 divide-y divide-slate-900" style={cellStyle}>
+        {rows.map((row, ri) => (
+          <div key={ri} className="grid grid-cols-2">
+            <div className="flex items-center px-3 py-2 border-r border-slate-900">
+              <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{row.left.label}</span>
+              <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(row.left, value[row.left.name] as string)}</span>
+            </div>
+            {row.right ? (
+              <div className="flex items-center px-3 py-2">
+                <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{row.right.label}</span>
+                <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(row.right, value[row.right.name] as string)}</span>
+              </div>
+            ) : (
+              <div />
+            )}
+          </div>
+        ))}
       </div>
     );
   }

@@ -202,6 +202,7 @@ export default function ApprovalsPage() {
                     key={field.id}
                     field={field}
                     value={selectedMemo.formData?.[field.id]}
+                    formData={{ ...(selectedMemo.formData as Record<string, unknown>), memoNumber: selectedMemo.memoNumber }}
                     readonly={true}
                     ownerUser={detailOwnerUser}
                     users={allUsers}
