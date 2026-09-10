@@ -57,8 +57,7 @@ export default function HomePage() {
       if (i === 0) {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
       } else if (i === cols.length - 1) {
-        const ceoUser = allUsers.find((u) => u.position === 'CEO');
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: ceoUser?.displayName || '', userId: ceoUser?.id || '', signerTitle: ceoUser?.position || 'CEO' };
+        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
       } else {
         gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
       }
@@ -348,6 +347,33 @@ export default function HomePage() {
 
   const handleCreateMemo = async (sendEmail = false) => {
     if (!selectedTemplate || !user) return;
+
+    // Validate required fields in form_row
+    const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
+    if (formRowField) {
+      const config = (formRowField.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; required?: boolean }> };
+      const fields = config.fields || [];
+      const value = (sectionFormData[formRowField.id] as Record<string, string>) || {};
+      for (const f of fields) {
+        if (f.required && !value[f.name]) {
+          alert(`กรุณากรอก "${f.label}" (จำเป็น)`);
+          return;
+        }
+      }
+    }
+
+    // Validate CLIENT SPECIFIC / VENDOR SPECIFIC mutual exclusion
+    const clientVal = (sectionFormData.form_row_1 as Record<string, string>)?.clientSpecific || '';
+    const vendorVal = (sectionFormData.form_row_1 as Record<string, string>)?.vendorSpecific || '';
+    if (clientVal && vendorVal) {
+      alert('เลือกได้แค่ CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
+      return;
+    }
+    if (!clientVal && !vendorVal) {
+      alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
+      return;
+    }
+
     setCreating(true);
     try {
       const formData = { ...sectionFormData };

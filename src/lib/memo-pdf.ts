@@ -157,7 +157,7 @@ function renderBodyTextInner(field: MemoField, value: string | undefined): strin
   ).join('');
 }
 
-function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
+function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[]): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const configColumns = (config.columns as { title: string; subtitle?: string }[]) || [];
   const showTime = config.showTime as boolean;
@@ -185,12 +185,27 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
         ? 'อนุมัติ'
         : configColumns[i]?.title || 'ตรวจสอบ');
 
+  // Resolve non-first columns from ATTN TO / CC, mirroring readonly ApprovalGrid preview
+  let resolvedName = colData.name || '';
+  let resolvedTitle = colData.signerTitle || '';
+  if (!isFirst && users) {
+    const attnUser = attnToUserId ? users.find((u) => u.id === attnToUserId) : null;
+    const ccUsers = (ccUserIds || []).map((id) => users.find((u) => u.id === id)).filter(Boolean);
+    if (i === 1 && attnUser) {
+      resolvedName = attnUser.displayName;
+      resolvedTitle = attnUser.department || '';
+    } else if (i > 1 && ccUsers[i - 2]) {
+      resolvedName = ccUsers[i - 2]!.displayName;
+      resolvedTitle = ccUsers[i - 2]!.department || '';
+    }
+  }
+
   const displayName = isFirst
     ? (ownerUser?.displayName || colData.name || '')
-    : colData.name || '';
+    : resolvedName;
   const displayTitle = isFirst
     ? (ownerUser?.department || colData.signerTitle || '')
-    : colData.signerTitle || '';
+    : resolvedTitle;
 
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
@@ -230,7 +245,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
-function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
+function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[]): string {
   switch (field.type) {
     case 'section_title':
       return renderSectionTitle(field);
@@ -247,7 +262,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
     case 'body_text':
       return renderBodyTextInner(field, value as string | undefined);
     case 'approval_grid':
-      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups);
+      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds);
     default:
       return '';
   }
@@ -272,14 +287,36 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
       }
     };
 
-    for (const field of template.fields) {
-      if (field.type === 'section_title') continue;
+    // Same filter as creation preview in memo-document-form.tsx:
+    // skip memo_type, section_title, checkbox_group, and legacy จุดประสงค์ dropdown
+    const visibleFields = template.fields.filter(
+      (f) =>
+        f.type !== 'memo_type' &&
+        f.type !== 'section_title' &&
+        f.type !== 'checkbox_group' &&
+        !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์')
+    );
+
+    // Extract ATTN TO / CC from form_row for approval grid name resolution (mirrors SectionRenderer)
+    const formDataObj = (memo.formData as Record<string, unknown>) || {};
+    const formRowData = Object.values(formDataObj).find((v) => {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const obj = v as Record<string, unknown>;
+        return obj.subject !== undefined || obj.attnTo !== undefined;
+      }
+      return false;
+    }) as Record<string, unknown> | undefined;
+    const attnToUserId = (formRowData?.attnTo as string) || '';
+    const rawCc = formRowData?.cc;
+    const ccUserIds: string[] = Array.isArray(rawCc) ? (rawCc as string[]) : [];
+
+    for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds));
       } else {
         flushBody();
-        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups));
+        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds));
       }
     }
     flushBody();

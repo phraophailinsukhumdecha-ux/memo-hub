@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ApprovalGridConfig, User, Group } from '@/types';
 import { Plus, X } from 'lucide-react';
@@ -15,6 +15,8 @@ interface ApprovalGridProps {
   ownerUser?: User | null;
   users?: User[];
   groups?: Group[];
+  attnToUserId?: string;
+  ccUserIds?: string[];
 }
 
 const DEFAULT_CONFIG: ApprovalGridConfig = {
@@ -25,7 +27,7 @@ const DEFAULT_CONFIG: ApprovalGridConfig = {
   ],
 };
 
-export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users }: ApprovalGridProps) {
+export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, attnToUserId, ccUserIds = [] }: ApprovalGridProps) {
   const cfg = config || DEFAULT_CONFIG;
 
   let configColumns = cfg.columns;
@@ -42,12 +44,45 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     }
   }
 
+  // Auto-populate columns from ownerUser, attnToUserId, ccUserIds
+  useEffect(() => {
+    if (readonly || !onChange) return;
+    if (!ownerUser && !attnToUserId && ccUserIds.length === 0) return;
+
+    const autoValue: typeof value = {};
+    let idx = 0;
+    if (ownerUser) {
+      autoValue[`col_${idx}`] = { name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: 'ผู้ขออนุมัติ' };
+      idx++;
+    }
+    if (attnToUserId) {
+      const attnUser = users?.find((u) => u.id === attnToUserId);
+      if (attnUser) {
+        autoValue[`col_${idx}`] = { name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ' };
+        idx++;
+      }
+    }
+    for (const ccId of ccUserIds) {
+      const ccUser = users?.find((u) => u.id === ccId);
+      if (ccUser) {
+        autoValue[`col_${idx}`] = { name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ' };
+        idx++;
+      }
+    }
+    if (Object.keys(autoValue).length > 0) {
+      onChange(autoValue);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerUser?.id, attnToUserId, ccUserIds.join(',')]);
+
   const colIndices = Object.keys(value)
     .filter((k) => k.startsWith('col_'))
     .map((k) => parseInt(k.split('_')[1]))
     .sort((a, b) => a - b);
 
-  const totalColumns = Math.max(colIndices.length, configColumns.length);
+  // Calculate required columns: ownerUser + attnTo + ccUsers
+  const requiredColumns = (ownerUser ? 1 : 0) + (attnToUserId ? 1 : 0) + ccUserIds.length;
+  const totalColumns = Math.max(colIndices.length, configColumns.length, requiredColumns);
   const lastIndex = totalColumns - 1;
   const canRemove = totalColumns > 3;
 
@@ -201,6 +236,21 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     }
 
     if (isMiddle) {
+      // Always resolve from ATTN TO / CC based on colIndex
+      let resolvedName = colData.name || '';
+      let resolvedTitle = colData.signerTitle || '';
+      if (users) {
+        const attnUser = attnToUserId ? users.find((u) => u.id === attnToUserId) : null;
+        const ccUsers = ccUserIds.map((id) => users.find((u) => u.id === id)).filter(Boolean);
+        if (colIndex === 1 && attnUser) {
+          resolvedName = attnUser.displayName;
+          resolvedTitle = attnUser.department || '';
+        } else if (colIndex > 1 && ccUsers[colIndex - 2]) {
+          resolvedName = ccUsers[colIndex - 2]!.displayName;
+          resolvedTitle = ccUsers[colIndex - 2]!.department || '';
+        }
+      }
+
       return (
         <div key={colIndex} className="p-4">
           <div className="flex items-center justify-between mb-4">
@@ -227,7 +277,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
               <p className="mb-1">ลงชื่อ</p>
               {readonly ? (
                 <p className="border-b border-slate-700 pb-1 min-h-[1.5rem]">
-                  {colData.name ? `( ${colData.name} )` : '(  )'}
+                  {resolvedName ? `( ${resolvedName} )` : '(  )'}
                 </p>
               ) : (
                 <select
@@ -245,7 +295,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
             <div>
               <p className="mb-1">ตำแหน่ง</p>
               <p className="border-b border-slate-700 pb-1 min-h-[1.5rem]">
-                {colData.signerTitle || ''}
+                {resolvedTitle}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -275,6 +325,23 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
 
     const displayName = colData.name || '';
     const displayTitle = colData.signerTitle || '';
+    // Always resolve from ATTN TO / CC based on colIndex
+    let resolvedName = displayName;
+    let resolvedTitle = displayTitle;
+    if (users) {
+      const attnUser = attnToUserId ? users.find((u) => u.id === attnToUserId) : null;
+      const ccUsers = ccUserIds.map((id) => users.find((u) => u.id === id)).filter(Boolean);
+      if (colIndex === 0) {
+        // First column: ownerUser (already handled above)
+      } else if (colIndex === 1 && attnUser) {
+        resolvedName = attnUser.displayName;
+        resolvedTitle = attnUser.department || '';
+      } else if (colIndex > 1 && ccUsers[colIndex - 2]) {
+        resolvedName = ccUsers[colIndex - 2]!.displayName;
+        resolvedTitle = ccUsers[colIndex - 2]!.department || '';
+      }
+    }
+
     return (
       <div key={colIndex} className="p-4">
         <div className="mb-4">
@@ -294,7 +361,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
             <p className="mb-1">ลงชื่อ</p>
             {readonly ? (
               <p className="border-b border-slate-700 pb-1 min-h-[1.5rem]">
-                {displayName ? `( ${displayName} )` : '(  )'}
+                {resolvedName ? `( ${resolvedName} )` : '(  )'}
               </p>
             ) : (
               <select
@@ -313,7 +380,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
             <p className="mb-1">ตำแหน่ง</p>
             {readonly ? (
               <p className="border-b border-slate-700 pb-1 min-h-[1.5rem]">
-                {displayTitle}
+                {resolvedTitle}
               </p>
             ) : (
               <input

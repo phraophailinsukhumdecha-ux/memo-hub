@@ -2,15 +2,38 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-// Default form_row fields matching the creation form
+const COMPANY_HEADER_FIELD = {
+  id: 'company_header_1',
+  name: 'company_header',
+  label: 'ข้อมูลบริษัท',
+  type: 'company_header',
+  required: false,
+  fieldConfig: {
+    logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
+    companyName: 'Digital Factory Company Limited',
+    addressLines: [
+      'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
+      'ถนนรัชดาภิเษก แขวงสามเสนนอก',
+      'เขตห้วยขวาง กรุงเทพมหานคร 10310',
+    ],
+  },
+};
+
 const DEFAULT_FORM_ROW_FIELDS = [
-  { name: 'RefNo', label: 'REF. NO.', type: 'text' },
-  { name: 'quotationNo', label: 'Quotation No.', type: 'text' },
-  { name: 'jobNo', label: 'Job No.', type: 'text' },
-  { name: 'date', label: 'Date', type: 'date' },
-  { name: 'subject', label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'] },
-  { name: 'detail', label: 'เรื่องขออนุมัติ', type: 'text' },
-  { name: 'to', label: 'To', type: 'text' },
+  { name: 'RefNo', label: 'REF. NO.', type: 'text', required: false },
+  { name: 'quotationNo', label: 'Quotation No.', type: 'text', required: false },
+  { name: 'jobNo', label: 'Job No.', type: 'text', required: false },
+  { name: 'date', label: 'Date', type: 'date', required: false },
+  { name: 'subject', label: 'Subject', type: 'dropdown', options: ['ขออนุมัติ', 'ขอให้ดำเนินการ', 'ให้ข้อคิดเห็น', 'แจ้งให้ทราบ'], required: false },
+  { name: 'clientSpecific', label: 'CLIENT SPECIFIC', type: 'dropdown', options: ['1', '2', '3'], required: true },
+  { name: 'vendorSpecific', label: 'VENDOR SPECIFIC', type: 'dropdown', options: ['1', '2', '3'], required: true },
+  { name: 'dfInternalAffairs', label: 'DF INTERNAL AFFAIRS', type: 'dropdown', options: ['Yes', 'No'], required: true },
+  { name: 'detail', label: 'เรื่องขออนุมัติ', type: 'text', required: false },
+  { name: 'attnTo', label: 'ATTN TO', type: 'user_dropdown', required: true },
+  { name: 'from', label: 'FROM', type: 'auto_from', required: false },
+  { name: 'dept', label: 'DEPT', type: 'auto_dept', required: false },
+  { name: 'cc', label: 'CC', type: 'user_multiselect', required: false },
+  { name: 'to', label: 'To', type: 'text', required: false },
 ];
 
 export async function POST() {
@@ -23,11 +46,14 @@ export async function POST() {
     const template = templateDoc.data()!;
     const fields = template.fields || [];
 
-    const formRowIndex = fields.findIndex((f: Record<string, unknown>) => f.id === 'form_row_1');
+    // 1. Ensure company_header exists
+    const hasCompanyHeader = fields.some((f: Record<string, unknown>) => f.type === 'company_header');
+    let updatedFields = hasCompanyHeader ? fields : [COMPANY_HEADER_FIELD, ...fields];
 
-    let updatedFields;
+    // 2. Replace form_row fields entirely
+    const formRowIndex = updatedFields.findIndex((f: Record<string, unknown>) => f.id === 'form_row_1');
     if (formRowIndex >= 0) {
-      updatedFields = fields.map((field: Record<string, unknown>) => {
+      updatedFields = updatedFields.map((field: Record<string, unknown>) => {
         if (field.id === 'form_row_1') {
           return { ...field, fieldConfig: { fields: DEFAULT_FORM_ROW_FIELDS } };
         }
@@ -35,7 +61,7 @@ export async function POST() {
       });
     } else {
       updatedFields = [
-        ...fields,
+        ...updatedFields,
         {
           id: 'form_row_1',
           name: 'form_data',
@@ -51,8 +77,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: 'Template form_row updated',
-      fields: DEFAULT_FORM_ROW_FIELDS,
+      message: 'Template updated with ATTN TO, FROM, DEPT, CC fields',
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormRowConfig } from '@/types';
+import { User } from '@/types';
 
 interface FormRowProps {
   config?: FormRowConfig;
@@ -12,6 +13,7 @@ interface FormRowProps {
   onChange?: (value: Record<string, string>) => void;
   readonly?: boolean;
   memoType?: string;
+  users?: User[];
 }
 
 const DEFAULT_CONFIG: FormRowConfig = {
@@ -25,7 +27,7 @@ const DEFAULT_CONFIG: FormRowConfig = {
   ],
 };
 
-export function FormRow({ config, value = {}, onChange, readonly, memoType }: FormRowProps) {
+export function FormRow({ config, value = {}, onChange, readonly, memoType, users = [] }: FormRowProps) {
   const cfg = config || DEFAULT_CONFIG;
 
   const handleChange = (fieldName: string, fieldValue: string) => {
@@ -40,15 +42,36 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType }: Fo
   };
 
   if (readonly) {
-    // Show all fields from config - no filtering
+    const headerFieldNames = ['RefNo', 'refNo', 'quotationNo', 'jobNo', 'date'];
+    const bodyFields = cfg.fields.filter((f) => !headerFieldNames.includes(f.name));
+
+    const resolveUserName = (uid: string) => {
+      const user = users.find((u) => u.id === uid);
+      return user?.displayName || uid;
+    };
+
+    const resolveValue = (f: typeof cfg.fields[0], val: string) => {
+      const fieldType = f.type as string;
+      if (fieldType === 'user_dropdown') return resolveUserName(val);
+      if (fieldType === 'user_multiselect') {
+        const ids = Array.isArray(val) ? val as string[] : [];
+        return ids.length > 0 ? ids.map((id) => resolveUserName(id)).join(', ') : '-';
+      }
+      return val || '-';
+    };
+
     return (
       <div className="space-y-1">
-        {cfg.fields.map((f) => (
-          <div key={f.name} className="flex items-center gap-2 text-sm">
-            <span className="font-semibold text-slate-900">{f.label}</span>
-            <span className="text-slate-900">: {value[f.name] || '-'}</span>
-          </div>
-        ))}
+        {bodyFields.map((f) => {
+          const raw = value[f.name];
+          const displayVal = resolveValue(f, raw as string);
+          return (
+            <div key={f.name} className="flex items-center gap-2 text-sm">
+              <span className="font-semibold text-slate-900">{f.label}</span>
+              <span className="text-slate-900">: {displayVal}</span>
+            </div>
+          );
+        })}
       </div>
     );
   }

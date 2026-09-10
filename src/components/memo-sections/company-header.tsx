@@ -14,7 +14,7 @@ interface CompanyHeaderProps {
 }
 
 const DEFAULT_CONFIG: CompanyHeaderConfig = {
-  logoUrl: '/logo-df.png',
+  logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
   companyName: 'Digital Factory Company Limited',
   addressLines: [
     'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
@@ -45,12 +45,12 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
 
       {/* MEMORANDUM Header + Memo Details */}
       <div className="border border-slate-900">
-      <div className="flex">
+        <div className="flex">
           {/* Left: MEMORANDUM + Address */}
-          <div className="border-r border-slate-900 py-4 px-3">
-            <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3">MEMORANDUM</h2>
+          <div className="border-r border-slate-900 py-4 px-3 w-[55%]">
+            <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">MEMORANDUM</h2>
             <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
-              <p>{cfg.companyName}</p>
+              <p className="font-semibold">บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)</p>
               {cfg.addressLines.map((line, i) => (
                 <p key={i}>{line}</p>
               ))}
@@ -59,27 +59,27 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
 
           {/* Right: Memo Details Table */}
           <div className="flex-1 p-4">
-            <table className="text-sm">
+            <table className="text-sm w-full">
               <tbody>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">MEMO NO.</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {memoNumber || '-'}</td>
+                  <td className="text-slate-900 py-1">: {memoNumber || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">REF. NO.</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {refNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">REF. NO. (if any)</td>
+                  <td className="text-slate-900 py-1">: {refNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation No.</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {quotationNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Quotation no.</td>
+                  <td className="text-slate-900 py-1">: {quotationNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job No.</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {jobNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">Job no.</td>
+                  <td className="text-slate-900 py-1">: {jobNo || '-'}</td>
                 </tr>
                 <tr>
                   <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">DATE</td>
-                  <td className="text-slate-900 py-1 whitespace-nowrap">: {date || '-'}</td>
+                  <td className="text-slate-900 py-1">: {date || '-'}</td>
                 </tr>
               </tbody>
             </table>

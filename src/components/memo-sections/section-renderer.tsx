@@ -91,6 +91,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           onChange={onChange as ((value: Record<string, string>) => void) | undefined}
           readonly={readonly}
           memoType={memoType}
+          users={users}
         />
       );
 
@@ -104,7 +105,17 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
         />
       );
 
-    case 'approval_grid':
+    case 'approval_grid': {
+      const formRowField = formData ? Object.values(formData).find((v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          const obj = v as Record<string, unknown>;
+          return obj.subject !== undefined || obj.attnTo !== undefined;
+        }
+        return false;
+      }) as Record<string, string> | undefined : undefined;
+      const attnToUserId = formRowField?.attnTo || '';
+      const rawCc = formRowField?.cc;
+      const ccUserIds: string[] = Array.isArray(rawCc) ? rawCc as string[] : [];
       return (
         <ApprovalGrid
           config={field.fieldConfig as ApprovalGridConfig | undefined}
@@ -116,8 +127,11 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           ownerUser={ownerUser}
           users={users}
           groups={groups}
+          attnToUserId={attnToUserId}
+          ccUserIds={ccUserIds}
         />
       );
+    }
 
     default:
       return (

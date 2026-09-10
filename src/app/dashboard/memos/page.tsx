@@ -116,8 +116,7 @@ export default function MemosPage() {
           if (i === 0) {
             gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '' };
           } else if (i === cols.length - 1) {
-            const ceoUser = allUsers.find((u) => u.position === 'CEO');
-            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: ceoUser?.displayName || '', signerTitle: ceoUser?.position || 'CEO' };
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
           } else {
             gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
           }

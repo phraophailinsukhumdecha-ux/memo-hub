@@ -190,13 +190,18 @@ export default function SettingsPage() {
 
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
-  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }>>([]);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean }>>([]);
   const [fieldSaving, setFieldSaving] = useState(false);
 
   const handleEditFormFields = (template: MemoTemplate) => {
     const formRow = (template.fields || []).find((f) => f.type === 'form_row');
-    const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }> };
-    setEditingFormFields(config.fields ? JSON.parse(JSON.stringify(config.fields)) : []);
+    const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] | string; placeholder?: string }> };
+    const rawFields = config.fields || [];
+    const normalized = rawFields.map((f) => ({
+      ...f,
+      options: Array.isArray(f.options) ? f.options : typeof f.options === 'string' ? f.options.split(',').map((s) => s.trim()).filter(Boolean) : [],
+    }));
+    setEditingFormFields(normalized);
     setEditingFieldTemplateId(template.id);
   };
 
@@ -228,10 +233,10 @@ export default function SettingsPage() {
   };
 
   const addFormField = () => {
-    setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text' }]);
+    setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text', options: [] }]);
   };
 
-  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string }>) => {
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean }>) => {
     const updated = [...editingFormFields];
     updated[index] = { ...updated[index], ...updates };
     setEditingFormFields(updated);
@@ -923,12 +928,43 @@ Deadline: {deadline}
                                 </SelectContent>
                               </Select>
                               {f.type === 'dropdown' && (
-                                <Input
-                                  className="flex-1"
-                                  placeholder="Options (คั่นด้วย comma เช่น ขออนุมัติ, ขอให้ดำเนินการ)"
-                                  value={(f.options || []).join(', ')}
-                                  onChange={(e) => updateFormField(i, { options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-                                />
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex flex-wrap gap-1">
+                                    {(Array.isArray(f.options) ? f.options : []).map((opt, oi) => (
+                                      <span key={oi} className="inline-flex items-center gap-1 bg-slate-100 border rounded px-2 py-0.5 text-xs">
+                                        {opt}
+                                        <button type="button" onClick={() => {
+                                          const newOpts = (Array.isArray(f.options) ? f.options : []).filter((_, j) => j !== oi);
+                                          updateFormField(i, { options: newOpts });
+                                        }} className="text-red-400 hover:text-red-600">&times;</button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Input
+                                      className="flex-1 text-xs"
+                                      placeholder="เพิ่มรายการใหม่"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          const val = (e.target as HTMLInputElement).value.trim();
+                                          if (val) {
+                                            updateFormField(i, { options: [...(Array.isArray(f.options) ? f.options : []), val] });
+                                            (e.target as HTMLInputElement).value = '';
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={(e) => {
+                                      const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
+                                      const val = input?.value.trim();
+                                      if (val) {
+                                        updateFormField(i, { options: [...(Array.isArray(f.options) ? f.options : []), val] });
+                                        input.value = '';
+                                      }
+                                    }}>เพิ่ม</Button>
+                                  </div>
+                                </div>
                               )}
                               <Input
                                 className="w-32"
@@ -936,6 +972,15 @@ Deadline: {deadline}
                                 value={f.name}
                                 onChange={(e) => updateFormField(i, { name: e.target.value })}
                               />
+                              <button
+                                type="button"
+                                onClick={() => updateFormField(i, { required: !f.required })}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${f.required ? 'bg-red-500' : 'bg-slate-300'}`}
+                                title={f.required ? 'บังคับกรอก' : 'ไม่บังคับ'}
+                              >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.required ? 'translate-x-6' : 'translate-x-1'}`} />
+                              </button>
+                              <span className="text-xs text-slate-500 w-12">{f.required ? 'บังคับ' : ''}</span>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeFormField(i)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -949,17 +994,23 @@ Deadline: {deadline}
                         <div className="space-y-1">
                           {(() => {
                             const formRow = (t.fields || []).find((f) => f.type === 'form_row');
-                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] }> };
+                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[]; required?: boolean }> };
                             const fields = config.fields || [];
                             if (fields.length === 0) {
                               return <p className="text-xs text-slate-500 text-center py-2">ยังไม่มีช่องกรอกข้อมูล — กด &quot;แก้ไข&quot; เพื่อเพิ่ม</p>;
                             }
                             return fields.map((f, i) => (
                               <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
-                                <span className="font-medium text-slate-700 w-40">{f.label || <span className="italic text-slate-400">ไม่มี label</span>}</span>
+                                <span className="font-medium text-slate-700 w-40">
+                                  {f.label || <span className="italic text-slate-400">ไม่มี label</span>}
+                                  {f.required && <span className="text-red-500 ml-1">*</span>}
+                                </span>
                                 <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
-                                {f.type === 'dropdown' && f.options && (
+                                {f.type === 'dropdown' && Array.isArray(f.options) && f.options.length > 0 && (
                                   <span className="text-xs text-slate-500 ml-1">({f.options.join(', ')})</span>
+                                )}
+                                {f.required && (
+                                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">บังคับ</span>
                                 )}
                                 <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
                               </div>
@@ -989,9 +1040,9 @@ Deadline: {deadline}
                             dropdown_select: 'เลือกรายการ',
                             approval_grid: 'ตารางอนุมัติ',
                           };
-                          const isHidden = f.type === 'memo_type' || f.type === 'section_title' || f.type === 'company_header';
+                          const isHidden = f.type === 'memo_type' || f.type === 'section_title';
                           if (isHidden) return null;
-                          const isProtected = f.type === 'form_row';
+                          const isProtected = f.type === 'form_row' || f.type === 'company_header';
                           return (
                             <div key={i} className={`flex items-center gap-3 p-2 rounded border text-sm ${isProtected ? 'bg-blue-50 border-blue-200' : 'bg-slate-50'}`}>
                               <span className="font-medium text-slate-700 w-48">{f.label || typeLabels[f.type] || f.type}</span>
