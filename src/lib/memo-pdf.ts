@@ -9,21 +9,53 @@ function renderSectionTitle(field: MemoField): string {
   </div>`;
 }
 
-function renderCompanyHeader(field: MemoField): string {
-  const config = (field.fieldConfig || {}) as Record<string, unknown>;
-  const logoUrl = (config.logoUrl as string) || DEFAULT_LOGO_URL;
-  const companyName = (config.companyName as string) || 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด';
-  const addressLines = (config.addressLines as string[]) || [];
+export interface MemoHeaderDetails {
+  memoNumber?: string;
+  refNo?: string;
+  quotationNo?: string;
+  jobNo?: string;
+  date?: string;
+}
 
-  return `<div style="border:1px solid #000;padding:12px;margin-bottom:12px;">
-    <table style="width:100%;border-collapse:collapse;">
+// Mirrors CompanyHeader preview: logo + company name bar, then
+// MEMORANDUM box (Thai company + address | MEMO NO / REF / Quotation / Job / DATE)
+function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): string {
+  const config = (field.fieldConfig || {}) as Record<string, unknown>;
+  const logoUrl = (config.logoUrl as string) || 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png';
+  const companyName = 'Digital Factory Company Limited';
+  const addressLines = ((config.addressLines as string[]) || [
+    'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
+    'ถนนรัชดาภิเษก แขวงสามเสนนอก',
+    'เขตห้วยขวาง กรุงเทพมหานคร 10310',
+  ]);
+  const h = header || {};
+
+  return `<div style="margin-bottom:16px;">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
       <tr>
-        <td style="width:200px;vertical-align:top;">
-          <img src="${logoUrl}" style="max-width:180px;max-height:60px;" />
+        <td style="vertical-align:middle;">
+          <img src="${logoUrl}" style="height:56px;width:auto;" />
         </td>
-        <td style="text-align:right;vertical-align:top;font-size:13px;line-height:1.6;">
-          <p style="margin:0;font-weight:600;">${companyName}</p>
-          ${addressLines.map(line => `<p style="margin:0;">${line}</p>`).join('')}
+        <td style="text-align:right;vertical-align:middle;">
+          <p style="margin:0;font-size:18px;font-weight:600;color:#475569;letter-spacing:1px;">${companyName}</p>
+        </td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
+      <tr>
+        <td style="width:55%;vertical-align:top;border-right:1px solid #0f172a;padding:16px 12px;">
+          <p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;text-align:center;">MEMORANDUM</p>
+          <p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;font-weight:600;">บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)</p>
+          ${addressLines.map(line => `<p style="margin:0;font-size:12px;line-height:1.7;color:#0f172a;">${line}</p>`).join('')}
+        </td>
+        <td style="vertical-align:top;padding:16px;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">MEMO NO.</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">REF. NO. (if any)</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">Quotation no.</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">Job no.</td><td style="color:#0f172a;padding:4px 0;">: ${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">DATE</td><td style="color:#0f172a;padding:4px 0;">: ${h.date || '-'}</td></tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -97,64 +129,56 @@ function renderMemoType(field: MemoField, value: string): string {
   </div>`;
 }
 
+// Mirrors readonly FormRow preview: plain "{label} : {value}" lines,
+// excluding fields already shown in the MEMORANDUM header box.
 function renderFormRow(field: MemoField, value: Record<string, string>, users?: User[]): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const fields = (config.fields as { name: string; label: string; type: string }[]) || [];
   const data = (typeof value === 'object' && value !== null) ? value : {};
 
+  const headerFieldNames = ['RefNo', 'refNo', 'quotationNo', 'jobNo', 'date'];
+  const bodyFields = fields.filter((f) => !headerFieldNames.includes(f.name));
+
   const resolveUserName = (uid: string) => {
+    if (!uid) return '-';
     if (!users) return uid;
     const user = users.find((u) => u.id === uid);
     return user?.displayName || uid;
   };
 
-  const rows: string[] = [];
-  for (let i = 0; i < fields.length; i += 2) {
-    const left = fields[i];
-    const right = fields[i + 1];
+  const resolveValue = (f: { name: string; type: string }, raw: unknown) => {
+    const fieldType = f.type as string;
+    if (fieldType === 'user_dropdown') return resolveUserName(raw as string);
+    if (fieldType === 'user_multiselect') {
+      const ids = Array.isArray(raw) ? (raw as string[]) : [];
+      return ids.length > 0 ? ids.map((id) => resolveUserName(id)).join(', ') : '-';
+    }
+    const str = (raw as string) || '';
+    return str || '-';
+  };
 
-    const getDisplayVal = (f: { name: string; type: string }) => {
-      const raw = data[f.name] || '';
-      const fieldType = f.type as string;
-      if (fieldType === 'user_dropdown') return resolveUserName(raw);
-      if (fieldType === 'user_multiselect') {
-        const ids = Array.isArray(raw) ? raw : [];
-        return ids.length > 0 ? ids.map((id) => resolveUserName(id)).join(', ') : '-';
-      }
-      if (fieldType === 'auto_from' || fieldType === 'auto_dept') return raw || '-';
-      return raw || '-';
-    };
+  const lines = bodyFields.map((f) => {
+    const displayVal = resolveValue(f, data[f.name]);
+    return `<p style="margin:0 0 4px;font-size:14px;color:#0f172a;"><span style="font-weight:600;">${f.label}</span><span> : ${displayVal}</span></p>`;
+  });
 
-    const leftVal = getDisplayVal(left);
-    const rightVal = right ? getDisplayVal(right) : '';
-
-    rows.push(`<tr>
-      <td style="width:120px;padding:8px;border:1px solid #000;font-weight:600;font-size:13px;">${left.label}</td>
-      <td style="padding:8px;border:1px solid #000;font-size:13px;">${leftVal}</td>
-      ${right ? `
-        <td style="width:140px;padding:8px;border:1px solid #000;font-weight:600;font-size:13px;">${right.label}</td>
-        <td style="padding:8px;border:1px solid #000;font-size:13px;">${rightVal}</td>
-      ` : '<td style="padding:8px;border:1px solid #000;"></td><td style="padding:8px;border:1px solid #000;"></td>'}
-    </tr>`);
-  }
-
-  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
-    ${rows.join('')}
-  </table>`;
+  return `<div style="margin-bottom:12px;">${lines.join('')}</div>`;
 }
 
+// Mirrors readonly BodyText preview: bordered box, content or ruled lines
 function renderBodyTextInner(field: MemoField, value: string | undefined): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const lines = (config.lines as number) || 12;
   const content = value || '';
 
   if (content) {
-    return `<p style="font-size:13px;white-space:pre-wrap;margin:0 0 8px;">${content}</p>`;
+    return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;"><p style="font-size:14px;color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
   }
 
-  return Array.from({ length: lines }).map(() =>
-    '<div style="border-bottom:1px solid #ccc;height:24px;"></div>'
+  const ruled = Array.from({ length: lines }).map(() =>
+    '<div style="border-bottom:1px solid #cbd5e1;height:28px;"></div>'
   ).join('');
+  return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;">${ruled}</div>`;
 }
 
 function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[]): string {
@@ -179,11 +203,8 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     const isFirst = i === 0;
     const isLast = i === totalColumns - 1;
 
-    const colTitle = colData.colTitle || (isFirst
-      ? 'ผู้ขออนุมัติ'
-      : isLast
-        ? 'อนุมัติ'
-        : configColumns[i]?.title || 'ตรวจสอบ');
+    // Same titles as ApprovalGrid preview: first = ผู้ขออนุมัติ, rest = อนุมัติ
+    const colTitle = colData.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : 'อนุมัติ');
 
   // Resolve non-first columns from ATTN TO / CC, mirroring readonly ApprovalGrid preview
   let resolvedName = colData.name || '';
@@ -245,12 +266,12 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
-function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[]): string {
+function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails): string {
   switch (field.type) {
     case 'section_title':
       return renderSectionTitle(field);
     case 'company_header':
-      return renderCompanyHeader(field);
+      return renderCompanyHeader(field, header);
     case 'checkbox_group':
       return renderCheckboxGroup(field, (value as string[]) || []);
     case 'dropdown_select':
@@ -310,13 +331,24 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
     const rawCc = formRowData?.cc;
     const ccUserIds: string[] = Array.isArray(rawCc) ? (rawCc as string[]) : [];
 
+    // Header box details (mirrors SectionRenderer company_header props).
+    // memoNumber falls back to the saved memo number for memos created
+    // before it was stored in formData.
+    const header: MemoHeaderDetails = {
+      memoNumber: ((formDataObj.memoNumber as string) || (memo as unknown as Record<string, unknown>).memoNumber as string) || '',
+      refNo: ((formRowData?.RefNo as string) || (formRowData?.refNo as string)) || '',
+      quotationNo: (formRowData?.quotationNo as string) || '',
+      jobNo: (formRowData?.jobNo as string) || '',
+      date: (formRowData?.date as string) || '',
+    };
+
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header));
       } else {
         flushBody();
-        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds));
+        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header));
       }
     }
     flushBody();
