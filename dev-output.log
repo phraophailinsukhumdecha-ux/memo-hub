@@ -1,0 +1,44 @@
+▲ Next.js 16.3.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.10.65:3000
+- Environments: .env.local
+✓ Ready in 489ms
+✓ Running next.config.ts took 33ms
+
+ GET /home 200 in 1065ms (next.js: 727ms, application-code: 338ms)
+ GET /api/memo-id?department=IT 200 in 472ms (next.js: 141ms, application-code: 331ms)
+[MEMO] formData.approval_grid_1 keys: [ 'col_1', 'col_2', 'col_0' ]
+[MEMO]   col_1: name=?????, userId=BQagg6NEdLFWMuDWOe4o
+[MEMO]   col_2: name=?????, userId=MxZCkAgCOP8reYzMdTDa
+[MEMO]   col_0: name=test, userId=WpTqgfbremTkpW4nQvmk
+[MEMO] formData.form_row_1 keys: [ 'subject', 'attnTo', 'clientSpecific', 'cc' ]
+ POST /api/memos 200 in 503ms (next.js: 31ms, application-code: 472ms)
+ DELETE /api/memos/IT20260910_01 200 in 1164ms (next.js: 804ms, application-code: 360ms)
+ DELETE /api/memos/IT20260910_02 200 in 290ms (next.js: 20ms, application-code: 270ms)
+ GET /auth/login 200 in 98ms (next.js: 38ms, application-code: 60ms)
+ GET /auth/login 200 in 53ms (next.js: 6ms, application-code: 47ms)
+ GET /auth/login 200 in 26ms (next.js: 7ms, application-code: 20ms)
+ GET /dashboard 200 in 85ms (next.js: 35ms, application-code: 49ms)
+ GET /dashboard 200 in 28ms (next.js: 13ms, application-code: 16ms)
+ GET /dashboard/settings 200 in 60ms (next.js: 40ms, application-code: 20ms)
+ GET /api/settings 200 in 122ms (next.js: 50ms, application-code: 72ms)
+ GET /api/settings 200 in 59ms (next.js: 5ms, application-code: 54ms)
+ GET /dashboard 200 in 35ms (next.js: 11ms, application-code: 25ms)
+[2026-09-10T10:02:01.357Z]  @firebase/firestore: Firestore (12.17.0): BloomFilter error:  Error [BloomFilterError]: Invalid hash count: 0
+    at ignore-listed frames
+[MEMO] formData.form_row_1 keys: [ 'subject', 'clientSpecific', 'attnTo', 'cc' ]
+[MEMO] formData.approval_grid_1 keys: [ 'col_0', 'col_1', 'col_2' ]
+[MEMO]   col_0: name=test, userId=WpTqgfbremTkpW4nQvmk
+[MEMO]   col_1: name=?????, userId=BQagg6NEdLFWMuDWOe4o
+[MEMO]   col_2: name=?????, userId=MxZCkAgCOP8reYzMdTDa
+ POST /api/memos 200 in 632ms (next.js: 6ms, application-code: 626ms)
+ POST /api/memos 500 in 11ms (next.js: 4ms, application-code: 7ms)
+[MEMO] formData.form_row_1 keys: [ 'subject', 'clientSpecific', 'attnTo', 'cc' ]
+[MEMO] formData.approval_grid_1 keys: [ 'col_0', 'col_1', 'col_2' ]
+[MEMO]   col_0: name=test, userId=WpTqgfbremTkpW4nQvmk
+[MEMO]   col_1: name=, userId=undefined
+[MEMO]   col_2: name=, userId=undefined
+ POST /api/memos 200 in 517ms (next.js: 6ms, application-code: 511ms)
+ GET /dashboard 200 in 27ms (next.js: 5ms, application-code: 22ms)
+✓ Compiled in 120ms
+ GET /dashboard 200 in 22ms (next.js: 3ms, application-code: 19ms)

@@ -57,16 +57,22 @@ export default function HomePage() {
     const gridConfig = t.fields.find((f) => f.type === 'approval_grid');
     const gridFieldCfg = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
     const cols = gridFieldCfg.columns || [];
-    const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; date?: string; time?: string }> = {};
-    cols.forEach((col, i) => {
-      if (i === 0) {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', userId: user?.id || '', signerTitle: user?.department || '' };
-      } else if (i === cols.length - 1) {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
-      } else {
-        gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
-      }
-    });
+    const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; date?: string; time?: string; colTitle?: string }> = {};
+
+    // Build col_0 from owner
+    const today = { date: todayStr, time: timeStr };
+    let idx = 0;
+    if (user) {
+      gridValue[`col_${idx}`] = { ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: 'ผู้ขออนุมัติ' };
+      idx++;
+    }
+
+    // col_1..N from approval grid config columns (empty, will be filled by auto-populate)
+    for (let i = 1; i < cols.length; i++) {
+      gridValue[`col_${idx}`] = { ...today, name: '', signerTitle: '', colTitle: 'อนุมัติ' };
+      idx++;
+    }
+
     const formData: Record<string, unknown> = {};
     for (const field of t.fields) {
       if (field.type === 'section_title' || field.type === 'company_header') continue;
@@ -402,6 +408,45 @@ export default function HomePage() {
     setCreating(true);
     try {
       const formData = { ...sectionFormData };
+
+      // Ensure approval grid columns are populated from ATTN TO / CC before saving
+      const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
+      if (formRowField) {
+        const formRowData = (formData[formRowField.id] as Record<string, string>) || {};
+        const attnToUserId = formRowData.attnTo || '';
+        const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
+        const gridField = selectedTemplate.fields.find((f) => f.type === 'approval_grid');
+        if (gridField) {
+          const grid = (formData[gridField.id] as Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }>) || {};
+          const now = new Date();
+          const todayStr = now.toISOString().split('T')[0];
+          const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const today = { date: todayStr, time: timeStr };
+          let idx = 0;
+          // col_0: owner
+          if (user) {
+            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: 'ผู้ขออนุมัติ' };
+            idx++;
+          }
+          // col_1: ATTN TO
+          if (attnToUserId) {
+            const attnUser = allUsers.find((u) => u.id === attnToUserId);
+            if (attnUser) {
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ' };
+              idx++;
+            }
+          }
+          // col_2..N: CC
+          for (const ccId of ccUserIds) {
+            const ccUser = allUsers.find((u) => u.id === ccId);
+            if (ccUser) {
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ' };
+              idx++;
+            }
+          }
+          formData[gridField.id] = grid;
+        }
+      }
 
       const memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
       setIsCreating(false);
