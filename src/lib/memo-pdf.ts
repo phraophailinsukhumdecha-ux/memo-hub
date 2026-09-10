@@ -157,12 +157,26 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
     return str || '-';
   };
 
-  const lines = bodyFields.map((f) => {
+  // Two-column layout: ATTN TO / FROM / DEPT / CC on the right, the rest on the left
+  const RIGHT_COLUMN_NAMES = ['attnTo', 'from', 'dept', 'cc'];
+  const leftFields = bodyFields.filter((f) => !RIGHT_COLUMN_NAMES.includes(f.name));
+  const rightFields = bodyFields.filter((f) => RIGHT_COLUMN_NAMES.includes(f.name));
+
+  const renderLine = (f: { name: string; label: string; type: string }) => {
     const displayVal = resolveValue(f, data[f.name]);
     return `<p style="margin:0 0 4px;font-size:14px;color:#0f172a;"><span style="font-weight:600;">${f.label}</span><span> : ${displayVal}</span></p>`;
-  });
+  };
 
-  return `<div style="margin-bottom:12px;">${lines.join('')}</div>`;
+  if (rightFields.length === 0) {
+    return `<div style="margin-bottom:12px;">${leftFields.map(renderLine).join('')}</div>`;
+  }
+
+  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+    <tr>
+      <td style="width:50%;vertical-align:top;padding-right:12px;">${leftFields.map(renderLine).join('')}</td>
+      <td style="width:50%;vertical-align:top;">${rightFields.map(renderLine).join('')}</td>
+    </tr>
+  </table>`;
 }
 
 // Mirrors readonly BodyText preview: bordered box, content or ruled lines

@@ -60,18 +60,38 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
       return val || '-';
     };
 
+    // Two-column layout: ATTN TO / FROM / DEPT / CC on the right, the rest on the left
+    const RIGHT_COLUMN_NAMES = ['attnTo', 'from', 'dept', 'cc'];
+    const leftFields = bodyFields.filter((f) => !RIGHT_COLUMN_NAMES.includes(f.name));
+    const rightFields = bodyFields.filter((f) => RIGHT_COLUMN_NAMES.includes(f.name));
+
+    const renderLine = (f: typeof cfg.fields[0]) => {
+      const raw = value[f.name];
+      const displayVal = resolveValue(f, raw as string);
+      return (
+        <div key={f.name} className="flex items-center gap-2 text-sm">
+          <span className="font-semibold text-slate-900">{f.label}</span>
+          <span className="text-slate-900">: {displayVal}</span>
+        </div>
+      );
+    };
+
+    if (rightFields.length === 0) {
+      return (
+        <div className="space-y-1">
+          {leftFields.map(renderLine)}
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-1">
-        {bodyFields.map((f) => {
-          const raw = value[f.name];
-          const displayVal = resolveValue(f, raw as string);
-          return (
-            <div key={f.name} className="flex items-center gap-2 text-sm">
-              <span className="font-semibold text-slate-900">{f.label}</span>
-              <span className="text-slate-900">: {displayVal}</span>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          {leftFields.map(renderLine)}
+        </div>
+        <div className="space-y-1">
+          {rightFields.map(renderLine)}
+        </div>
       </div>
     );
   }
