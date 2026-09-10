@@ -362,15 +362,11 @@ export default function HomePage() {
       }
     }
 
-    // Validate CLIENT SPECIFIC / VENDOR SPECIFIC mutual exclusion
+    // Validate CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required (both allowed)
     const clientVal = (sectionFormData.form_row_1 as Record<string, string>)?.clientSpecific || '';
     const vendorVal = (sectionFormData.form_row_1 as Record<string, string>)?.vendorSpecific || '';
-    if (clientVal && vendorVal) {
-      alert('เลือกได้แค่ CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
-      return;
-    }
     if (!clientVal && !vendorVal) {
-      alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง');
+      alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างน้อย 1 อัน');
       return;
     }
 

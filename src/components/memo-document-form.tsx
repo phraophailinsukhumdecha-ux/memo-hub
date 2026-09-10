@@ -118,48 +118,36 @@ export function MemoDocumentForm({
                     />
                   ) : f.type === 'dropdown' ? (
                     (() => {
-                      // CLIENT SPECIFIC / VENDOR SPECIFIC are mutually exclusive:
-                      // selecting one locks the other (clear it to switch).
-                      const locked =
-                        (f.name === 'clientSpecific' && !!value['vendorSpecific']) ||
-                        (f.name === 'vendorSpecific' && !!value['clientSpecific']);
+                      // CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required,
+                      // both may be selected. × clears the value to re-pick.
                       const isExclusive = f.name === 'clientSpecific' || f.name === 'vendorSpecific';
                       const currentVal = value[f.name] || '';
                       return (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <div className="flex-1 min-w-0">
-                              <Select
-                                value={currentVal}
-                                onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}
-                                disabled={locked}
-                              >
-                                <SelectTrigger
-                                  className="disabled:opacity-40 disabled:cursor-not-allowed"
-                                  title={locked ? 'เลือกได้เพียง CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง — กด × เพื่อล้างอีกฝั่งก่อน' : undefined}
-                                >
-                                  <SelectValue placeholder="เลือก" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {((f as Record<string, unknown>).options as string[] || []).map((opt) => (
-                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {isExclusive && currentVal && (
-                              <button
-                                type="button"
-                                onClick={() => onChange(field.id, { ...value, [f.name]: '' })}
-                                title="ล้างค่า เพื่อเลือกอีกฝั่ง"
-                                className="shrink-0 h-6 w-6 rounded-full text-sm leading-none text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200"
-                              >
-                                ×
-                              </button>
-                            )}
+                        <div className="flex items-center gap-1">
+                          <div className="flex-1 min-w-0">
+                            <Select
+                              value={currentVal}
+                              onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="เลือก" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {((f as Record<string, unknown>).options as string[] || []).map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                          {locked && (
-                            <p className="text-xs text-slate-400">เลือกได้เพียงอย่างใดอย่างหนึ่ง — กด × เพื่อล้างอีกฝั่งก่อน</p>
+                          {isExclusive && currentVal && (
+                            <button
+                              type="button"
+                              onClick={() => onChange(field.id, { ...value, [f.name]: '' })}
+                              title="ล้างค่า"
+                              className="shrink-0 h-6 w-6 rounded-full text-sm leading-none text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200"
+                            >
+                              ×
+                            </button>
                           )}
                         </div>
                       );

@@ -105,31 +105,21 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     });
   }
 
-  // CLIENT SPECIFIC / VENDOR SPECIFIC are mutually exclusive:
-  // selecting one locks the other (clear it to switch).
-  const clientVal = (value['clientSpecific'] as string) || '';
-  const vendorVal = (value['vendorSpecific'] as string) || '';
+  // CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required, both may be
+  // selected. × clears the value to re-pick.
   const isExclusivePair = (fieldName: string) =>
     fieldName === 'clientSpecific' || fieldName === 'vendorSpecific';
-  const isLockedByPair = (fieldName: string) =>
-    (fieldName === 'clientSpecific' && !!vendorVal) ||
-    (fieldName === 'vendorSpecific' && !!clientVal);
 
   const renderDropdownInput = (f: typeof cfg.fields[0]) => {
     const currentVal = (value[f.name] as string) || '';
-    const locked = isLockedByPair(f.name);
     return (
       <div className="flex items-center gap-1">
         <div className="flex-1 min-w-0">
           <Select
             value={currentVal}
             onValueChange={(val) => handleChange(f.name, val)}
-            disabled={locked}
           >
-            <SelectTrigger
-              className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 disabled:opacity-40 disabled:cursor-not-allowed"
-              title={locked ? 'เลือกได้เพียง CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างใดอย่างหนึ่ง — กด × เพื่อล้างอีกฝั่งก่อน' : undefined}
-            >
+            <SelectTrigger className="border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0">
               <SelectValue placeholder="เลือก" />
             </SelectTrigger>
             <SelectContent>
@@ -143,7 +133,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
           <button
             type="button"
             onClick={() => handleChange(f.name, '')}
-            title="ล้างค่า เพื่อเลือกอีกฝั่ง"
+            title="ล้างค่า"
             className="shrink-0 h-5 w-5 rounded-full text-xs leading-none text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200"
           >
             ×
