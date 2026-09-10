@@ -28,6 +28,7 @@ import { subscribeToPendingMemos, approveMemo, rejectMemo } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { Memo, MemoTemplate, User } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { SectionRenderer } from '@/components/memo-sections';
 
@@ -195,7 +196,7 @@ export default function ApprovalsPage() {
             const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
             if (!detailTemplate) return <p className="text-sm text-slate-500">ไม่พบเทมเพลต</p>;
             return (
-              <div className="space-y-4">
+              <div className="memo-font space-y-4">
                 {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
                   <SectionRenderer
                     key={field.id}

@@ -21,6 +21,7 @@ import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 
@@ -397,10 +398,11 @@ export default function HomePage() {
                 body: JSON.stringify({ memoId, toEmails }),
               });
               const data = await res.json();
-              if (data.success) {
+              console.log('Email send result:', data);
+              if (data.ok) {
                 alert('สร้าง Memo และส่งอีเมลสำเร็จ!');
               } else {
-                alert('สร้าง Memo สำเร็จ แต่ส่งอีเมลไม่สำเร็จ: ' + (data.error || ''));
+                alert('สร้าง Memo สำเร็จ แต่ส่งอีเมลไม่สำเร็จ: ' + (data.message || data.error || ''));
               }
             } catch {
               alert('สร้าง Memo สำเร็จ แต่ไม่สามารถส่งอีเมลได้');
@@ -410,6 +412,7 @@ export default function HomePage() {
       }
     } catch (e) {
       console.error(e);
+      alert('เกิดข้อผิดพลาด: ' + (e instanceof Error ? e.message : 'ไม่ทราบสาเหตุ'));
     } finally {
       setCreating(false);
     }
@@ -578,12 +581,12 @@ export default function HomePage() {
             </Button>
           </div>
           {selectedMemo && detailTemplate && (
-            <div className="p-6">
-              <div className="border-2 border-slate-900">
-                {/* MEMO Header */}
-                <div className="border-b-2 border-slate-900 py-3 text-center">
-                  <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
-                </div>
+              <div className="p-6">
+                <div className="memo-font border-2 border-slate-900">
+                  {/* MEMO Header */}
+                  <div className="border-b-2 border-slate-900 py-3 text-center">
+                    <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
+                  </div>
                 {/* Document Body */}
                 <div className="p-6 space-y-0">
                   {detailTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (

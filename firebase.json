@@ -19,5 +19,8 @@
       "codebase": "default",
       "runtime": "nodejs20"
     }
-  ]
+  ],
+  "firestore": {
+    "indexes": "firestore/firestore.indexes.json"
+  }
 }

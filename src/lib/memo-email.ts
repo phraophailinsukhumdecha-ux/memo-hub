@@ -192,7 +192,8 @@ export function buildCompactMemoHtml(
         const str = (raw as string) || '';
         display = str ? escapeHtml(str) : '-';
       }
-      detailRows += `<tr><td style="padding:6px 10px;font-weight:${ft.boldLabels ? 600 : 400};font-size:${ft.baseFontSize}px;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};">${display}</td></tr>`;
+      const labelSize = Math.round(ft.baseFontSize * 0.88);
+      detailRows += `<tr><td style="padding:6px 10px;font-weight:${ft.boldLabels ? 600 : 400};font-size:${labelSize}px;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};">${display}</td></tr>`;
     }
   }
 

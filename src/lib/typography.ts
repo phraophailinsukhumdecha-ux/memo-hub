@@ -1,15 +1,23 @@
 import { MemoTypography } from '@/types';
 
-/** Default font stack: Sukhumvit first, Thai-capable fallbacks after. */
+/** Default font stack: TH Sarabun first, Thai-capable fallbacks after. */
 export const SUKHUMVIT_STACK =
   '"Sukhumvit Set", "Sukhumvit", "Sukhumvit Tadmai", "Leelawadee UI", "Noto Sans Thai", "TH Sarabun", Tahoma, sans-serif';
 
+export const TH_SARABUN_STACK =
+  '"TH Sarabun New", "TH SarabunPSK", "TH Sarabun", "Noto Sans Thai", Tahoma, "Leelawadee UI", Arial, Helvetica, sans-serif';
+
+/** CSS class name that forces memo font via globals.css (immune to Tailwind). */
+export const MEMO_FONT_CLASS = 'memo-font';
+
+/** Extract just the font-family value for a given typography config. */
+export function getFontFamily(t?: MemoTypography | null): string {
+  return (t?.fontFamily || TH_SARABUN_STACK);
+}
+
 export const FONT_PRESETS: Array<{ label: string; value: string }> = [
-  { label: 'Sukhumvit (ค่าเริ่มต้น)', value: SUKHUMVIT_STACK },
-  {
-    label: 'TH Sarabun',
-    value: '"TH Sarabun", "TH SarabunPSK", "Noto Sans Thai", Tahoma, sans-serif',
-  },
+  { label: 'TH Sarabun (ค่าเริ่มต้น)', value: TH_SARABUN_STACK },
+  { label: 'Sukhumvit', value: SUKHUMVIT_STACK },
   {
     label: 'Noto Sans Thai',
     value: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif',
@@ -21,7 +29,7 @@ export const FONT_PRESETS: Array<{ label: string; value: string }> = [
 ];
 
 export const DEFAULT_TYPOGRAPHY: Required<MemoTypography> = {
-  fontFamily: SUKHUMVIT_STACK,
+  fontFamily: TH_SARABUN_STACK,
   baseFontSize: 14,
   lineHeight: 1.7,
   textAlign: 'left',

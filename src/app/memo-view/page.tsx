@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Memo, MemoTemplate, User } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { SectionRenderer } from '@/components/memo-sections';
 
 function MemoViewContent() {
@@ -89,7 +90,7 @@ function MemoViewContent() {
           <h1 className="text-lg font-bold text-slate-900">{memo.memoNumber}</h1>
           {statusBadge}
         </div>
-        <div className="bg-white border-2 border-slate-900 text-sm">
+        <div className="memo-font bg-white border-2 border-slate-900 text-sm">
           <div className="p-4 space-y-0">
             {visibleFields.map((field) => (
               <SectionRenderer

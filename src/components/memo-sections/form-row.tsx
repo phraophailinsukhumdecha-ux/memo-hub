@@ -78,9 +78,10 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     const renderLine = (f: typeof cfg.fields[0]) => {
       const raw = value[f.name];
       const displayVal = resolveValue(f, raw as string);
+      const labelSize = Math.round(typo.baseFontSize * 0.88);
       return (
         <div key={f.name} className="flex items-center gap-2" style={lineStyle}>
-          <span className="text-slate-900" style={{ fontWeight: typo.boldLabels ? 600 : 400 }}>{f.label}</span>
+          <span className="text-slate-900" style={{ fontWeight: typo.boldLabels ? 600 : 400, fontSize: `${labelSize}px` }}>{f.label}</span>
           <span className="text-slate-900" style={{ fontWeight: typo.boldBody ? 700 : 400 }}>: {displayVal}</span>
         </div>
       );

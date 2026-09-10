@@ -13,6 +13,7 @@ import { subscribeToFirestoreDoc } from '@/lib/firestore-db';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { Memo, MemoTemplate, User } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell, cn } from '@/utils/cn';
 import { ArrowLeft, XCircle } from 'lucide-react';
 import { SectionRenderer } from '@/components/memo-sections';
@@ -116,7 +117,7 @@ export default function MemoDetailPage() {
               <CardHeader>
                 <CardTitle>ข้อมูลในเทมเพลต</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="memo-font space-y-3">
                 {(() => {
                   const memoTypeField = template.fields.find((f) => f.type === 'memo_type');
                   const currentMemoType = memoTypeField ? ((memo.formData as Record<string, unknown>)[memoTypeField.id] as string) : undefined;

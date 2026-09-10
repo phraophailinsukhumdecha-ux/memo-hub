@@ -35,6 +35,7 @@ import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
+import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { SectionRenderer } from '@/components/memo-sections';
@@ -330,7 +331,7 @@ export default function MemosPage() {
             if (!detailTemplate) return <p className="p-6 text-slate-500">ไม่พบเทมเพลต</p>;
             return (
               <div className="p-6">
-                <div className="border-2 border-slate-900">
+                <div className="memo-font border-2 border-slate-900">
                   <div className="border-b-2 border-slate-900 py-3 text-center">
                     <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
                   </div>

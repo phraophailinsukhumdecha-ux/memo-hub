@@ -12,6 +12,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Memo document font: applied via className="memo-font" on all memo containers.
+   !important overrides Tailwind's --font-sans reset. */
+.memo-font,
+.memo-font * {
+  font-family: "TH Sarabun New", "TH SarabunPSK", "TH Sarabun",
+    "Noto Sans Thai", Tahoma, "Leelawadee UI", Arial, Helvetica, sans-serif
+    !important;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
