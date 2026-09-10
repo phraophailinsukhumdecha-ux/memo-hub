@@ -178,7 +178,7 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
   const renderLine = (f: { name: string; label: string; type: string }) => {
     const displayVal = resolveValue(f, data[f.name]);
     const labelSize = Math.round(t.baseFontSize * 0.88);
-    return `<p style="margin:0 0 4px;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
+    return `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
   };
 
   if (rightFields.length === 0) {
