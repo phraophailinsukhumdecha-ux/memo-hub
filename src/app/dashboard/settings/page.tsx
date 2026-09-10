@@ -266,6 +266,7 @@ export default function SettingsPage() {
     logoUrl: '',
     companyName: '',
     companyNameTh: '',
+    memorandumTitle: '',
     addressText: '',
     memoNoLabel: '',
     refNoLabel: '',
@@ -283,6 +284,7 @@ export default function SettingsPage() {
       logoUrl: (config.logoUrl as string) || '',
       companyName: (config.companyName as string) || '',
       companyNameTh: (config.companyNameTh as string) || '',
+      memorandumTitle: (config.memorandumTitle as string) ?? 'MEMORANDUM',
       addressText: addressLines.join('\n'),
       memoNoLabel: (config.memoNoLabel as string) || '',
       refNoLabel: (config.refNoLabel as string) || '',
@@ -305,6 +307,7 @@ export default function SettingsPage() {
         logoUrl: editingHeader.logoUrl,
         companyName: editingHeader.companyName,
         companyNameTh: editingHeader.companyNameTh,
+        memorandumTitle: editingHeader.memorandumTitle,
         addressLines: editingHeader.addressText.split('\n').map((s) => s.trim()).filter(Boolean),
         memoNoLabel: editingHeader.memoNoLabel,
         refNoLabel: editingHeader.refNoLabel,
@@ -426,6 +429,7 @@ export default function SettingsPage() {
         logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
         companyName: 'Digital Factory Company Limited',
         companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
+        memorandumTitle: 'MEMORANDUM',
         addressLines: [
           'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
           'ถนนรัชดาภิเษก แขวงสามเสนนอก',
@@ -1007,6 +1011,14 @@ Deadline: {deadline}
                             </div>
                           </div>
                           <div className="space-y-1">
+                            <Label>หัวข้อ MEMORANDUM (เว้นว่าง = ซ่อน)</Label>
+                            <Input
+                              placeholder="MEMORANDUM"
+                              value={editingHeader.memorandumTitle}
+                              onChange={(e) => setEditingHeader({ ...editingHeader, memorandumTitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
                             <Label>ที่อยู่ (บรรทัดละ 1 บรรทัด)</Label>
                             <Textarea
                               rows={3}
@@ -1052,6 +1064,7 @@ Deadline: {deadline}
                                     <img src={config.logoUrl as string} alt="logo" className="h-8 w-auto object-contain" />
                                   </div>
                                 )}
+                                <p className="font-medium text-slate-700">{(config.memorandumTitle as string) ?? 'MEMORANDUM'}</p>
                                 <p className="font-medium text-slate-700">{(config.companyName as string) || <span className="italic text-slate-400">ไม่มีชื่อบริษัท (อังกฤษ)</span>}</p>
                                 <p className="font-medium text-slate-700">{(config.companyNameTh as string) || <span className="italic text-slate-400">ไม่มีชื่อบริษัท (ไทย)</span>}</p>
                                 {addressLines.map((line, i) => (

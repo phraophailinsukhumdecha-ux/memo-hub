@@ -12,6 +12,7 @@ const COMPANY_HEADER_FIELD = {
     logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
     companyName: 'Digital Factory Company Limited',
     companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
+    memorandumTitle: 'MEMORANDUM',
     addressLines: [
       'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
       'ถนนรัชดาภิเษก แขวงสามเสนนอก',

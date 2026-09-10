@@ -17,6 +17,7 @@ export const DEFAULT_COMPANY_HEADER: CompanyHeaderConfig = {
   logoUrl: 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png',
   companyName: 'Digital Factory Company Limited',
   companyNameTh: 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)',
+  memorandumTitle: 'MEMORANDUM',
   addressLines: [
     'อาคารโอลิมเปียไทยทาวเวอร์ ชั้น 4 เลขที่ 444',
     'ถนนรัชดาภิเษก แขวงสามเสนนอก',
@@ -54,7 +55,9 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
         <div className="flex">
           {/* Left: MEMORANDUM + Address */}
           <div className="border-r border-slate-900 py-4 px-3 w-[55%]">
-            <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">MEMORANDUM</h2>
+            {cfg.memorandumTitle ? (
+              <h2 className="text-lg font-bold tracking-wider text-slate-900 mb-3 text-center">{cfg.memorandumTitle}</h2>
+            ) : null}
             <div className="text-xs leading-relaxed text-slate-900 space-y-0.5">
               <p className="font-semibold">{cfg.companyNameTh}</p>
               {(cfg.addressLines || []).map((line, i) => (

@@ -59,6 +59,7 @@ export interface CompanyHeaderConfig {
   logoUrl: string;
   companyName: string;
   companyNameTh?: string;
+  memorandumTitle?: string;
   addressLines: string[];
   memoNoLabel?: string;
   refNoLabel?: string;
