@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import { resolveLogoSrc } from '@/lib/logo';
 
 interface SmtpConfig {
   host: string;
@@ -203,7 +204,8 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
 
       case 'company_header': {
         const logoUrlRaw = (config.logoUrl as string) || '';
-        const logoUrl = logoUrlRaw.startsWith('http') ? logoUrlRaw : `${baseUrl}${logoUrlRaw.startsWith('/') ? '' : '/'}${logoUrlRaw}`;
+        const logoSrc = resolveLogoSrc(logoUrlRaw);
+        const logoUrl = logoSrc.startsWith('http') ? logoSrc : `${baseUrl}${logoSrc.startsWith('/') ? '' : '/'}${logoSrc}`;
         const companyName = (config.companyName as string) || '';
         const addressLines = (config.addressLines as string[]) || [];
         return `<div style="border:1px solid #000;padding:10px;margin-bottom:12px;">

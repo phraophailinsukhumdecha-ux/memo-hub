@@ -1,5 +1,6 @@
 import { Memo, MemoField, MemoTemplate, User, Group } from '@/types';
 import { formatDate } from '@/utils/cn';
+import { resolveLogoSrc } from '@/lib/logo';
 
 const DEFAULT_LOGO_URL = '/logo-df.png';
 
@@ -21,7 +22,7 @@ export interface MemoHeaderDetails {
 // MEMORANDUM box (Thai company + address | MEMO NO / REF / Quotation / Job / DATE)
 function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
-  const logoUrl = (config.logoUrl as string) || 'https://workflow.digitalfactory.co.th/logo/df_full_logo-01.png';
+  const logoUrl = resolveLogoSrc((config.logoUrl as string) || '');
   const companyName = (config.companyName as string) || 'Digital Factory Company Limited';
   const companyNameTh = (config.companyNameTh as string) || 'บริษัท ดิจิทัล แฟคตอรี่ จำกัด (สำนักงานใหญ่)';
   const addressLines = ((config.addressLines as string[]) || [

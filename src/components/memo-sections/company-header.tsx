@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CompanyHeaderConfig } from '@/types';
+import { resolveLogoSrc } from '@/lib/logo';
 
 interface CompanyHeaderProps {
   config?: CompanyHeaderConfig;
@@ -40,7 +41,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
         <div className="flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={cfg.logoUrl}
+            src={resolveLogoSrc(cfg.logoUrl)}
             alt="Company Logo"
             className="h-14 w-auto object-contain"
           />
