@@ -182,6 +182,8 @@ export interface GlobalSettings {
     subject: string;
     body: string;
     preview?: string;
+    ownerSubject?: string;
+    ownerBody?: string;
   };
   deadlineDays: number;
   positionOptions: string[];

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { sendOwnerNotification } from '@/lib/memo-email';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { approverId, approverName, comment } = await request.json();
+
+    // Reject (Cancel) always requires a remark
+    if (!comment?.trim()) {
+      return NextResponse.json({ error: 'กรุณาระบุเหตุผลในการปฏิเสธ' }, { status: 400 });
+    }
 
     const memoDoc = await getDoc(doc(db, 'memos', id));
     if (!memoDoc.exists()) {
@@ -50,6 +56,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       action: 'MEMO_REJECTED',
       details: `ปฏิเสธ Memo: ${memo.title}`,
       timestamp: now,
+    });
+
+    // Notify the memo owner by email (fire-and-forget safe: never throws)
+    const baseUrl =
+      request.headers.get('origin') ||
+      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host') || 'localhost:3000'}`;
+    await sendOwnerNotification({
+      memoId: id,
+      actorId: approverId,
+      actorName: approverName,
+      action: 'reject',
+      remark: comment.trim(),
+      baseUrl,
     });
 
     return NextResponse.json({ success: true });

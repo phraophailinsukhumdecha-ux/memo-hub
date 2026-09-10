@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { sendOwnerNotification } from '@/lib/memo-email';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -132,6 +133,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       action: 'MEMO_APPROVED',
       details: `อนุมัติ Memo: ${memo.title}`,
       timestamp: now,
+    });
+
+    // Notify the memo owner by email (fire-and-forget safe: never throws)
+    const baseUrl =
+      request.headers.get('origin') ||
+      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host') || 'localhost:3000'}`;
+    await sendOwnerNotification({
+      memoId: id,
+      actorId: approverId,
+      actorName: approverName,
+      action: 'approve',
+      baseUrl,
     });
 
     return NextResponse.json({ success: true, allApproved });

@@ -4,6 +4,11 @@ import { doc, getDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoSrc } from '@/lib/logo';
+import {
+  buildCompactMemoHtml,
+  createViewToken,
+  buildViewUrl,
+} from '@/lib/memo-email';
 
 interface SmtpConfig {
   host: string;
@@ -477,7 +482,23 @@ MemoHub Digital Memo & Approval System`;
           .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
           .join('');
 
-        const previewHtml = renderMemoPreviewHtml(memo, templateFields, baseUrl);
+        // Compact memo detail summary (not the full document form)
+        const userMap = new Map(
+          allUsersData.map((u) => [
+            u.id,
+            { displayName: u.displayName, department: (u as Record<string, unknown>).department as string },
+          ])
+        );
+        const summaryHtml = buildCompactMemoHtml(
+          memo as Record<string, unknown>,
+          templateFields,
+          userMap,
+          baseUrl
+        );
+
+        // Public full-memo view link (no login required)
+        const viewToken = await createViewToken(memoId);
+        const viewUrl = buildViewUrl(baseUrl, viewToken);
 
         const htmlEmail = `<!DOCTYPE html>
 <html>
@@ -485,10 +506,13 @@ MemoHub Digital Memo & Approval System`;
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#1e293b;">${subject}</h2>
   ${bodyHtml}
-  ${previewHtml}
+  ${summaryHtml}
   <div style="margin:24px 0;text-align:center;">
     <a href="${approveUrl}" style="display:inline-block;padding:12px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">อนุมัติ</a>
     <a href="${cancelUrl}" style="display:inline-block;padding:12px 32px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">ปฏิเสธ</a>
+  </div>
+  <div style="margin:8px 0 24px;text-align:center;">
+    <a href="${viewUrl}" style="display:inline-block;padding:10px 24px;background:#fff;color:#0f172a;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:1px solid #0f172a;">เปิดดูฟอร์ม Memo ฉบับเต็ม</a>
   </div>
   <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
   <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>

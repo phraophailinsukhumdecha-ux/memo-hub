@@ -176,6 +176,18 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveEmailFormat = async () => {
+    if (!settings || !user) return;
+    setSaving(true);
+    try {
+      const oldSettings = await getSettings();
+      await saveSettings({ emailFormat: settings.emailFormat }, user.id);
+      await logSettingUpdated(user.id, user.displayName, 'EmailFormat', oldSettings.emailFormat, settings.emailFormat);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveDeadline = async () => {
     if (!settings || !user) return;
     setSaving(true);
@@ -795,8 +807,33 @@ Deadline: {deadline}
                 />
                 <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
               </div>
+              <div className="space-y-2 pt-2 border-t">
+                <Label>หัวข้ออีเมลแจ้งผู้สร้าง (เมื่อมีคนอนุมัติ/ปฏิเสธ)</Label>
+                <Input
+                  value={settings?.emailFormat?.ownerSubject || '[MemoHub] {memo_number} {action_label}โดย {actor_name}'}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerSubject: e.target.value } })}
+                  placeholder="[MemoHub] {memo_number} {action_label}โดย {actor_name}"
+                />
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>เนื้อหาอีเมลแจ้งผู้สร้าง</Label>
+                <Textarea
+                  rows={5}
+                  value={settings?.emailFormat?.ownerBody || ''}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerBody: e.target.value } })}
+                  placeholder={`สวัสดีค่ะ/ครับ
+
+Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
+เลขที่: {memo_number}
+เรื่อง: {title}
+
+เปิดดูฟอร์ม Memo ฉบับเต็ม: {memo_link}`}
+                />
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{memo_link}`'}, {'`{acted_at}`'}</p>
+              </div>
               <div className="flex items-center gap-2">
-                <Button onClick={handleSaveSMTP} disabled={saving}>
+                <Button onClick={handleSaveEmailFormat} disabled={saving}>
                   <Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกฟอร์แมท'}
                 </Button>
               </div>
