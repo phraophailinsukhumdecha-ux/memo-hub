@@ -45,6 +45,10 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
   };
 
   if (readonly) {
+    // Fields already shown in CompanyHeader - don't duplicate
+    const headerFieldNames = ['RefNo', 'refNo', 'quotationNo', 'jobNo', 'date'];
+    const displayFields = cfg.fields.filter((f) => !headerFieldNames.includes(f.name));
+
     const resolveUserName = (uid: string) => {
       const user = users.find((u) => u.id === uid);
       return user?.displayName || uid;
@@ -62,10 +66,10 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
 
     // Bordered table layout matching PDF (pairs of fields per row)
     const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
-    for (let i = 0; i < cfg.fields.length; i += 2) {
+    for (let i = 0; i < displayFields.length; i += 2) {
       rows.push({
-        left: cfg.fields[i],
-        right: cfg.fields[i + 1] || null,
+        left: displayFields[i],
+        right: displayFields[i + 1] || null,
       });
     }
 

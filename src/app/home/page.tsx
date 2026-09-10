@@ -162,6 +162,8 @@ export default function HomePage() {
   const pendingMemos = useMemo(() => {
     if (!user) return [];
     return memos.filter((m) => {
+      if (m.status === 'approved' || m.status === 'rejected' || m.status === 'cancel') return false;
+      if (m.ownerId === user.id) return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
       if (!grid) return false;
       return Object.values(grid).some((col) => col.name === user.displayName);
@@ -493,7 +495,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
-            {showApprove && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ
@@ -608,7 +610,7 @@ export default function HomePage() {
           </div>
           {selectedMemo && detailTemplate && (
               <div className="p-6">
-                <div className="memo-font border-2 border-slate-900">
+                <div className="memo-font border-2 border-slate-900 relative">
                   {/* MEMO Header */}
                   <div className="border-b-2 border-slate-900 py-3 text-center">
                     <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
@@ -628,6 +630,22 @@ export default function HomePage() {
                     />
                   ))}
                 </div>
+                {selectedMemo?.status === 'approved' && (
+                  <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-green-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
+                    <span className="text-green-600 font-extrabold tracking-wider text-sm">APPROVED</span>
+                    <span className="text-green-600 text-xs mt-0.5">อนุมัติแล้ว</span>
+                    <div className="w-4/5 h-px bg-green-600 my-1" />
+                    <span className="text-green-600 text-[10px]">MemoHub</span>
+                  </div>
+                )}
+                {selectedMemo?.status === 'rejected' && (
+                  <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-red-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
+                    <span className="text-red-600 font-extrabold tracking-wider text-sm">REJECTED</span>
+                    <span className="text-red-600 text-xs mt-0.5">ถูกปฏิเสธ</span>
+                    <div className="w-4/5 h-px bg-red-600 my-1" />
+                    <span className="text-red-600 text-[10px]">MemoHub</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -644,7 +662,7 @@ export default function HomePage() {
             </div>
           )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-            {selectedMemo && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
                   <CheckCircle className="h-4 w-4 mr-1" />

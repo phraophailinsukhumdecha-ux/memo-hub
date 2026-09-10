@@ -21,6 +21,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const memo = memoDoc.data()!;
     const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
     const now = new Date();
+    const formData = memo.formData || {};
+
+    // Find the approver's column in the approval grid and mark as signed
+    let approverColKey: string | null = null;
+    for (const fieldKey of Object.keys(formData)) {
+      const fieldValue = formData[fieldKey];
+      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+        for (const colKey of Object.keys(fieldValue)) {
+          if (colKey.startsWith('col_') && colKey !== 'col_0') {
+            const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
+            if (col?.userId === approverId || col?.name === approverName) {
+              approverColKey = colKey;
+              break;
+            }
+          }
+        }
+        if (approverColKey) break;
+      }
+    }
+
+    const updatedFormData = JSON.parse(JSON.stringify(formData));
+    if (approverColKey) {
+      for (const fieldKey of Object.keys(updatedFormData)) {
+        const fieldValue = updatedFormData[fieldKey];
+        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+          if (fieldValue[approverColKey]) {
+            fieldValue[approverColKey].signed = false;
+            fieldValue[approverColKey].date = now.toISOString().split('T')[0];
+            fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+          }
+        }
+      }
+    }
 
     const approval = {
       level: currentLevel.level,
@@ -34,6 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     await updateDoc(doc(db, 'memos', id), {
       status: 'rejected',
+      formData: updatedFormData,
       currentApprovalIndex: memo.currentApprovalIndex + 1,
       currentApprovalLevel: null,
       approvals: [...(memo.approvals || []), approval],

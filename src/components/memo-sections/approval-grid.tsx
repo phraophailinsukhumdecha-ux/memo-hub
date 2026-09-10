@@ -57,23 +57,38 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     if (readonly || !onChange) return;
     if (!ownerUser && !attnToUserId && ccUserIds.length === 0) return;
 
-    const autoValue: typeof value = {};
+    const todayStr = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const autoValue: typeof value = { ...value };
     let idx = 0;
     if (ownerUser) {
-      autoValue[`col_${idx}`] = { name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: 'ผู้ขออนุมัติ' };
+      autoValue[`col_${idx}`] = {
+        ...autoValue[`col_${idx}`],
+        name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: 'ผู้ขออนุมัติ',
+        date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
+      };
       idx++;
     }
     if (attnToUserId) {
       const attnUser = users?.find((u) => u.id === attnToUserId);
       if (attnUser) {
-        autoValue[`col_${idx}`] = { name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ' };
+        autoValue[`col_${idx}`] = {
+          ...autoValue[`col_${idx}`],
+          name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ',
+          date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
+        };
         idx++;
       }
     }
     for (const ccId of ccUserIds) {
       const ccUser = users?.find((u) => u.id === ccId);
       if (ccUser) {
-        autoValue[`col_${idx}`] = { name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ' };
+        autoValue[`col_${idx}`] = {
+          ...autoValue[`col_${idx}`],
+          name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ',
+          date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
+        };
         idx++;
       }
     }

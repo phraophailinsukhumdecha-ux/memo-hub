@@ -408,6 +408,13 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
       <div style="width:80%;height:1px;background:#16a34a;margin:6px 0;"></div>
       <div style="font-size:9px;color:#16a34a;">MemoHub</div>
     </div>
+  ` : memo.status === 'rejected' ? `
+    <div style="position:absolute;bottom:40px;right:40px;width:160px;height:160px;border:4px solid #dc2626;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
+      <div style="font-size:14px;font-weight:800;color:#dc2626;letter-spacing:2px;">REJECTED</div>
+      <div style="font-size:11px;color:#dc2626;margin-top:2px;">ถูกปฏิเสธ</div>
+      <div style="width:80%;height:1px;background:#dc2626;margin:6px 0;"></div>
+      <div style="font-size:9px;color:#dc2626;">MemoHub</div>
+    </div>
   ` : '';
 
   const memoFontCss = `.memo-font,.memo-font *{font-family:${typo.fontFamily} !important;}`;

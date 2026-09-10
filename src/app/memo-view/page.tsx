@@ -90,7 +90,7 @@ function MemoViewContent() {
           <h1 className="text-lg font-bold text-slate-900">{memo.memoNumber}</h1>
           {statusBadge}
         </div>
-        <div className="memo-font bg-white border-2 border-slate-900 text-sm">
+        <div className="memo-font bg-white border-2 border-slate-900 text-sm relative">
           <div className="p-4 space-y-0">
             {visibleFields.map((field) => (
               <SectionRenderer
@@ -108,6 +108,22 @@ function MemoViewContent() {
               />
             ))}
           </div>
+          {memo.status === 'approved' && (
+            <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-green-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
+              <span className="text-green-600 font-extrabold tracking-wider text-sm">APPROVED</span>
+              <span className="text-green-600 text-xs mt-0.5">อนุมัติแล้ว</span>
+              <div className="w-4/5 h-px bg-green-600 my-1" />
+              <span className="text-green-600 text-[10px]">MemoHub</span>
+            </div>
+          )}
+          {memo.status === 'rejected' && (
+            <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-red-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
+              <span className="text-red-600 font-extrabold tracking-wider text-sm">REJECTED</span>
+              <span className="text-red-600 text-xs mt-0.5">ถูกปฏิเสธ</span>
+              <div className="w-4/5 h-px bg-red-600 my-1" />
+              <span className="text-red-600 text-[10px]">MemoHub</span>
+            </div>
+          )}
         </div>
         {memo.status === 'rejected' && memo.approvals?.filter((a) => a.action === 'reject').length > 0 && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
