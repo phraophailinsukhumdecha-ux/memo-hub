@@ -112,14 +112,13 @@ export default function MemosPage() {
       } else if (field.type === 'approval_grid') {
         const gridCfg = field.fieldConfig as { columns?: { title: string }[]; showTime?: boolean } | undefined;
         const cols = gridCfg?.columns || [];
-        const gridValue: Record<string, { date: string; time: string; name: string; signerTitle: string }> = {};
+        const colTitles = cols.map((c) => c.title || 'อนุมัติ');
+        const gridValue: Record<string, { date: string; time: string; name: string; signerTitle: string; colTitle: string }> = {};
         cols.forEach((_, i) => {
           if (i === 0) {
-            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '' };
-          } else if (i === cols.length - 1) {
-            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '', colTitle: colTitles[i] || 'ผู้ขออนุมัติ' };
           } else {
-            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '' };
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '', colTitle: colTitles[i] || 'อนุมัติ' };
           }
         });
         initialData[field.id] = gridValue;

@@ -57,19 +57,21 @@ export default function HomePage() {
     const gridConfig = t.fields.find((f) => f.type === 'approval_grid');
     const gridFieldCfg = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
     const cols = gridFieldCfg.columns || [];
+    const colTitles = cols.map((c) => c.title || 'อนุมัติ');
+
     const gridValue: Record<string, { name?: string; userId?: string; signerTitle?: string; date?: string; time?: string; colTitle?: string }> = {};
 
     // Build col_0 from owner
     const today = { date: todayStr, time: timeStr };
     let idx = 0;
     if (user) {
-      gridValue[`col_${idx}`] = { ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: 'ผู้ขออนุมัติ' };
+      gridValue[`col_${idx}`] = { ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
       idx++;
     }
 
     // col_1..N from approval grid config columns (empty, will be filled by auto-populate)
     for (let i = 1; i < cols.length; i++) {
-      gridValue[`col_${idx}`] = { ...today, name: '', signerTitle: '', colTitle: 'อนุมัติ' };
+      gridValue[`col_${idx}`] = { ...today, name: '', signerTitle: '', colTitle: colTitles[i] || 'อนุมัติ' };
       idx++;
     }
 
