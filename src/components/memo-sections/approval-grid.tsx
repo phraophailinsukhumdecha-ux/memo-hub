@@ -115,8 +115,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
   const getColTitle = (colIndex: number) => {
     const colData = value[`col_${colIndex}`] || {};
     if (colData.colTitle) return colData.colTitle;
-    if (colIndex === 0) return 'ผู้ขออนุมัติ';
-    return 'อนุมัติ';
+    return configColumns[colIndex]?.title || 'อนุมัติ';
   };
 
   const handleFieldChange = (colIndex: number, field: string, fieldValue: string) => {
