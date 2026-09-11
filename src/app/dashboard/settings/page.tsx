@@ -1572,7 +1572,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
 
       {/* Section Config Editor Dialog */}
       <Dialog open={editingSectionIndex !== null} onOpenChange={() => setEditingSectionIndex(null)}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>แก้ไข Section</DialogTitle>
           </DialogHeader>
