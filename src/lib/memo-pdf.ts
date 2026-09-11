@@ -61,7 +61,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
           ${addressLines.map(line => `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;">${line}</p>`).join('')}
         </td>
         <td style="vertical-align:top;padding:16px;">
-          <table style="width:100%;border-collapse:collapse;font-size:${Math.round(t.baseFontSize * 0.82)}px;line-height:${t.lineHeight};">
+           <table style="width:100%;border-collapse:collapse;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
             <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
@@ -177,8 +177,7 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
 
   const renderLine = (f: { name: string; label: string; type: string }) => {
     const displayVal = resolveValue(f, data[f.name]);
-    const labelSize = Math.round(t.baseFontSize * 0.88);
-    return `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
+    return `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
   };
 
   if (rightFields.length === 0) {
@@ -260,7 +259,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     const t = typo || resolveTypography(null);
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
-        <p style="font-weight:600;font-size:13px;margin:0;">${colTitle}</p>
+        <p style="font-weight:600;font-size:${t.baseFontSize}px;margin:0;">${colTitle}</p>
       </div>
       <div style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
         <p style="margin:4px 0;">ลงชื่อ</p>

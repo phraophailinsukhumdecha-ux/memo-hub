@@ -192,8 +192,7 @@ export function buildCompactMemoHtml(
         const str = (raw as string) || '';
         display = str ? escapeHtml(str) : '-';
       }
-      const labelSize = Math.round(ft.baseFontSize * 0.88);
-      detailRows += `<tr><td style="padding:6px 10px;font-weight:${ft.boldLabels ? 600 : 400};font-size:${labelSize}px;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};">${display}</td></tr>`;
+      detailRows += `<tr><td style="padding:6px 10px;font-weight:${ft.boldLabels ? 600 : 400};font-size:${ft.baseFontSize}px;width:170px;background:#f8fafc;border-bottom:1px solid #e2e8f0;vertical-align:top;">${escapeHtml(f.label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:${ft.baseFontSize}px;line-height:${ft.lineHeight};text-align:${ft.textAlign};font-weight:${ft.boldBody ? 700 : 400};">${display}</td></tr>`;
     }
   }
 
@@ -218,14 +217,14 @@ export function buildCompactMemoHtml(
       .filter((k) => k.startsWith('col_'))
       .sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
     if (colKeys.length === 0) continue;
-    approvalHtml += '<p style="font-weight:600;font-size:13px;margin:12px 0 6px;">สถานะการอนุมัติ:</p>';
+    approvalHtml += `<p style="font-weight:600;font-size:${typo.baseFontSize}px;margin:12px 0 6px;">สถานะการอนุมัติ:</p>`;
     for (const colKey of colKeys) {
       const col = cols[colKey];
       if (!col) continue;
       const icon = col.signed ? '✓' : '○';
       const color = col.signed ? '#16a34a' : '#f59e0b';
       const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
-      approvalHtml += `<p style="margin:4px 0;font-size:13px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
+      approvalHtml += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
       if (col.signerTitle) approvalHtml += ` (${escapeHtml(col.signerTitle)})`;
       if (col.signed && col.date) approvalHtml += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
       approvalHtml += '</p>';
@@ -242,7 +241,7 @@ export function buildCompactMemoHtml(
         </div>
         <span style="margin-left:auto;color:${statusColor};font-size:12px;font-weight:700;">${statusText}</span>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">${detailRows}</table>
+      <table style="width:100%;border-collapse:collapse;font-size:${typo.baseFontSize}px;">${detailRows}</table>
       <div style="padding:10px 14px;">${bodyHtml}${approvalHtml}</div>
     </div>`;
 }
