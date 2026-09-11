@@ -17,9 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MemoHub - ระบบจัดการบันทึกและอนุมัติ Memo",
   description: "ระบบจัดการบันทึกและอนุมัติ Memo สำหรับองค์กร",
-  icons: {
-    icon: "/favicon.svg",
-  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
