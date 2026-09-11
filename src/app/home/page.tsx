@@ -418,6 +418,8 @@ export default function HomePage() {
         const gridField = selectedTemplate.fields.find((f) => f.type === 'approval_grid');
         if (gridField) {
           const grid = (formData[gridField.id] as Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }>) || {};
+          const gridCfg = (gridField.fieldConfig || {}) as { columns?: { title: string }[] };
+          const colTitles = (gridCfg.columns || []).map((c) => c.title || 'อนุมัติ');
           const now = new Date();
           const todayStr = now.toISOString().split('T')[0];
           const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -425,14 +427,14 @@ export default function HomePage() {
           let idx = 0;
           // col_0: owner
           if (user) {
-            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: 'ผู้ขออนุมัติ' };
+            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
             idx++;
           }
           // col_1: ATTN TO
           if (attnToUserId) {
             const attnUser = allUsers.find((u) => u.id === attnToUserId);
             if (attnUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ' };
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ' };
               idx++;
             }
           }
@@ -440,7 +442,7 @@ export default function HomePage() {
           for (const ccId of ccUserIds) {
             const ccUser = allUsers.find((u) => u.id === ccId);
             if (ccUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ' };
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ' };
               idx++;
             }
           }

@@ -60,12 +60,15 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     const todayStr = new Date().toISOString().split('T')[0];
     const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+    // Read titles from template config columns
+    const colTitles = configColumns.map((c) => c.title || 'อนุมัติ');
+
     const autoValue: typeof value = { ...value };
     let idx = 0;
     if (ownerUser) {
       autoValue[`col_${idx}`] = {
         ...autoValue[`col_${idx}`],
-        name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: 'ผู้ขออนุมัติ',
+        name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ',
         date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
       };
       idx++;
@@ -75,7 +78,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       if (attnUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
-          name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: 'อนุมัติ',
+          name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ',
           date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
         };
         idx++;
@@ -86,7 +89,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       if (ccUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
-          name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: 'อนุมัติ',
+          name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ',
           date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
         };
         idx++;
