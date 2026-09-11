@@ -141,7 +141,7 @@ export function TypographyEditor({ value, onChange, showReset }: TypographyEdito
         </div>
       </div>
       <div className="flex items-center gap-6">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-slate-900 cursor-pointer">
           <input
             type="checkbox"
             checked={v.boldLabels ?? false}
@@ -150,7 +150,7 @@ export function TypographyEditor({ value, onChange, showReset }: TypographyEdito
           />
           หัวข้อตัวหนา
         </label>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-slate-900 cursor-pointer">
           <input
             type="checkbox"
             checked={v.boldBody ?? false}
