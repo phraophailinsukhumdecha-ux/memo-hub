@@ -251,7 +251,6 @@ export default function MemosPage() {
                 <TableHead className="w-40 whitespace-nowrap">เทมเพลต</TableHead>
                 <TableHead className="w-32 whitespace-nowrap">สถานะ</TableHead>
                 <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
-                <TableHead className="w-40 whitespace-nowrap">ผู้อนุมัติปัจจุบัน</TableHead>
                 <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
                 <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
                 <TableHead className="w-32"></TableHead>
@@ -260,7 +259,7 @@ export default function MemosPage() {
             <TableBody>
               {filteredMemos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-slate-600 py-8">
+                  <TableCell colSpan={8} className="text-center text-slate-600 py-8">
                     ไม่พบข้อมูล Memo
                   </TableCell>
                 </TableRow>
@@ -272,7 +271,6 @@ export default function MemosPage() {
                     <TableCell className="whitespace-nowrap">{memo.templateName}</TableCell>
                     <TableCell>{getStatusBadge(memo.status)}</TableCell>
                     <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
-                    <TableCell className="whitespace-nowrap">{memo.currentApprovalLevel || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
                     <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.deadlineAt} /></TableCell>
                     <TableCell>
