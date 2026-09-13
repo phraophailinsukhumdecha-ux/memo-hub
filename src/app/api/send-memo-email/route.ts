@@ -26,6 +26,10 @@ interface EmailFormat {
   subject: string;
   body: string;
   preview?: string;
+  ownerSubject?: string;
+  ownerBody?: string;
+  approverSubject?: string;
+  approverBody?: string;
 }
 
 const ERR = {
@@ -178,16 +182,29 @@ function renderApprovalGridHtml(value: Record<string, Record<string, string>>): 
     if (!col) continue;
     const name = col.name || '';
     const signerTitle = col.signerTitle || '';
-    const signed = col.signed;
-    const icon = signed ? '✓' : '○';
-    const color = signed ? '#16a34a' : '#f59e0b';
+    const isRequester = colKey === 'col_0';
+    let icon: string;
+    let color: string;
+    if (isRequester) {
+      icon = '✓';
+      color = '#16a34a';
+    } else if (col.action === 'reject') {
+      icon = '✗';
+      color = '#dc2626';
+    } else if (col.signed) {
+      icon = '✓';
+      color = '#16a34a';
+    } else {
+      icon = '○';
+      color = '#f59e0b';
+    }
     const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
 
     html += `<p style="margin:4px 0;font-size:13px;">`;
     html += `<span style="color:${color};font-weight:600;">${icon}</span> `;
     html += `<strong>${escapeHtml(title)}</strong> — ${escapeHtml(name)}`;
     if (signerTitle) html += ` (${escapeHtml(signerTitle)})`;
-    if (signed && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}</span>`;
+    if ((col.signed || col.action) && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}</span>`;
     html += '</p>';
   }
 
@@ -309,7 +326,8 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
           const displayName = col.name || '';
           const displayTitle = col.signerTitle || '';
           const signed = col.signed;
-          const signIcon = signed ? '<span style="color:#16a34a;font-weight:bold;">✓</span>' : '';
+          const isRej = col.action === 'reject';
+          const signIcon = isRej ? '<span style="color:#dc2626;font-weight:bold;">✗</span>' : signed ? '<span style="color:#16a34a;font-weight:bold;">✓</span>' : '';
 
           return `<td style="width:${100 / maxPerRow}%;padding:10px;border:1px solid #000;vertical-align:top;">
             <div style="text-align:center;margin-bottom:8px;"><p style="font-weight:600;font-size:13px;margin:0;">${escapeHtml(colTitle)}</p></div>
@@ -516,7 +534,10 @@ MemoHub Digital Memo & Approval System`;
     <a href="${cancelUrl}" style="display:inline-block;padding:12px 32px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">ปฏิเสธ</a>
   </div>
   <div style="margin:8px 0 24px;text-align:center;">
-    <a href="${viewUrl}" style="display:inline-block;padding:10px 24px;background:#fff;color:#0f172a;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:1px solid #0f172a;">เปิดดูฟอร์ม Memo ฉบับเต็ม</a>
+    <a href="${viewUrl}" style="display:inline-block;padding:10px 24px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">ดูเอกสาร</a>
+  </div>
+  <div style="margin:0 0 24px;text-align:center;">
+    <a href="${baseUrl}/home" style="color:#2563eb;text-decoration:underline;font-size:13px;">เข้าสู่ระบบเพื่อดูเอกสาร</a>
   </div>
   <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
   <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>

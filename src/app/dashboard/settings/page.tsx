@@ -770,33 +770,111 @@ export default function SettingsPage() {
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>ตั้งค่าฟอร์แมทอีเมล</CardTitle>
-              <CardDescription>กำหนดรูปแบบอีเมลที่จะส่งแจ้งเตือน (ใช้ตัวแปร {'{variable}'} ได้)</CardDescription>
+              <CardDescription>กำหนดรูปแบบอีเมลแจ้งเตือนแต่ละประเภท (ใช้ตัวแปร {'{variable}'} ได้)</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label>หัวข้ออีเมล (Subject)</Label>
-                <Input
-                  value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}'}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '' } })}
-                  placeholder="[MemoHub] {memo_number} - {title}"
-                />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>เนื้อหาอีเมล (Body)</Label>
-                <Textarea
-                  rows={6}
-                  value={settings?.emailFormat?.body || ''}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
-                  placeholder={`สวัสดีค่ะ/ครับ
+            <CardContent className="space-y-6">
+              {/* Section 1: Email to approvers (when memo is created) */}
+              <div className="space-y-4 p-4 rounded-lg border border-blue-200 bg-blue-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <h3 className="text-sm font-semibold text-blue-900">อีเมลแจ้งผู้อนุมัติ (เมื่อสร้าง Memo ใหม่)</h3>
+                </div>
+                <div className="space-y-2">
+                  <Label>หัวข้ออีเมล (Subject)</Label>
+                  <Input
+                    value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}'}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '' } })}
+                    placeholder="[MemoHub] {memo_number} - {title}"
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>เนื้อหาอีเมล (Body)</Label>
+                  <Textarea
+                    rows={5}
+                    value={settings?.emailFormat?.body || ''}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
+                    placeholder={`สวัสดีค่ะ/ครับ
 
 มี Memo ใหม่รอการอนุมัติของท่าน
 
 กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้`}
-                />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+                </div>
               </div>
-              <div className="space-y-2">
+
+              {/* Section 2: Email to requester (when someone acts) */}
+              <div className="space-y-4 p-4 rounded-lg border border-green-200 bg-green-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <h3 className="text-sm font-semibold text-green-900">อีเมลแจ้งผู้สร้าง (เมื่อมีคนอนุมัติ/ปฏิเสธ)</h3>
+                </div>
+                <div className="space-y-2">
+                  <Label>หัวข้ออีเมล (Subject)</Label>
+                  <Input
+                    value={settings?.emailFormat?.ownerSubject || '[MemoHub] {memo_number} {action_label}โดย {actor_name}'}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerSubject: e.target.value } })}
+                    placeholder="[MemoHub] {memo_number} {action_label}โดย {actor_name}"
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>เนื้อหาอีเมล (Body)</Label>
+                  <Textarea
+                    rows={5}
+                    value={settings?.emailFormat?.ownerBody || ''}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerBody: e.target.value } })}
+                    placeholder={`สวัสดีค่ะ/ครับ
+
+Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
+เลขที่: {memo_number}
+เรื่อง: {title}
+
+เปิดดูฟอร์ม Memo ฉบับเต็ม: {memo_link}`}
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{memo_link}`'}, {'`{acted_at}`'}</p>
+                </div>
+              </div>
+
+              {/* Section 3: Email to other approvers (when someone acts) */}
+              <div className="space-y-4 p-4 rounded-lg border border-orange-200 bg-orange-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-orange-500" />
+                  <h3 className="text-sm font-semibold text-orange-900">อีเมลแจ้งผู้อนุมัติคนอื่น (เมื่อมีคนอนุมัติ/ปฏิเสธ)</h3>
+                </div>
+                <div className="space-y-2">
+                  <Label>หัวข้ออีเมล (Subject)</Label>
+                  <Input
+                    value={settings?.emailFormat?.approverSubject || '[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว'}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, approverSubject: e.target.value } })}
+                    placeholder="[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว"
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{acted_at}`'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>เนื้อหาอีเมล (Body)</Label>
+                  <Textarea
+                    rows={5}
+                    value={settings?.emailFormat?.approverBody || ''}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, approverBody: e.target.value } })}
+                    placeholder={`สวัสดีค่ะ/ครับ คุณ{approver_name}
+
+มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
+เลขที่: {memo_number}
+ดำเนินการโดย: {actor_name} → {action_label}
+
+สถานะปัจจุบัน:
+{status_summary}
+
+กรุณาเข้าระบบเพื่อดำเนินการต่อ`}
+                  />
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{memo_link}`'}, {'`{acted_at}`'}, {'`{status_summary}`'} (สถานะปัจจุบันของตารางอนุมัติ)</p>
+                </div>
+              </div>
+
+              {/* Section 4: Preview Template */}
+              <div className="space-y-2 pt-2 border-t">
                 <Label>ตัวอย่าง Memo ในอีเมล (Preview Template)</Label>
                 <Textarea
                   rows={10}
@@ -815,31 +893,7 @@ Deadline: {deadline}
                 />
                 <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
               </div>
-              <div className="space-y-2 pt-2 border-t">
-                <Label>หัวข้ออีเมลแจ้งผู้สร้าง (เมื่อมีคนอนุมัติ/ปฏิเสธ)</Label>
-                <Input
-                  value={settings?.emailFormat?.ownerSubject || '[MemoHub] {memo_number} {action_label}โดย {actor_name}'}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerSubject: e.target.value } })}
-                  placeholder="[MemoHub] {memo_number} {action_label}โดย {actor_name}"
-                />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>เนื้อหาอีเมลแจ้งผู้สร้าง</Label>
-                <Textarea
-                  rows={5}
-                  value={settings?.emailFormat?.ownerBody || ''}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerBody: e.target.value } })}
-                  placeholder={`สวัสดีค่ะ/ครับ
 
-Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
-เลขที่: {memo_number}
-เรื่อง: {title}
-
-เปิดดูฟอร์ม Memo ฉบับเต็ม: {memo_link}`}
-                />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{memo_link}`'}, {'`{acted_at}`'}</p>
-              </div>
               <div className="flex items-center gap-2">
                 <Button onClick={handleSaveEmailFormat} disabled={saving}>
                   <Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกฟอร์แมท'}
@@ -872,7 +926,13 @@ Memo ของท่านมีการดำเนินการ: {action_la
                     <span className="inline-block px-6 py-2 bg-green-600 text-white text-xs rounded-lg font-semibold">อนุมัติ</span>
                     <span className="inline-block px-6 py-2 bg-red-600 text-white text-xs rounded-lg font-semibold ml-2">ปฏิเสธ</span>
                   </div>
-                  <p className="mt-2 text-slate-400 text-center text-xs">MemoHub Digital Memo & Approval System</p>
+                  <div className="mt-2 text-center">
+                    <span className="text-xs text-blue-600 underline">ดูเอกสาร</span>
+                    <span className="text-xs text-slate-400 mx-2">|</span>
+                    <span className="text-xs text-blue-600 underline">เข้าสู่ระบบเพื่อดูเอกสาร</span>
+                  </div>
+                  <p className="mt-2 text-slate-400 text-center text-xs">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
+                  <p className="text-slate-400 text-center text-xs">MemoHub Digital Memo & Approval System</p>
                 </div>
               </div>
             </CardContent>

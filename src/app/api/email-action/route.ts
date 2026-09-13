@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { sendOwnerNotification } from '@/lib/memo-email';
+import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
 
 function getBaseUrl(request: NextRequest): string {
   return (
@@ -304,6 +304,14 @@ export async function GET(request: NextRequest) {
       baseUrl: getBaseUrl(request),
     });
 
+    await sendApproverNotifications({
+      memoId: tokenData.memoId,
+      actorId: tokenData.approverId || '',
+      actorName: tokenData.approverName,
+      action: action as 'approve' | 'reject',
+      baseUrl: getBaseUrl(request),
+    });
+
     const actionLabel = action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
     const statusColor = action === 'approve' ? '#16a34a' : '#dc2626';
     const statusBg = action === 'approve' ? '#f0fdf4' : '#fef2f2';
@@ -505,6 +513,15 @@ export async function POST(request: NextRequest) {
     await sendOwnerNotification({
       memoId: tokenData.memoId,
       actorId: tokenData.approverId,
+      actorName: matchUserName || tokenData.approverName,
+      action: action as 'approve' | 'reject',
+      remark: remark?.trim() || undefined,
+      baseUrl: getBaseUrl(request),
+    });
+
+    await sendApproverNotifications({
+      memoId: tokenData.memoId,
+      actorId: tokenData.approverId || '',
       actorName: matchUserName || tokenData.approverName,
       action: action as 'approve' | 'reject',
       remark: remark?.trim() || undefined,

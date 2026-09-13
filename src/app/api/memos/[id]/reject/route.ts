@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
-import { sendOwnerNotification } from '@/lib/memo-email';
+import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -99,6 +99,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       request.headers.get('origin') ||
       `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host') || 'localhost:3000'}`;
     await sendOwnerNotification({
+      memoId: id,
+      actorId: approverId,
+      actorName: approverName,
+      action: 'reject',
+      remark: comment.trim(),
+      baseUrl,
+    });
+
+    await sendApproverNotifications({
       memoId: id,
       actorId: approverId,
       actorName: approverName,

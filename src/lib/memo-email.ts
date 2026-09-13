@@ -26,6 +26,8 @@ export interface SmtpConfig {
 export interface OwnerMailFormat {
   ownerSubject?: string;
   ownerBody?: string;
+  approverSubject?: string;
+  approverBody?: string;
 }
 
 export const DEFAULT_OWNER_SUBJECT =
@@ -221,12 +223,26 @@ export function buildCompactMemoHtml(
     for (const colKey of colKeys) {
       const col = cols[colKey];
       if (!col) continue;
-      const icon = col.signed ? '✓' : '○';
-      const color = col.signed ? '#16a34a' : '#f59e0b';
+      const isRequester = colKey === 'col_0';
+      let icon: string;
+      let color: string;
+      if (isRequester) {
+        icon = '✓';
+        color = '#16a34a';
+      } else if (col.action === 'reject') {
+        icon = '✗';
+        color = '#dc2626';
+      } else if (col.signed) {
+        icon = '✓';
+        color = '#16a34a';
+      } else {
+        icon = '○';
+        color = '#f59e0b';
+      }
       const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
       approvalHtml += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
       if (col.signerTitle) approvalHtml += ` (${escapeHtml(col.signerTitle)})`;
-      if (col.signed && col.date) approvalHtml += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
+      if ((col.signed || col.action) && col.date) approvalHtml += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
       approvalHtml += '</p>';
     }
   }
@@ -396,9 +412,13 @@ export async function sendOwnerNotification(
   ${bodyHtml}
   ${summaryHtml}
   <div style="margin:24px 0;text-align:center;">
-    <a href="${memoLink}" style="display:inline-block;padding:12px 32px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">เปิดดูฟอร์ม Memo ฉบับเต็ม</a>
+    <a href="${memoLink}" style="display:inline-block;padding:12px 32px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">ดูเอกสาร</a>
+  </div>
+  <div style="text-align:center;margin-bottom:16px;">
+    <a href="${baseUrl}/home" style="color:#2563eb;text-decoration:underline;font-size:13px;">เข้าสู่ระบบเพื่อดูเอกสาร</a>
   </div>
   <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
+  <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
   <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
 </body>
 </html>`;
@@ -415,6 +435,207 @@ export async function sendOwnerNotification(
     return { ok: true };
   } catch (e) {
     console.error('sendOwnerNotification failed:', e);
+    return { ok: false, message: e instanceof Error ? e.message : 'Unknown' };
+  }
+}
+
+interface ApproverNotifyInput {
+  memoId: string;
+  actorId: string;
+  actorName: string;
+  action: 'approve' | 'reject';
+  remark?: string;
+  baseUrl: string;
+}
+
+/**
+ * Send notification emails to OTHER approvers (not the actor) after someone acts.
+ * Only emails approvers who haven't acted yet (not signed, not rejected).
+ * Never throws — fire-and-forget safe.
+ */
+export async function sendApproverNotifications(
+  input: ApproverNotifyInput
+): Promise<{ ok: boolean; sent?: number; message?: string }> {
+  try {
+    const { memoId, actorId, actorName, action, remark, baseUrl } = input;
+
+    const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
+    const settings = settingsDoc.data();
+    const smtp = settings?.smtp as SmtpConfig | undefined;
+    if (!smtp?.host || !smtp.user || !smtp.password) {
+      return { ok: false, message: 'SMTP not configured' };
+    }
+
+    const memoDoc = await getDoc(doc(db, 'memos', memoId));
+    if (!memoDoc.exists()) return { ok: false, message: 'Memo not found' };
+    const memo = memoDoc.data()!;
+
+    const formData = (memo.formData || {}) as Record<string, unknown>;
+
+    // Collect all approvers (col_1+) and find who hasn't acted yet
+    interface ApproverInfo {
+      email: string;
+      name: string;
+      colKey: string;
+      colTitle: string;
+    }
+    const pendingApprovers: ApproverInfo[] = [];
+
+    for (const fieldKey of Object.keys(formData)) {
+      const fieldValue = formData[fieldKey];
+      if (!fieldValue || typeof fieldValue !== 'object' || Array.isArray(fieldValue)) continue;
+      for (const colKey of Object.keys(fieldValue)) {
+        if (!colKey.startsWith('col_') || colKey === 'col_0') continue;
+        const col = (fieldValue as Record<string, Record<string, unknown>>)[colKey];
+        if (!col) continue;
+        const colUserId = col.userId as string | undefined;
+        const colName = col.name as string | undefined;
+        if (!colUserId && !colName) continue;
+        // Skip the actor
+        if (colUserId === actorId) continue;
+        // Skip already acted (signed or rejected)
+        if (col.signed || col.action === 'reject') continue;
+        pendingApprovers.push({
+          email: '', // will resolve below
+          name: colName || '',
+          colKey,
+          colTitle: (col.colTitle as string) || 'ผู้อนุมัติ',
+        });
+      }
+    }
+
+    if (pendingApprovers.length === 0) return { ok: true, sent: 0 };
+
+    // Resolve emails from users collection
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const allUsers = usersSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Record<string, unknown>),
+    })) as Array<{ id: string; email?: string; displayName?: string }>;
+
+    for (const approver of pendingApprovers) {
+      const user = allUsers.find((u) => u.id === approver.email || u.displayName === approver.name);
+      if (user?.email) approver.email = user.email;
+    }
+
+    // Load template fields for summary
+    let templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }> = [];
+    let templateTypo: MemoTypography | undefined;
+    if (memo.templateId) {
+      const templateDoc = await getDoc(doc(db, 'memoTemplates', memo.templateId));
+      if (templateDoc.exists()) {
+        const templateData = templateDoc.data();
+        templateFields = (templateData.fields || []) as typeof templateFields;
+        templateTypo = templateData.typography as MemoTypography | undefined;
+      }
+    }
+
+    const userMap = new Map<string, { displayName?: string; department?: string }>();
+    for (const d of usersSnapshot.docs) {
+      const u = d.data() as Record<string, unknown>;
+      userMap.set(d.id, {
+        displayName: u.displayName as string,
+        department: u.department as string,
+      });
+    }
+
+    const emailFormat = (settings?.emailFormat || {}) as Record<string, string>;
+    const now = new Date();
+    const actedAt = formatThaiDateTime(now);
+    const actionLabel = action === 'approve' ? 'อนุมัติ' : 'ถูกปฏิเสธ';
+
+    const viewToken = await createViewToken(memoId);
+    const memoLink = buildViewUrl(baseUrl, viewToken);
+
+    const transporter = createTransporter(smtp);
+    const sender = buildSender(smtp);
+    let sentCount = 0;
+
+    for (const approver of pendingApprovers) {
+      if (!approver.email) continue;
+
+      const vars: Record<string, string> = {
+        memo_number: (memo.memoNumber as string) || memoId,
+        title: (memo.title as string) || '',
+        owner_name: (memo.ownerName as string) || '',
+        department: (memo.department as string) || '',
+        status:
+          (memo.status as string) === 'approved'
+            ? 'อนุมัติแล้ว'
+            : (memo.status as string) === 'rejected'
+              ? 'ถูกปฏิเสธ'
+              : 'รออนุมัติ',
+        actor_name: actorName,
+        action_label: actionLabel,
+        remark: remark || '-',
+        memo_link: memoLink,
+        acted_at: actedAt,
+        approver_name: approver.name,
+      };
+
+      const subjectTemplate = emailFormat.approverSubject || '[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว';
+      const bodyTemplate = emailFormat.approverBody || `สวัสดีค่ะ/ครับ คุณ{approver_name}
+
+มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
+เลขที่: {memo_number}
+ดำเนินการโดย: {actor_name} → {action_label}
+
+สถานะปัจจุบัน:
+{status_summary}
+
+กรุณาเข้าระบบเพื่อดำเนินการต่อ`;
+      const subject = replaceVariables(subjectTemplate, vars);
+
+      const statusSummary = buildCompactMemoHtml(
+        memo as Record<string, unknown>,
+        templateFields,
+        userMap,
+        baseUrl,
+        templateTypo
+      );
+      const bodyWithSummary = bodyTemplate.replace('{status_summary}', statusSummary);
+      const bodyText = replaceVariables(bodyWithSummary, vars);
+      const bodyHtml = bodyText
+        .split('\n')
+        .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
+        .join('');
+
+      const htmlEmail = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:${resolveMailFontFamily(templateTypo)};max-width:600px;margin:0 auto;padding:20px;">
+  <h2 style="color:#1e293b;">${escapeHtml(subject)}</h2>
+  ${bodyHtml}
+  <div style="margin:24px 0;text-align:center;">
+    <a href="${baseUrl}/home" style="display:inline-block;padding:12px 32px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">เข้าสู่ระบบเพื่ออนุมัติ</a>
+  </div>
+  <div style="text-align:center;margin-bottom:16px;">
+    <a href="${memoLink}" style="color:#2563eb;text-decoration:underline;font-size:13px;">ดูเอกสารฉบับเต็ม (ไม่ต้องเข้าสู่ระบบ)</a>
+  </div>
+  <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
+  <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
+  <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
+</body>
+</html>`;
+
+      try {
+        await transporter.sendMail({
+          from: sender,
+          to: approver.email,
+          subject,
+          replyTo: smtp.fromEmail || undefined,
+          text: `${subject}\n\n${replaceVariables(bodyTemplate, vars)}`,
+          html: htmlEmail,
+        });
+        sentCount++;
+      } catch (e) {
+        console.error(`sendApproverNotifications: failed to email ${approver.email}:`, e);
+      }
+    }
+
+    return { ok: true, sent: sentCount };
+  } catch (e) {
+    console.error('sendApproverNotifications failed:', e);
     return { ok: false, message: e instanceof Error ? e.message : 'Unknown' };
   }
 }
