@@ -53,6 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = true;
+          fieldValue[approverColKey].action = 'approve';
           fieldValue[approverColKey].date = now.toISOString().split('T')[0];
           fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
         }

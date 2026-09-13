@@ -121,6 +121,7 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
         return false;
       }) as Record<string, string> | undefined : undefined;
       const attnToUserId = formRowField?.attnTo || '';
+      const auditorUserId = (formRowField?.auditor as string) || '';
       const rawCc = formRowField?.cc;
       const ccUserIds: string[] = Array.isArray(rawCc) ? rawCc as string[] : [];
       return (
@@ -135,8 +136,8 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           users={users}
           groups={groups}
           attnToUserId={attnToUserId}
+          auditorUserId={auditorUserId}
           ccUserIds={ccUserIds}
-          typography={effectiveTypo}
         />
       );
     }

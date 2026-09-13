@@ -64,14 +64,29 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
       return val || '-';
     };
 
-    // Bordered table layout matching PDF (pairs of fields per row)
-    const rows: { left: typeof cfg.fields[0]; right: typeof cfg.fields[0] | null }[] = [];
-    for (let i = 0; i < displayFields.length; i += 2) {
-      rows.push({
-        left: displayFields[i],
-        right: displayFields[i + 1] || null,
-      });
+    // Bordered table layout matching PDF.
+    // Fields with width==='full' span the whole row; others pair sequentially.
+    type RowField = typeof cfg.fields[0];
+    const rows: { full?: RowField; left?: RowField; right?: RowField | null }[] = [];
+    let pending: RowField | null = null;
+    const flushPending = () => {
+      if (pending) {
+        rows.push({ left: pending, right: null });
+        pending = null;
+      }
+    };
+    for (const f of displayFields) {
+      if ((f.width as string) === 'full') {
+        flushPending();
+        rows.push({ full: f });
+      } else if (!pending) {
+        pending = f;
+      } else {
+        rows.push({ left: pending, right: f });
+        pending = null;
+      }
     }
+    flushPending();
 
     const labelSize = Math.round(typo.baseFontSize * 0.88);
     const cellStyle: React.CSSProperties = {
@@ -79,23 +94,27 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
       lineHeight: typo.lineHeight,
     };
 
+    const renderCell = (f: RowField, withRightBorder: boolean) => (
+      <div className={`flex items-center px-3 py-2 ${withRightBorder ? 'border-r border-slate-900' : ''}`}>
+        <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{f.label}</span>
+        <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(f, value[f.name] as string)}</span>
+      </div>
+    );
+
     return (
       <div className="border border-slate-900 divide-y divide-slate-900" style={cellStyle}>
         {rows.map((row, ri) => (
-          <div key={ri} className="grid grid-cols-2">
-            <div className="flex items-center px-3 py-2 border-r border-slate-900">
-              <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{row.left.label}</span>
-              <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(row.left, value[row.left.name] as string)}</span>
+          row.full ? (
+            <div key={ri} className="px-3 py-2">
+              <span className="font-semibold text-slate-900" style={{ fontSize: `${labelSize}px` }}>{row.full.label}</span>
+              <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}> : {resolveValue(row.full, value[row.full.name] as string)}</span>
             </div>
-            {row.right ? (
-              <div className="flex items-center px-3 py-2">
-                <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{row.right.label}</span>
-                <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(row.right, value[row.right.name] as string)}</span>
-              </div>
-            ) : (
-              <div />
-            )}
-          </div>
+          ) : (
+            <div key={ri} className="grid grid-cols-2">
+              {renderCell(row.left!, true)}
+              {row.right ? renderCell(row.right, false) : <div />}
+            </div>
+          )
         ))}
       </div>
     );

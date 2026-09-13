@@ -48,6 +48,7 @@ export default function HomePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
+  const [approverFilter, setApproverFilter] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const initFormData = (t: MemoTemplate) => {
@@ -165,12 +166,43 @@ export default function HomePage() {
     }
     return false;
   };
+
+  const getUserAction = (memo: Memo): 'approve' | 'reject' | null => {
+    if (!user) return null;
+    const formData = memo.formData as Record<string, unknown> | undefined;
+    if (!formData) return null;
+    for (const fieldKey of Object.keys(formData)) {
+      const fieldValue = formData[fieldKey];
+      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+        for (const colKey of Object.keys(fieldValue as Record<string, unknown>)) {
+          if (colKey.startsWith('col_') && colKey !== 'col_0') {
+            const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
+            if ((col?.userId === user.id || col?.name === user.displayName) && col?.action) {
+              return col.action as 'approve' | 'reject';
+            }
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   const isAdmin = user?.role === 'admin';
 
   const pendingMemos = useMemo(() => {
     if (!user) return [];
     return memos.filter((m) => {
       if (m.status === 'approved' || m.status === 'rejected' || m.status === 'cancel') return false;
+      if (m.ownerId === user.id) return false;
+      const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
+      if (!grid) return false;
+      return Object.values(grid).some((col) => col.name === user.displayName);
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [memos, user]);
+
+  const approverMemos = useMemo(() => {
+    if (!user) return [];
+    return memos.filter((m) => {
       if (m.ownerId === user.id) return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
       if (!grid) return false;
@@ -191,9 +223,11 @@ export default function HomePage() {
     );
   }
 
-  const pendingCount = pendingMemos.filter((m) => m.status === 'waiting' || m.status === 'new').length;
-  const approvedCount = pendingMemos.filter((m) => m.status === 'approved').length;
-  const overdueCount = pendingMemos.filter((m) => {
+  const pendingCount = approverMemos.filter((m) => getUserAction(m) === null && m.status !== 'approved' && m.status !== 'rejected' && m.status !== 'cancel').length;
+  const approvedCount = approverMemos.filter((m) => getUserAction(m) === 'approve').length;
+  const rejectedCount = approverMemos.filter((m) => getUserAction(m) === 'reject').length;
+  const overdueCount = approverMemos.filter((m) => {
+    if (getUserAction(m) !== null) return false;
     if (m.status !== 'waiting' && m.status !== 'new') return false;
     return new Date(m.deadlineAt) < new Date();
   }).length;
@@ -214,19 +248,31 @@ export default function HomePage() {
   };
 
   const getStatusBadge = (memo: Memo) => {
-    if (memo.status === 'approved') return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว (approve)</Badge>;
-    if (memo.status === 'rejected') return <Badge className="bg-red-100 text-red-700 border-red-200">ถูกปฏิเสธ</Badge>;
-    if (memo.status === 'cancel') return <Badge className="bg-slate-100 text-slate-700 border-slate-200">ยกเลิก</Badge>;
-    if (new Date(memo.deadlineAt) < new Date()) return <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>;
-    const { signed, total } = getApprovalProgress(memo);
     const isOwner = memo.ownerId === user?.id;
+
     if (isOwner) {
+      if (memo.status === 'approved') return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว</Badge>;
+      if (memo.status === 'rejected') return <Badge className="bg-red-100 text-red-700 border-red-200">ไม่ผ่านการอนุมัติ</Badge>;
+      if (memo.status === 'cancel') return <Badge className="bg-slate-100 text-slate-700 border-slate-200">ยกเลิก</Badge>;
+      if (new Date(memo.deadlineAt) < new Date()) return <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>;
+      const { signed, total } = getApprovalProgress(memo);
       if (total > 0) return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ ({signed}/{total})</Badge>;
       return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
     }
-    if (hasUserSigned(memo, user?.id || '')) {
+
+    const userAction = getUserAction(memo);
+    if (userAction === 'approve') {
+      if (memo.status === 'rejected') {
+        return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว <span className="ml-1 text-red-500 text-[10px]">⚠ เอกสารไม่ผ่าน</span></Badge>;
+      }
       return <Badge className="bg-green-100 text-green-700 border-green-200">อนุมัติแล้ว</Badge>;
     }
+    if (userAction === 'reject') {
+      return <Badge className="bg-red-100 text-red-700 border-red-200">ถูกปฏิเสธ</Badge>;
+    }
+
+    if (memo.status === 'cancel') return <Badge className="bg-slate-100 text-slate-700 border-slate-200">ยกเลิก</Badge>;
+    if (new Date(memo.deadlineAt) < new Date()) return <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>;
     return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
   };
 
@@ -411,11 +457,12 @@ export default function HomePage() {
     try {
       const formData = { ...sectionFormData };
 
-      // Ensure approval grid columns are populated from ATTN TO / CC before saving
+      // Ensure approval grid columns are populated from ATTN TO / Auditor / CC before saving
       const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
       if (formRowField) {
         const formRowData = (formData[formRowField.id] as Record<string, string>) || {};
         const attnToUserId = formRowData.attnTo || '';
+        const auditorUserId = (formRowData.auditor as string) || '';
         const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
         const gridField = selectedTemplate.fields.find((f) => f.type === 'approval_grid');
         if (gridField) {
@@ -432,7 +479,15 @@ export default function HomePage() {
             grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
             idx++;
           }
-          // col_1: ATTN TO
+          // col_1: Auditor (ผู้ตรวจสอบ)
+          if (auditorUserId) {
+            const audUser = allUsers.find((u) => u.id === auditorUserId);
+            if (audUser) {
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'ตรวจสอบโดยหัวหน้าแผนก' };
+              idx++;
+            }
+          }
+          // col_2: ATTN TO (ผู้อนุมัติคนแรก)
           if (attnToUserId) {
             const attnUser = allUsers.find((u) => u.id === attnToUserId);
             if (attnUser) {
@@ -440,7 +495,7 @@ export default function HomePage() {
               idx++;
             }
           }
-          // col_2..N: CC
+          // CC
           for (const ccId of ccUserIds) {
             const ccUser = allUsers.find((u) => u.id === ccId);
             if (ccUser) {
@@ -545,10 +600,16 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
             {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
-              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                อนุมัติ
-              </Button>
+              <>
+                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  อนุมัติ
+                </Button>
+                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleReject(memo)}>
+                  <XCircle className="h-4 w-4 mr-1" />
+                  ปฏิเสธ
+                </Button>
+              </>
             )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(memo)} disabled={downloadingId === memo.id}>
               <Download className="h-4 w-4" />
@@ -606,8 +667,8 @@ export default function HomePage() {
             {isApprover && (
               <TabsTrigger value="pending" className="gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                รออนุมัติ
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{pendingCount}</Badge>
+                รายการทั้งหมด
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
               </TabsTrigger>
             )}
             <TabsTrigger value="mine" className="gap-1.5">
@@ -621,14 +682,30 @@ export default function HomePage() {
             <TabsContent value="pending">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <CardTitle className="text-base">รายการรออนุมัติ</CardTitle>
+                  <CardTitle className="text-base">รายการทั้งหมด</CardTitle>
                   <div className="flex gap-2 text-xs">
-                    <span className="text-blue-600">รออนุมัติ {pendingCount}</span>
-                    <span className="text-green-600">อนุมัติแล้ว {approvedCount}</span>
-                    <span className="text-orange-600">เลยเวลา {overdueCount}</span>
+                    <button onClick={() => setApproverFilter(approverFilter === 'pending' ? null : 'pending')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'pending' ? 'bg-blue-100 ring-2 ring-blue-400 font-semibold' : 'hover:bg-blue-50'}`}>
+                      <span className="text-blue-600">รออนุมัติ {pendingCount}</span>
+                    </button>
+                    <button onClick={() => setApproverFilter(approverFilter === 'approved' ? null : 'approved')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'approved' ? 'bg-green-100 ring-2 ring-green-400 font-semibold' : 'hover:bg-green-50'}`}>
+                      <span className="text-green-600">อนุมัติแล้ว {approvedCount}</span>
+                    </button>
+                    <button onClick={() => setApproverFilter(approverFilter === 'rejected' ? null : 'rejected')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'rejected' ? 'bg-red-100 ring-2 ring-red-400 font-semibold' : 'hover:bg-red-50'}`}>
+                      <span className="text-red-600">ถูกปฏิเสธ {rejectedCount}</span>
+                    </button>
+                    <button onClick={() => setApproverFilter(approverFilter === 'overdue' ? null : 'overdue')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'overdue' ? 'bg-orange-100 ring-2 ring-orange-400 font-semibold' : 'hover:bg-orange-50'}`}>
+                      <span className="text-orange-600">เลยเวลา {overdueCount}</span>
+                    </button>
                   </div>
                 </CardHeader>
-                <CardContent>{renderMemoList(pendingMemos, true)}</CardContent>
+                <CardContent>{renderMemoList(
+                  approverFilter === 'pending' ? approverMemos.filter((m) => getUserAction(m) === null && m.status !== 'approved' && m.status !== 'rejected' && m.status !== 'cancel') :
+                  approverFilter === 'approved' ? approverMemos.filter((m) => getUserAction(m) === 'approve') :
+                  approverFilter === 'rejected' ? approverMemos.filter((m) => getUserAction(m) === 'reject') :
+                  approverFilter === 'overdue' ? approverMemos.filter((m) => getUserAction(m) === null && (m.status === 'waiting' || m.status === 'new') && new Date(m.deadlineAt) < new Date()) :
+                  approverMemos,
+                  true
+                )}</CardContent>
               </Card>
             </TabsContent>
           )}
@@ -698,13 +775,16 @@ export default function HomePage() {
               </div>
             </div>
           )}
-          {selectedMemo?.status === 'rejected' && selectedMemo?.approvals?.filter((a) => a.action === 'reject').length > 0 && (
+          {selectedMemo?.status === 'rejected' && (
             <div className="px-6 pb-4">
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm font-semibold text-red-700 mb-1">หมายเหตุการไม่อนุมัติ</p>
-                {selectedMemo.approvals.filter((a) => a.action === 'reject').map((a, i) => (
-                  <div key={i} className="text-sm text-red-600">
-                    <p><span className="font-medium">{a.approverName}</span>: {a.comment}</p>
+                <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>
+                {selectedMemo.rejectionComment && (
+                  <p className="text-sm text-red-600">เนื่องจาก: {selectedMemo.rejectionComment}</p>
+                )}
+                {selectedMemo?.approvals?.filter((a) => a.action === 'reject').map((a, i) => (
+                  <div key={i} className="text-sm text-red-600 mt-1">
+                    <p>ปฏิเสธโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
                   </div>
                 ))}
               </div>

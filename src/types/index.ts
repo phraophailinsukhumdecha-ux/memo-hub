@@ -169,6 +169,7 @@ export interface Memo {
   updatedAt: Date;
   waitingAt?: Date | null;
   closedAt?: Date | null;
+  rejectionComment?: string;
 }
 
 export interface Approval {

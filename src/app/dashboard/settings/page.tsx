@@ -203,7 +203,7 @@ export default function SettingsPage() {
 
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
-  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean }>>([]);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half' }>>([]);
   const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
 
@@ -252,7 +252,7 @@ export default function SettingsPage() {
     setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text', options: [] }]);
   };
 
-  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean }>) => {
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half' }>) => {
     const updated = [...editingFormFields];
     updated[index] = { ...updated[index], ...updates };
     setEditingFormFields(updated);
@@ -1173,6 +1173,8 @@ Memo ของท่านมีการดำเนินการ: {action_la
                                   <SelectItem value="text">Text</SelectItem>
                                   <SelectItem value="date">Date</SelectItem>
                                   <SelectItem value="dropdown">Dropdown</SelectItem>
+                                  <SelectItem value="user_dropdown">User Dropdown</SelectItem>
+                                  <SelectItem value="user_multiselect">User Multiselect</SelectItem>
                                 </SelectContent>
                               </Select>
                               {f.type === 'dropdown' && (
@@ -1220,6 +1222,13 @@ Memo ของท่านมีการดำเนินการ: {action_la
                                 value={f.name}
                                 onChange={(e) => updateFormField(i, { name: e.target.value })}
                               />
+                              <Select value={f.width || 'half'} onValueChange={(v) => updateFormField(i, { width: v as 'full' | 'half' })}>
+                                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="half">ครึ่งแถว</SelectItem>
+                                  <SelectItem value="full">เต็มแถว</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <button
                                 type="button"
                                 onClick={() => updateFormField(i, { required: !f.required })}

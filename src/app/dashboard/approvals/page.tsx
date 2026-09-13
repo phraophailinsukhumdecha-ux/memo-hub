@@ -196,6 +196,7 @@ export default function ApprovalsPage() {
             const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
             if (!detailTemplate) return <p className="text-sm text-slate-500">ไม่พบเทมเพลต</p>;
             return (
+              <>
               <div className="memo-font space-y-4">
                 {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
                   <SectionRenderer
@@ -210,6 +211,20 @@ export default function ApprovalsPage() {
                   />
                 ))}
               </div>
+              {selectedMemo.status === 'rejected' && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>
+                  {selectedMemo.rejectionComment && (
+                    <p className="text-sm text-red-600">เนื่องจาก: {selectedMemo.rejectionComment}</p>
+                  )}
+                  {selectedMemo.approvals?.filter((a) => a.action === 'reject').map((a, i) => (
+                    <div key={i} className="text-sm text-red-600 mt-1">
+                      <p>ปฏิเสธโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              </>
             );
           })()}
           <DialogFooter>

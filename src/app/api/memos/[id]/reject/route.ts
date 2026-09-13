@@ -48,6 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
           if (fieldValue[approverColKey]) {
             fieldValue[approverColKey].signed = false;
+            fieldValue[approverColKey].action = 'reject';
             fieldValue[approverColKey].date = now.toISOString().split('T')[0];
             fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
           }
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currentApprovalIndex: memo.currentApprovalIndex + 1,
       currentApprovalLevel: null,
       approvals: [...(memo.approvals || []), approval],
+      rejectionComment: comment.trim(),
       closedAt: now,
       updatedAt: now,
     });

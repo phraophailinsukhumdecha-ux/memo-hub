@@ -77,28 +77,28 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           <div className="flex-1 p-4">
             <table
               className="w-full"
-              style={{ fontSize: `${Math.round(typo.baseFontSize * 0.82)}px`, lineHeight: typo.lineHeight }}
+              style={{ fontSize: `${typo.baseFontSize}px`, lineHeight: typo.lineHeight }}
             >
               <tbody>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.memoNoLabel}</td>
-                  <td className="text-slate-900 py-1">: {memoNumber || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-0 whitespace-nowrap">{cfg.memoNoLabel}</td>
+                  <td className="text-slate-900 py-0">: {memoNumber || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.refNoLabel}</td>
-                  <td className="text-slate-900 py-1">: {refNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-0 whitespace-nowrap">{cfg.refNoLabel}</td>
+                  <td className="text-slate-900 py-0">: {refNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.quotationLabel}</td>
-                  <td className="text-slate-900 py-1">: {quotationNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-0 whitespace-nowrap">{cfg.quotationLabel}</td>
+                  <td className="text-slate-900 py-0">: {quotationNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.jobNoLabel}</td>
-                  <td className="text-slate-900 py-1">: {jobNo || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-0 whitespace-nowrap">{cfg.jobNoLabel}</td>
+                  <td className="text-slate-900 py-0">: {jobNo || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold text-slate-900 pr-1 py-1 whitespace-nowrap">{cfg.dateLabel}</td>
-                  <td className="text-slate-900 py-1">: {date || '-'}</td>
+                  <td className="font-bold text-slate-900 pr-1 py-0 whitespace-nowrap">{cfg.dateLabel}</td>
+                  <td className="text-slate-900 py-0">: {date || '-'}</td>
                 </tr>
               </tbody>
             </table>

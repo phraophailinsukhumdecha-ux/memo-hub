@@ -288,6 +288,7 @@ export function MemoDocumentForm({
         const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
         const formRowData = formRowField ? (formData[formRowField.id] as Record<string, string>) || {} : {};
         const attnToUserId = formRowData.attnTo || '';
+        const auditorUserId = (formRowData.auditor as string) || '';
         const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
         return (
           <div key={field.id} className="space-y-1">
@@ -300,6 +301,7 @@ export function MemoDocumentForm({
               ownerUser={ownerUser}
               users={users}
               attnToUserId={attnToUserId}
+              auditorUserId={auditorUserId}
               ccUserIds={ccUserIds}
             />
           </div>

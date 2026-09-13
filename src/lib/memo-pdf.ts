@@ -1,5 +1,4 @@
 import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography } from '@/types';
-import { formatDate } from '@/utils/cn';
 import { resolveLogoSrc } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
 
@@ -62,11 +61,11 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
         </td>
         <td style="vertical-align:top;padding:16px;">
            <table style="width:100%;border-collapse:collapse;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${jobNoLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:4px 4px 4px 0;white-space:nowrap;">${dateLabel}</td><td style="color:#0f172a;padding:4px 0;">: ${h.date || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:0;">: ${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${jobNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${dateLabel}</td><td style="color:#0f172a;padding:0;">: ${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>
@@ -170,26 +169,45 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
     return str || '-';
   };
 
-  // Two-column layout: ATTN TO / FROM / DEPT / CC on the right, the rest on the left
-  const RIGHT_COLUMN_NAMES = ['attnTo', 'from', 'dept', 'cc'];
-  const leftFields = bodyFields.filter((f) => !RIGHT_COLUMN_NAMES.includes(f.name));
-  const rightFields = bodyFields.filter((f) => RIGHT_COLUMN_NAMES.includes(f.name));
+  // Bordered table layout matching preview.
+  // Fields with width==='full' span the whole row; others pair sequentially.
+  type RowField = { name: string; label: string; type: string; width?: string };
+  const typedFields = fields as RowField[];
+  const rows: { full?: RowField; left?: RowField; right?: RowField | null }[] = [];
+  let pending: RowField | null = null;
+  for (const f of typedFields.filter((x) => !headerFieldNames.includes(x.name))) {
+    if (f.width === 'full') {
+      if (pending) {
+        rows.push({ left: pending, right: null });
+        pending = null;
+      }
+      rows.push({ full: f });
+    } else if (!pending) {
+      pending = f;
+    } else {
+      rows.push({ left: pending, right: f });
+      pending = null;
+    }
+  }
+  if (pending) rows.push({ left: pending, right: null });
 
-  const renderLine = (f: { name: string; label: string; type: string }) => {
+  const labelSize = Math.round(t.baseFontSize * 0.88);
+  const renderCell = (f: RowField) => {
     const displayVal = resolveValue(f, data[f.name]);
-    return `<p style="margin:0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};color:#0f172a;font-family:${t.fontFamily};"><span style="font-weight:${t.boldLabels ? 600 : 400};">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};"> : ${displayVal}</span></p>`;
+    return `<span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};font-size:${t.baseFontSize}px;"> : ${displayVal}</span>`;
   };
 
-  if (rightFields.length === 0) {
-    return `<div style="margin-bottom:12px;">${leftFields.map(renderLine).join('')}</div>`;
-  }
+  const bodyRows = rows.map((row) => {
+    if (row.full) {
+      return `<tr><td colspan="2" style="padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.full)}</td></tr>`;
+    }
+    return `<tr>
+      <td style="width:50%;padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.left!)}</td>
+      <td style="width:50%;padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${row.right ? renderCell(row.right) : ''}</td>
+    </tr>`;
+  }).join('');
 
-  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
-    <tr>
-      <td style="width:50%;vertical-align:top;padding-right:12px;">${leftFields.map(renderLine).join('')}</td>
-      <td style="width:50%;vertical-align:top;">${rightFields.map(renderLine).join('')}</td>
-    </tr>
-  </table>`;
+  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">${bodyRows}</table>`;
 }
 
 // Mirrors readonly BodyText preview: bordered box, content or ruled lines
@@ -209,7 +227,7 @@ function renderBodyTextInner(field: MemoField, value: string | undefined, typo?:
   return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;">${ruled}</div>`;
 }
 
-function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography): string {
+function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography, auditorUserId?: string): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const configColumns = (config.columns as { title: string; subtitle?: string }[]) || [];
   const showTime = config.showTime as boolean;
@@ -234,18 +252,27 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     // Same titles as ApprovalGrid preview: first = ผู้ขออนุมัติ, rest = อนุมัติ
     const colTitle = colData.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : 'อนุมัติ');
 
-  // Resolve non-first columns from ATTN TO / CC, mirroring readonly ApprovalGrid preview
+  // Resolve non-first columns from ATTN TO / Auditor / CC, mirroring readonly ApprovalGrid preview
   let resolvedName = colData.name || '';
   let resolvedTitle = colData.signerTitle || '';
   if (!isFirst && users) {
-    const attnUser = attnToUserId ? users.find((u) => u.id === attnToUserId) : null;
-    const ccUsers = (ccUserIds || []).map((id) => users.find((u) => u.id === id)).filter(Boolean);
-    if (i === 1 && attnUser) {
-      resolvedName = attnUser.displayName;
-      resolvedTitle = attnUser.department || '';
-    } else if (i > 1 && ccUsers[i - 2]) {
-      resolvedName = ccUsers[i - 2]!.displayName;
-      resolvedTitle = ccUsers[i - 2]!.department || '';
+    const seq: { displayName: string; department?: string }[] = [];
+    if (auditorUserId) {
+      const u = users.find((x) => x.id === auditorUserId);
+      if (u) seq.push(u);
+    }
+    if (attnToUserId) {
+      const u = users.find((x) => x.id === attnToUserId);
+      if (u) seq.push(u);
+    }
+    for (const id of ccUserIds || []) {
+      const u = users.find((x) => x.id === id);
+      if (u) seq.push(u);
+    }
+    const assigned = seq[i - 1];
+    if (assigned) {
+      resolvedName = assigned.displayName;
+      resolvedTitle = assigned.department || '';
     }
   }
 
@@ -257,6 +284,11 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     : resolvedTitle;
 
     const t = typo || resolveTypography(null);
+    const stampHtml = (!isFirst && colData.action === 'approve')
+      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #16a34a;border-radius:6px;display:inline-block;background:#f0fdf4;"><span style="font-weight:800;color:#16a34a;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✓ อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.7)}px;color:#16a34a;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
+      : (!isFirst && colData.action === 'reject')
+      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #dc2626;border-radius:6px;display:inline-block;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✗ ไม่อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.7)}px;color:#dc2626;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
+      : '';
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
         <p style="font-weight:600;font-size:${t.baseFontSize}px;margin:0;">${colTitle}</p>
@@ -264,6 +296,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
       <div style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
         <p style="margin:4px 0;">ลงชื่อ</p>
         <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;min-height:20px;">${displayName ? `( ${displayName} )` : '(  )'}</p>
+        ${stampHtml}
         <p style="margin:4px 0;">ตำแหน่ง</p>
         <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;min-height:20px;">${displayTitle}</p>
         <div style="display:flex;gap:8px;">
@@ -295,7 +328,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
-function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails, templateTypo?: MemoTypography): string {
+function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails, templateTypo?: MemoTypography, auditorUserId?: string): string {
   // Effective typography: per-section override wins per-key, else template default
   const typo = resolveFieldTypography(templateTypo, field.typography);
   switch (field.type) {
@@ -314,7 +347,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
     case 'body_text':
       return renderBodyTextInner(field, value as string | undefined, typo);
     case 'approval_grid':
-      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, typo);
+      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, typo, auditorUserId);
     default:
       return '';
   }
@@ -361,6 +394,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
       return false;
     }) as Record<string, unknown> | undefined;
     const attnToUserId = (formRowData?.attnTo as string) || '';
+    const auditorUserId = (formRowData?.auditor as string) || '';
     const rawCc = formRowData?.cc;
     const ccUserIds: string[] = Array.isArray(rawCc) ? (rawCc as string[]) : [];
 
@@ -378,10 +412,10 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
       } else {
         flushBody();
-        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo));
+        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
       }
     }
     flushBody();
@@ -424,10 +458,6 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
       ${sectionsHtml}
 
       ${stampHtml}
-
-      <div style="margin-top:40px;padding-top:12px;border-top:1px solid #e2e8f0;text-align:center;font-size:10px;color:#94a3b8;">
-        พิมพ์จาก MemoHub Digital Memo & Approval System | ${formatDate(new Date())}
-      </div>
     </div>
   `;
 }

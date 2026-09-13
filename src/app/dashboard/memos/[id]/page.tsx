@@ -181,6 +181,24 @@ export default function MemoDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {memo.status === 'rejected' && (
+            <Card>
+              <CardHeader><CardTitle className="text-red-700">เอกสารไม่ผ่านอนุมัติ</CardTitle></CardHeader>
+              <CardContent>
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  {memo.rejectionComment && (
+                    <p className="text-sm text-red-600">เนื่องจาก: {memo.rejectionComment}</p>
+                  )}
+                  {memo.approvals?.filter((a) => a.action === 'reject').map((a, i) => (
+                    <div key={i} className="text-sm text-red-600 mt-1">
+                      <p>ปฏิเสธโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -237,6 +237,7 @@ export async function GET(request: NextRequest) {
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = action === 'approve';
+          fieldValue[approverColKey].action = action;
           fieldValue[approverColKey].date = now.toISOString().split('T')[0];
           fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
         }
@@ -287,6 +288,7 @@ export async function GET(request: NextRequest) {
       updateData.closedAt = now;
     } else if (newStatus === 'rejected') {
       updateData.status = 'rejected';
+      updateData.rejectionComment = 'ปฏิเสธผ่านอีเมล';
       updateData.closedAt = now;
     }
 
@@ -442,6 +444,7 @@ export async function POST(request: NextRequest) {
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = action === 'approve';
+          fieldValue[approverColKey].action = action;
           fieldValue[approverColKey].date = now.toISOString().split('T')[0];
           fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
         }
