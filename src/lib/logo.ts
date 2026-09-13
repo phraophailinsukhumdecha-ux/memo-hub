@@ -21,3 +21,10 @@ export function resolveLogoAbsolute(url: string | undefined, baseUrl: string): s
   if (/^https?:\/\//i.test(src)) return src;
   return `${baseUrl}${src.startsWith('/') ? '' : '/'}${src}`;
 }
+
+/** Direct external logo URL for emails (no proxy — email clients need absolute URLs). */
+export function resolveLogoForEmail(url?: string): string {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  return '';
+}

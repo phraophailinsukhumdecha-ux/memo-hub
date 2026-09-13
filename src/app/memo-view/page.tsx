@@ -1,10 +1,36 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, Component, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Memo, MemoTemplate, User } from '@/types';
-import { resolveTypography } from '@/lib/typography';
 import { SectionRenderer } from '@/components/memo-sections';
+
+class MemoViewErrorBoundary extends Component<{ children: ReactNode }, { error: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: '' };
+  }
+  static getDerivedStateFromError(err: unknown) {
+    return { error: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการแสดงผล' };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⚠</span>
+            </div>
+            <h1 className="text-xl font-bold text-red-600 mb-2">แสดงผลไม่สำเร็จ</h1>
+            <p className="text-slate-600 text-sm">{this.state.error}</p>
+            <p className="text-xs text-slate-400 mt-4">MemoHub Digital Memo & Approval System</p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function MemoViewContent() {
   const searchParams = useSearchParams();
@@ -153,7 +179,9 @@ export default function MemoViewPage() {
         </div>
       }
     >
-      <MemoViewContent />
+      <MemoViewErrorBoundary>
+        <MemoViewContent />
+      </MemoViewErrorBoundary>
     </Suspense>
   );
 }

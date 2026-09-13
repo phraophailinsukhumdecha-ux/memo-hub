@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import { resolveLogoAbsolute } from '@/lib/logo';
+import { resolveLogoForEmail } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
 import { MemoTypography } from '@/types';
 
@@ -146,9 +146,8 @@ export function buildCompactMemoHtml(
   // Company logo + number header
   const headerField = templateFields.find((f) => f.type === 'company_header');
   const headerConfig = (headerField?.fieldConfig || {}) as Record<string, unknown>;
-  const logoUrl = resolveLogoAbsolute(
-    headerField ? ((headerConfig.logoUrl as string) || '') : '',
-    baseUrl
+  const logoUrl = resolveLogoForEmail(
+    headerField ? ((headerConfig.logoUrl as string) || '') : ''
   );
   const companyName = (headerConfig.companyName as string) || '';
 
@@ -476,6 +475,7 @@ export async function sendApproverNotifications(
     interface ApproverInfo {
       email: string;
       name: string;
+      userId: string;
       colKey: string;
       colTitle: string;
     }
@@ -496,8 +496,9 @@ export async function sendApproverNotifications(
         // Skip already acted (signed or rejected)
         if (col.signed || col.action === 'reject') continue;
         pendingApprovers.push({
-          email: '', // will resolve below
+          email: '',
           name: colName || '',
+          userId: colUserId || '',
           colKey,
           colTitle: (col.colTitle as string) || 'ผู้อนุมัติ',
         });
@@ -514,7 +515,9 @@ export async function sendApproverNotifications(
     })) as Array<{ id: string; email?: string; displayName?: string }>;
 
     for (const approver of pendingApprovers) {
-      const user = allUsers.find((u) => u.id === approver.email || u.displayName === approver.name);
+      // Match by userId first (reliable), then by displayName (fallback)
+      const user = allUsers.find((u) => approver.userId && u.id === approver.userId)
+        || allUsers.find((u) => u.displayName === approver.name);
       if (user?.email) approver.email = user.email;
     }
 
