@@ -199,11 +199,11 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
 
   const bodyRows = rows.map((row) => {
     if (row.full) {
-      return `<tr><td colspan="2" style="padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.full)}</td></tr>`;
+      return `<tr><td colspan="2" style="padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.full)}</td></tr>`;
     }
     return `<tr>
-      <td style="width:50%;padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.left!)}</td>
-      <td style="width:50%;padding:8px 12px;border:1px solid #000;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${row.right ? renderCell(row.right) : ''}</td>
+      <td style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.left!)}</td>
+      <td style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${row.right ? renderCell(row.right) : ''}</td>
     </tr>`;
   }).join('');
 

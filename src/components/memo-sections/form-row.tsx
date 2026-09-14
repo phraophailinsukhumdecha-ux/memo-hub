@@ -95,17 +95,17 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     };
 
     const renderCell = (f: RowField, withRightBorder: boolean) => (
-      <div className={`flex items-center px-3 py-2 ${withRightBorder ? 'border-r border-slate-900' : ''}`}>
+      <div className={`flex items-center px-0 py-1 ${withRightBorder ? 'border-r border-slate-300' : ''}`}>
         <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{f.label}</span>
         <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(f, value[f.name] as string)}</span>
       </div>
     );
 
     return (
-      <div className="border border-slate-900 divide-y divide-slate-900" style={cellStyle}>
+      <div className="divide-y divide-slate-300" style={cellStyle}>
         {rows.map((row, ri) => (
           row.full ? (
-            <div key={ri} className="px-3 py-2">
+            <div key={ri} className="px-0 py-1">
               <span className="font-semibold text-slate-900" style={{ fontSize: `${labelSize}px` }}>{row.full.label}</span>
               <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}> : {resolveValue(row.full, value[row.full.name] as string)}</span>
             </div>
@@ -168,10 +168,10 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
   };
 
   return (
-    <div className="border border-slate-900 divide-y divide-slate-900">
+    <div className="divide-y divide-slate-300">
       {rows.map((row, rowIndex) => (
         <div key={rowIndex} className="grid grid-cols-2">
-          <div className="flex items-center px-3 py-2 border-r border-slate-900">
+          <div className="flex items-center px-3 py-2 border-r border-slate-300">
             <Label className="text-sm font-semibold whitespace-nowrap text-slate-900 w-32">
               {row.left.label}
               {isFieldRequired(row.left.name, row.left.requiredByType) && (
