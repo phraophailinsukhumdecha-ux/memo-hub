@@ -285,16 +285,16 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
 
     const t = typo || resolveTypography(null);
     const stampHtml = (!isFirst && colData.action === 'approve')
-      ? `<div style="position:absolute;top:8px;right:8px;padding:2px 8px;border:2px solid #16a34a;border-radius:6px;background:#f0fdf4;"><span style="font-weight:800;color:#16a34a;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✓ อนุมัติ</span></div>`
+      ? `<div style="position:absolute;top:8px;right:8px;padding:2px 8px;border:2px solid #16a34a;border-radius:6px;background:#f0fdf4;"><span style="font-weight:800;color:#16a34a;font-size:12px;">✓ อนุมัติ</span></div>`
       : (!isFirst && colData.action === 'reject')
-      ? `<div style="position:absolute;top:8px;right:8px;padding:2px 8px;border:2px solid #dc2626;border-radius:6px;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✗ ไม่อนุมัติ</span></div>`
+      ? `<div style="position:absolute;top:8px;right:8px;padding:2px 8px;border:2px solid #dc2626;border-radius:6px;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:12px;">✗ ไม่อนุมัติ</span></div>`
       : '';
     return `<td style="width:${100/maxPerRow}%;padding:8px 12px;border:1px solid #000;vertical-align:top;position:relative;">
       ${stampHtml}
       <div style="text-align:center;margin-bottom:8px;">
-        <p style="font-weight:600;font-size:${t.baseFontSize}px;margin:0;">${colTitle}</p>
+        <p style="font-weight:600;font-size:14px;margin:0;">${colTitle}</p>
       </div>
-      <div style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
+      <div style="font-size:14px;line-height:${t.lineHeight};">
         <p style="margin:2px 0;">ลงชื่อ <span style="border-bottom:1px dashed #999;padding-bottom:1px;">${displayName ? `( ${displayName} )` : '(  )'}</span></p>
         <p style="margin:2px 0;">ตำแหน่ง <span style="border-bottom:1px dashed #999;padding-bottom:1px;">${displayTitle}</span></p>
         <p style="margin:2px 0;">วันที่ <span style="border-bottom:1px dashed #999;padding-bottom:1px;">${colData.date || ''}</span>${showTime ? ` &nbsp;เวลา <span style="border-bottom:1px dashed #999;padding-bottom:1px;">${colData.time || ''}</span>` : ''}</p>
