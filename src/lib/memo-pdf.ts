@@ -345,19 +345,20 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
   const templateTypo = template?.typography;
   const typo = resolveTypography(templateTypo);
 
-  let sectionsHtml = '';
+  let headerSectionsHtml = '';
+  let bodyHtml = '';
   let approvalGridHtml = '';
 
   if (template && template.fields && template.fields.length > 0) {
     const memoTypeField = template.fields.find(f => f.type === 'memo_type');
     const memoType = memoTypeField ? ((memo.formData as Record<string, unknown>)?.[memoTypeField.id] as string) : undefined;
 
-    const parts: string[] = [];
+    const headerParts: string[] = [];
     let bodyBuffer: string[] = [];
 
     const flushBody = () => {
       if (bodyBuffer.length > 0) {
-        parts.push(`<div style="padding:0;margin-bottom:4px;">${bodyBuffer.join('')}</div>`);
+        bodyHtml = bodyBuffer.join('');
         bodyBuffer = [];
       }
     };
@@ -405,19 +406,19 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
         bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
       } else {
         flushBody();
-        parts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
+        headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
       }
     }
     flushBody();
 
-    sectionsHtml = parts.join('');
+    headerSectionsHtml = headerParts.join('');
   } else {
     const formDataRows = Object.entries(memo.formData)
       .map(([key, value]) => `<tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;width:180px;color:#334155;">${key}</td><td style="padding:6px 12px;border:1px solid #e2e8f0;color:#0f172a;">${value ?? '-'}</td></tr>`)
       .join('');
 
     if (formDataRows) {
-      sectionsHtml = `<div style="margin-bottom:20px;">
+      headerSectionsHtml = `<div style="margin-bottom:20px;">
         <h3 style="font-size:14px;font-weight:700;margin:0 0 8px;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">รายละเอียด</h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">${formDataRows}</table>
       </div>`;
@@ -443,8 +444,9 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
   return `
     <style>${memoFontCss}</style>
     <div id="memo-print-content" class="memo-font" style="width:210mm;min-height:297mm;padding:15mm;color:#0f172a;position:relative;background:#fff;display:flex;flex-direction:column;">
+      ${headerSectionsHtml}
       <div style="flex:1;border:1px solid #0f172a;padding:12px;margin-bottom:4px;">
-        ${sectionsHtml}
+        ${bodyHtml}
       </div>
       ${approvalGridHtml}
       ${stampHtml}
