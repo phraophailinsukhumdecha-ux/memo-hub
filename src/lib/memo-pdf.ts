@@ -54,18 +54,18 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
     </table>
     <table style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
       <tr>
-        <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;text-align:center;">
+        <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;text-align:left;">
           ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;">${memorandumTitle}</p>` : ''}
           <p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;font-weight:600;">${companyNameTh}</p>
           ${addressLines.map(line => `<p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;">${line}</p>`).join('')}
         </td>
-        <td style="vertical-align:middle;padding:16px;text-align:center;">
+        <td style="vertical-align:middle;padding:16px;text-align:left;">
            <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:${t.lineHeight};">
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${memoNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${refNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${quotationLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${jobNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${dateLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.date || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:0;">: ${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${jobNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${dateLabel}</td><td style="color:#0f172a;padding:0;">: ${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>
