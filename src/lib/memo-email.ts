@@ -504,10 +504,10 @@ export async function sendApproverNotifications(
         const colUserId = col.userId as string | undefined;
         const colName = col.name as string | undefined;
         if (!colUserId && !colName) continue;
-        // Skip the actor
-        if (colUserId === actorId) continue;
-        // Skip already acted (signed or rejected)
-        if (col.signed || col.action === 'reject') continue;
+        // Skip already rejected
+        if (col.action === 'reject') continue;
+        // Skip other approvers who already acted, but always include the current actor
+        if (col.signed && colUserId !== actorId) continue;
         pendingApprovers.push({
           email: '',
           name: colName || '',
