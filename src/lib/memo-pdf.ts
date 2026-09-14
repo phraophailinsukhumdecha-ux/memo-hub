@@ -346,6 +346,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
   const typo = resolveTypography(templateTypo);
 
   let sectionsHtml = '';
+  let approvalGridHtml = '';
 
   if (template && template.fields && template.fields.length > 0) {
     const memoTypeField = template.fields.find(f => f.type === 'memo_type');
@@ -398,7 +399,9 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
 
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
-      if (field.type === 'body_text') {
+      if (field.type === 'approval_grid') {
+        approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId);
+      } else if (field.type === 'body_text') {
         bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
       } else {
         flushBody();
@@ -439,9 +442,11 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
 
   return `
     <style>${memoFontCss}</style>
-    <div id="memo-print-content" class="memo-font" style="width:210mm;padding:15mm;color:#0f172a;position:relative;background:#fff;">
-      ${sectionsHtml}
-
+    <div id="memo-print-content" class="memo-font" style="width:210mm;min-height:297mm;padding:15mm;color:#0f172a;position:relative;background:#fff;display:flex;flex-direction:column;">
+      <div style="flex:1;">
+        ${sectionsHtml}
+      </div>
+      ${approvalGridHtml}
       ${stampHtml}
     </div>
   `;
@@ -458,6 +463,8 @@ export async function downloadMemoPdf(memo: Memo, template?: MemoTemplate | null
   container.style.left = '-9999px';
   container.style.top = '0';
   container.style.width = '210mm';
+  container.style.height = '297mm';
+  container.style.overflow = 'hidden';
   container.style.background = '#fff';
   container.innerHTML = buildMemoHtml(memo, template, globalMemoTypeColumns, ownerUser, users, groups);
   document.body.appendChild(container);
@@ -468,12 +475,14 @@ export async function downloadMemoPdf(memo: Memo, template?: MemoTemplate | null
     scale: 2,
     useCORS: true,
     backgroundColor: '#ffffff',
+    width: element.scrollWidth,
+    height: 297, // Force A4 height in CSS pixels (297mm ≈ 1122px at 96dpi)
   });
 
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  const pdfHeight = pdf.internal.pageSize.getHeight(); // Fixed A4 height: 297mm
 
   pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
   pdf.save(`Memo_${memo.id}.pdf`);
