@@ -109,6 +109,55 @@ function resolveDisplayName(
 }
 
 /**
+ * Standalone approval status grid HTML for emails.
+ * Shows ✓/✗/○ for each approver with name, title, date/time.
+ */
+export function buildApprovalStatusHtml(
+  formData: Record<string, unknown>,
+  templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>,
+  typography?: MemoTypography
+): string {
+  const typo = resolveTypography(typography || null);
+  let html = '';
+  for (const field of templateFields) {
+    const val = formData[field.id];
+    if (!val || typeof val !== 'object' || Array.isArray(val)) continue;
+    const cols = val as Record<string, Record<string, string>>;
+    const colKeys = Object.keys(cols)
+      .filter((k) => k.startsWith('col_'))
+      .sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
+    if (colKeys.length === 0) continue;
+    html += `<p style="font-weight:600;font-size:${typo.baseFontSize}px;margin:12px 0 6px;">สถานะการอนุมัติ:</p>`;
+    for (const colKey of colKeys) {
+      const col = cols[colKey];
+      if (!col) continue;
+      const isRequester = colKey === 'col_0';
+      let icon: string;
+      let color: string;
+      if (isRequester) {
+        icon = '✓';
+        color = '#16a34a';
+      } else if (col.action === 'reject') {
+        icon = '✗';
+        color = '#dc2626';
+      } else if (col.signed) {
+        icon = '✓';
+        color = '#16a34a';
+      } else {
+        icon = '○';
+        color = '#f59e0b';
+      }
+      const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
+      html += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
+      if (col.signerTitle) html += ` (${escapeHtml(col.signerTitle)})`;
+      if ((col.signed || col.action) && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
+      html += '</p>';
+    }
+  }
+  return html;
+}
+
+/**
  * Compact memo detail summary for emails (NOT the full document form):
  * header line + detail rows + body text + approval status list.
  */
@@ -208,41 +257,7 @@ export function buildCompactMemoHtml(
 
   // Approval status list
   let approvalHtml = '';
-  for (const field of templateFields) {
-    const val = formData[field.id];
-    if (!val || typeof val !== 'object' || Array.isArray(val)) continue;
-    const cols = val as Record<string, Record<string, string>>;
-    const colKeys = Object.keys(cols)
-      .filter((k) => k.startsWith('col_'))
-      .sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
-    if (colKeys.length === 0) continue;
-    approvalHtml += `<p style="font-weight:600;font-size:${typo.baseFontSize}px;margin:12px 0 6px;">สถานะการอนุมัติ:</p>`;
-    for (const colKey of colKeys) {
-      const col = cols[colKey];
-      if (!col) continue;
-      const isRequester = colKey === 'col_0';
-      let icon: string;
-      let color: string;
-      if (isRequester) {
-        icon = '✓';
-        color = '#16a34a';
-      } else if (col.action === 'reject') {
-        icon = '✗';
-        color = '#dc2626';
-      } else if (col.signed) {
-        icon = '✓';
-        color = '#16a34a';
-      } else {
-        icon = '○';
-        color = '#f59e0b';
-      }
-      const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
-      approvalHtml += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
-      if (col.signerTitle) approvalHtml += ` (${escapeHtml(col.signerTitle)})`;
-      if ((col.signed || col.action) && col.date) approvalHtml += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
-      approvalHtml += '</p>';
-    }
-  }
+  approvalHtml = buildApprovalStatusHtml(formData, templateFields, typography);
 
   return `
     <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:16px 0;font-family:${typo.fontFamily};">
@@ -588,12 +603,21 @@ export async function sendApproverNotifications(
         .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
         .join('');
 
+      const approvalStatusHtml = buildApprovalStatusHtml(
+        formData as Record<string, unknown>,
+        templateFields,
+        templateTypo
+      );
+
       const htmlEmail = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:${resolveMailFontFamily(templateTypo)};max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#1e293b;">${escapeHtml(subject)}</h2>
   ${bodyHtml}
+  <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin:16px 0;background:#f8fafc;">
+    ${approvalStatusHtml}
+  </div>
   <div style="margin:24px 0;text-align:center;">
     <a href="${baseUrl}/home" style="display:inline-block;padding:12px 32px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">เข้าสู่ระบบเพื่ออนุมัติ</a>
   </div>
