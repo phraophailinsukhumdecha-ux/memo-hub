@@ -218,13 +218,13 @@ function renderBodyTextInner(field: MemoField, value: string | undefined, typo?:
   const t = typo || resolveTypography(null);
 
   if (content) {
-    return `<div style="border:1px solid #0f172a;padding:12px;margin-bottom:8px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
+    return `<div style="padding:0;margin-bottom:0;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
   }
 
   const ruled = Array.from({ length: lines }).map(() =>
     '<div style="border-bottom:1px solid #cbd5e1;height:28px;"></div>'
   ).join('');
-  return `<div style="border:1px solid #0f172a;padding:12px;margin-bottom:8px;">${ruled}</div>`;
+  return `<div style="padding:0;margin-bottom:0;">${ruled}</div>`;
 }
 
 function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography, auditorUserId?: string): string {
@@ -443,7 +443,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
   return `
     <style>${memoFontCss}</style>
     <div id="memo-print-content" class="memo-font" style="width:210mm;min-height:297mm;padding:15mm;color:#0f172a;position:relative;background:#fff;display:flex;flex-direction:column;">
-      <div style="flex:1;">
+      <div style="flex:1;border:1px solid #0f172a;padding:12px;margin-bottom:4px;">
         ${sectionsHtml}
       </div>
       ${approvalGridHtml}
