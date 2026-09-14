@@ -314,7 +314,8 @@ export async function GET(request: NextRequest) {
 
     const actionLabel = action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
     const statusColor = action === 'approve' ? '#16a34a' : '#dc2626';
-    const statusBg = action === 'approve' ? '#f0fdf4' : '#fef2f2';
+    const statusBg = action === 'approve' ? '#16a34a' : '#dc2626';
+    const iconColor = '#ffffff';
 
     return new Response(`
       <!DOCTYPE html>
@@ -322,7 +323,7 @@ export async function GET(request: NextRequest) {
       <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
         <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:400px;">
           <div style="width:60px;height:60px;border-radius:50%;background:${statusBg};display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <span style="font-size:28px;">${action === 'approve' ? '✓' : '✗'}</span>
+            <span style="font-size:28px;color:${iconColor};font-weight:bold;">${action === 'approve' ? '✓' : '✗'}</span>
           </div>
           <h2 style="color:${statusColor};">ดำเนินการ${actionLabel}สำเร็จ</h2>
           <p style="color:#64748b;margin:8px 0 4px;">Memo: ${tokenData.memoId}</p>

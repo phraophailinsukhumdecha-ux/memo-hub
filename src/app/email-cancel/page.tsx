@@ -90,8 +90,8 @@ function EmailCancelContent() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">✗</span>
+          <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl text-white font-bold">✗</span>
           </div>
           <h1 className="text-xl font-bold text-red-600 mb-2">ปฏิเสธ Memo สำเร็จ</h1>
           <p className="text-slate-600 mb-2">Memo: {memo?.memoNumber}</p>
@@ -126,11 +126,11 @@ function EmailCancelContent() {
         <h1 className="text-xl font-bold text-slate-900 mb-4">ปฏิเสธ Memo</h1>
 
         {memo && (
-          <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-            <p className="text-sm"><strong>เลขที่:</strong> {memo.memoNumber}</p>
-            <p className="text-sm"><strong>หัวข้อ:</strong> {memo.title}</p>
-            <p className="text-sm"><strong>ผู้สร้าง:</strong> {memo.ownerName} ({memo.department || '-'})</p>
-            <p className="text-sm"><strong>Deadline:</strong> {new Date(memo.deadlineAt).toLocaleDateString('th-TH')}</p>
+          <div className="mb-4 p-3 bg-slate-100 rounded-lg border border-slate-200">
+            <p className="text-sm text-slate-800"><strong>เลขที่:</strong> {memo.memoNumber}</p>
+            <p className="text-sm text-slate-800"><strong>หัวข้อ:</strong> {memo.title}</p>
+            <p className="text-sm text-slate-800"><strong>ผู้สร้าง:</strong> {memo.ownerName} ({memo.department || '-'})</p>
+            <p className="text-sm text-slate-800"><strong>Deadline:</strong> {new Date(memo.deadlineAt).toLocaleDateString('th-TH')}</p>
           </div>
         )}
 
