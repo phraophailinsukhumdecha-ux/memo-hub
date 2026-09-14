@@ -23,7 +23,6 @@ import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
-import { SectionRenderer } from '@/components/memo-sections';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 
 export default function HomePage() {
@@ -34,6 +33,7 @@ export default function HomePage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailHtml, setDetailHtml] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -136,6 +136,10 @@ export default function HomePage() {
       if (memo) {
         setSelectedMemo(memo);
         setIsDetailOpen(true);
+        fetch(`/api/memo-id-html?id=${memo.id}`)
+          .then((res) => res.text())
+          .then((text) => setDetailHtml(text))
+          .catch(() => setDetailHtml(''));
         if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && isApprover && !hasUserSigned(memo, user.id)) {
           setTimeout(() => handleApprove(memo.id), 500);
         }
@@ -148,11 +152,6 @@ export default function HomePage() {
     if (!selectedMemo?.templateId) return null;
     return templates.find((t) => t.id === selectedMemo.templateId) || null;
   }, [selectedMemo, templates]);
-
-  const detailOwnerUser = useMemo(() => {
-    if (!selectedMemo?.ownerId) return null;
-    return allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
-  }, [selectedMemo, allUsers]);
 
   const isApprover = user?.isApprover === true;
 
@@ -413,9 +412,16 @@ export default function HomePage() {
     }
   };
 
-  const openDetail = (memo: Memo) => {
+  const openDetail = async (memo: Memo) => {
     setSelectedMemo(memo);
     setIsDetailOpen(true);
+    try {
+      const res = await fetch(`/api/memo-id-html?id=${memo.id}`);
+      const text = await res.text();
+      setDetailHtml(text);
+    } catch {
+      setDetailHtml('');
+    }
   };
 
   const formatDateStr = (date: Date | string) => {
@@ -736,43 +742,12 @@ export default function HomePage() {
           </div>
           {selectedMemo && detailTemplate && (
               <div className="p-6">
-                <div className="memo-font border-2 border-slate-900 relative">
-                  {/* MEMO Header */}
-                  <div className="border-b-2 border-slate-900 py-3 text-center">
-                    <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
-                  </div>
-                {/* Document Body */}
-                <div className="p-6 space-y-0">
-                  {detailTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title').map((field) => (
-                    <SectionRenderer
-                      key={field.id}
-                      field={field}
-                      value={selectedMemo.formData?.[field.id]}
-                      formData={{ ...(selectedMemo.formData as Record<string, unknown>), memoNumber: selectedMemo.memoNumber }}
-                      readonly={true}
-                      ownerUser={detailOwnerUser}
-                      users={allUsers}
-                      typography={detailTemplate.typography}
-                    />
-                  ))}
-                </div>
-                {selectedMemo?.status === 'approved' && (
-                  <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-green-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-                    <span className="text-green-600 font-extrabold tracking-wider text-base">APPROVED</span>
-                    <span className="text-green-600 text-sm mt-0.5">อนุมัติแล้ว</span>
-                    <div className="w-4/5 h-px bg-green-600 my-1" />
-                  </div>
-                )}
-                {selectedMemo?.status === 'rejected' && (
-                  <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-red-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-                    <span className="text-red-600 font-extrabold tracking-wider text-base">REJECTED</span>
-                    <span className="text-red-600 text-sm mt-0.5">ถูกปฏิเสธ</span>
-                    <div className="w-4/5 h-px bg-red-600 my-1" />
-                  </div>
-                )}
+                <div
+                  className="bg-white relative"
+                  dangerouslySetInnerHTML={{ __html: detailHtml }}
+                />
               </div>
-            </div>
-          )}
+            )}
           {selectedMemo?.status === 'rejected' && (
             <div className="px-6 pb-4">
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
