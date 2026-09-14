@@ -88,7 +88,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     }
     flushPending();
 
-    const labelSize = Math.round(typo.baseFontSize * 0.88);
+    const labelSize = Math.round(typo.baseFontSize * 1.0);
     const cellStyle: React.CSSProperties = {
       fontFamily: typo.fontFamily,
       lineHeight: typo.lineHeight,

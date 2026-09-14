@@ -285,9 +285,9 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
 
     const t = typo || resolveTypography(null);
     const stampHtml = (!isFirst && colData.action === 'approve')
-      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #16a34a;border-radius:6px;display:inline-block;background:#f0fdf4;"><span style="font-weight:800;color:#16a34a;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✓ อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.7)}px;color:#16a34a;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
+      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #16a34a;border-radius:6px;display:inline-block;background:#f0fdf4;"><span style="font-weight:800;color:#16a34a;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✓ อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.75)}px;color:#16a34a;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
       : (!isFirst && colData.action === 'reject')
-      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #dc2626;border-radius:6px;display:inline-block;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✗ ไม่อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.7)}px;color:#dc2626;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
+      ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #dc2626;border-radius:6px;display:inline-block;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✗ ไม่อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.75)}px;color:#dc2626;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
       : '';
     return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
       <div style="text-align:center;margin-bottom:12px;">
@@ -436,17 +436,15 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
 
   const stampHtml = isApproved ? `
     <div style="position:absolute;bottom:40px;right:40px;width:160px;height:160px;border:4px solid #16a34a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
-      <div style="font-size:14px;font-weight:800;color:#16a34a;letter-spacing:2px;">APPROVED</div>
-      <div style="font-size:11px;color:#16a34a;margin-top:2px;">อนุมัติแล้ว</div>
+      <div style="font-size:16px;font-weight:800;color:#16a34a;letter-spacing:2px;">APPROVED</div>
+      <div style="font-size:14px;color:#16a34a;margin-top:2px;">อนุมัติแล้ว</div>
       <div style="width:80%;height:1px;background:#16a34a;margin:6px 0;"></div>
-      <div style="font-size:9px;color:#16a34a;">MemoHub</div>
     </div>
   ` : memo.status === 'rejected' ? `
     <div style="position:absolute;bottom:40px;right:40px;width:160px;height:160px;border:4px solid #dc2626;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
-      <div style="font-size:14px;font-weight:800;color:#dc2626;letter-spacing:2px;">REJECTED</div>
-      <div style="font-size:11px;color:#dc2626;margin-top:2px;">ถูกปฏิเสธ</div>
+      <div style="font-size:16px;font-weight:800;color:#dc2626;letter-spacing:2px;">REJECTED</div>
+      <div style="font-size:14px;color:#dc2626;margin-top:2px;">ถูกปฏิเสธ</div>
       <div style="width:80%;height:1px;background:#dc2626;margin:6px 0;"></div>
-      <div style="font-size:9px;color:#dc2626;">MemoHub</div>
     </div>
   ` : '';
 

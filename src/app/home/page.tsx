@@ -758,18 +758,16 @@ export default function HomePage() {
                 </div>
                 {selectedMemo?.status === 'approved' && (
                   <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-green-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-                    <span className="text-green-600 font-extrabold tracking-wider text-sm">APPROVED</span>
-                    <span className="text-green-600 text-xs mt-0.5">อนุมัติแล้ว</span>
+                    <span className="text-green-600 font-extrabold tracking-wider text-base">APPROVED</span>
+                    <span className="text-green-600 text-sm mt-0.5">อนุมัติแล้ว</span>
                     <div className="w-4/5 h-px bg-green-600 my-1" />
-                    <span className="text-green-600 text-[10px]">MemoHub</span>
                   </div>
                 )}
                 {selectedMemo?.status === 'rejected' && (
                   <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-red-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-                    <span className="text-red-600 font-extrabold tracking-wider text-sm">REJECTED</span>
-                    <span className="text-red-600 text-xs mt-0.5">ถูกปฏิเสธ</span>
+                    <span className="text-red-600 font-extrabold tracking-wider text-base">REJECTED</span>
+                    <span className="text-red-600 text-sm mt-0.5">ถูกปฏิเสธ</span>
                     <div className="w-4/5 h-px bg-red-600 my-1" />
-                    <span className="text-red-600 text-[10px]">MemoHub</span>
                   </div>
                 )}
               </div>
