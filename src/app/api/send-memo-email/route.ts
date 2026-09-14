@@ -462,12 +462,7 @@ export async function POST(request: NextRequest) {
 เลขที่: {memo_number}
 เรื่อง: {title}
 ผู้สร้าง: {owner_name}
-สถานะ: {status}
-Deadline: {deadline}
-
-กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้
-
-MemoHub Digital Memo & Approval System`;
+Deadline: {deadline}`;
 
     const transporter = createTransporter(smtp!);
     const sender = buildSender(smtp!);

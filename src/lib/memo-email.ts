@@ -36,9 +36,7 @@ export const DEFAULT_OWNER_BODY = `สวัสดีค่ะ/ครับ
 
 Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
 เลขที่: {memo_number}
-เรื่อง: {title}
-
-เปิดดูฟอร์ม Memo ฉบับเต็ม: {memo_link}`;
+เรื่อง: {title}`;
 
 export function escapeHtml(str: string): string {
   return str
@@ -581,23 +579,10 @@ export async function sendApproverNotifications(
 
 มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
 เลขที่: {memo_number}
-ดำเนินการโดย: {actor_name} → {action_label}
-
-สถานะปัจจุบัน:
-{status_summary}
-
-กรุณาเข้าระบบเพื่อดำเนินการต่อ`;
+ดำเนินการโดย: {actor_name} → {action_label}`;
       const subject = replaceVariables(subjectTemplate, vars);
 
-      const statusSummary = buildCompactMemoHtml(
-        memo as Record<string, unknown>,
-        templateFields,
-        userMap,
-        baseUrl,
-        templateTypo
-      );
-      const bodyWithSummary = bodyTemplate.replace('{status_summary}', statusSummary);
-      const bodyText = replaceVariables(bodyWithSummary, vars);
+      const bodyText = replaceVariables(bodyTemplate, vars);
       const bodyHtml = bodyText
         .split('\n')
         .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)

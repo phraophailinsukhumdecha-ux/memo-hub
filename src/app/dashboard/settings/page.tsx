@@ -798,7 +798,10 @@ export default function SettingsPage() {
 
 มี Memo ใหม่รอการอนุมัติของท่าน
 
-กรุณาเข้าระบบเพื่ออนุมัติ Memo นี้`}
+เลขที่: {memo_number}
+เรื่อง: {title}
+ผู้สร้าง: {owner_name}
+Deadline: {deadline}`}
                   />
                   <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
                 </div>
@@ -829,11 +832,9 @@ export default function SettingsPage() {
 
 Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
 เลขที่: {memo_number}
-เรื่อง: {title}
-
-เปิดดูฟอร์ม Memo ฉบับเต็ม: {memo_link}`}
+เรื่อง: {title}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{memo_link}`'}, {'`{acted_at}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{acted_at}`'}</p>
                 </div>
               </div>
 
@@ -862,14 +863,9 @@ Memo ของท่านมีการดำเนินการ: {action_la
 
 มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
 เลขที่: {memo_number}
-ดำเนินการโดย: {actor_name} → {action_label}
-
-สถานะปัจจุบัน:
-{status_summary}
-
-กรุณาเข้าระบบเพื่อดำเนินการต่อ`}
+ดำเนินการโดย: {actor_name} → {action_label}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{memo_link}`'}, {'`{acted_at}`'}, {'`{status_summary}`'} (สถานะปัจจุบันของตารางอนุมัติ)</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{acted_at}`'}</p>
                 </div>
               </div>
 
@@ -927,8 +923,9 @@ Deadline: {deadline}
                     <span className="inline-block px-6 py-2 bg-red-600 text-white text-xs rounded-lg font-semibold ml-2">ปฏิเสธ</span>
                   </div>
                   <div className="mt-2 text-center">
-                    <span className="text-xs text-blue-600 underline">ดูเอกสาร</span>
-                    <span className="text-xs text-slate-400 mx-2">|</span>
+                    <span className="inline-block px-5 py-2 bg-slate-900 text-white text-xs rounded-lg font-semibold">ดูเอกสาร</span>
+                  </div>
+                  <div className="mt-2 text-center">
                     <span className="text-xs text-blue-600 underline">เข้าสู่ระบบเพื่อดูเอกสาร</span>
                   </div>
                   <p className="mt-2 text-slate-400 text-center text-xs">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
