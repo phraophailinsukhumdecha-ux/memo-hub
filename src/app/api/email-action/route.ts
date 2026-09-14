@@ -94,20 +94,6 @@ export async function GET(request: NextRequest) {
       `, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
-    const expiresAt = tokenData.expiresAt?.toDate?.() || new Date(tokenData.expiresAt);
-    if (new Date() > expiresAt) {
-      return new Response(`
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8"><title>MemoHub</title></head>
-        <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
-          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:400px;">
-            <h2 style="color:#dc2626;">ลิงค์หมดอายุ</h2>
-            <p style="color:#64748b;">ลิงค์นี้หมดอายุแล้ว กรุณาติดต่อผู้สร้าง Memo</p>
-          </div>
-        </body></html>
-      `, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-
     const memoDoc = await getDoc(doc(db, 'memos', tokenData.memoId));
     if (!memoDoc.exists()) {
       return new Response(`
@@ -372,11 +358,6 @@ export async function POST(request: NextRequest) {
 
     if (tokenData.used) {
       return NextResponse.json({ ok: false, error: 'ลิงค์ถูกใช้แล้ว' }, { status: 400 });
-    }
-
-    const expiresAt = tokenData.expiresAt?.toDate?.() || new Date(tokenData.expiresAt);
-    if (new Date() > expiresAt) {
-      return NextResponse.json({ ok: false, error: 'ลิงค์หมดอายุ' }, { status: 400 });
     }
 
     const memoDoc = await getDoc(doc(db, 'memos', tokenData.memoId));

@@ -30,11 +30,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'ลิงค์ไม่ถูกต้อง' }, { status: 404 });
     }
     const tokenData = tokenSnapshot.docs[0].data();
-    const expiresAt =
-      tokenData.expiresAt?.toDate?.() || new Date(tokenData.expiresAt);
-    if (new Date() > expiresAt) {
-      return NextResponse.json({ ok: false, error: 'ลิงค์หมดอายุ' }, { status: 400 });
-    }
 
     const memoDoc = await getDoc(doc(db, 'memos', tokenData.memoId));
     if (!memoDoc.exists()) {

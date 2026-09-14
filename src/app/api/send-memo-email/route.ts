@@ -483,7 +483,6 @@ Deadline: {deadline}`;
           action: null,
           used: false,
           createdAt: now,
-          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
         });
 
         const approveUrl = `${baseUrl}/api/email-action?token=${token}&action=approve`;
@@ -535,7 +534,6 @@ Deadline: {deadline}`;
     <a href="${baseUrl}/home" style="color:#2563eb;text-decoration:underline;font-size:13px;">เข้าสู่ระบบเพื่อดูเอกสาร</a>
   </div>
   <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
-  <p style="color:#64748b;font-size:12px;text-align:center;">ลิงค์นี้จะหมดอายุใน 7 วัน</p>
   <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
 </body>
 </html>`;
