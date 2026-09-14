@@ -64,7 +64,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
             ) : null}
             <div
               className="text-slate-900 space-y-0.5"
-              style={{ fontSize: `${typo.baseFontSize}px`, lineHeight: typo.lineHeight }}
+              style={{ fontSize: '14px', lineHeight: typo.lineHeight }}
             >
               <p className="font-semibold">{cfg.companyNameTh}</p>
               {(cfg.addressLines || []).map((line, i) => (
