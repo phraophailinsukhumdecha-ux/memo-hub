@@ -218,13 +218,13 @@ function renderBodyTextInner(field: MemoField, value: string | undefined, typo?:
   const t = typo || resolveTypography(null);
 
   if (content) {
-    return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
+    return `<div style="padding:0 0 12px 0;margin-bottom:12px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
   }
 
   const ruled = Array.from({ length: lines }).map(() =>
     '<div style="border-bottom:1px solid #cbd5e1;height:28px;"></div>'
   ).join('');
-  return `<div style="border:1px solid #0f172a;padding:12px;min-height:200px;margin-bottom:12px;">${ruled}</div>`;
+  return `<div style="padding:0 0 12px 0;margin-bottom:12px;">${ruled}</div>`;
 }
 
 function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography, auditorUserId?: string): string {
@@ -289,25 +289,25 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
       : (!isFirst && colData.action === 'reject')
       ? `<div style="text-align:center;margin:4px 0;padding:4px 8px;border:2px solid #dc2626;border-radius:6px;display:inline-block;background:#fef2f2;"><span style="font-weight:800;color:#dc2626;font-size:${Math.round(t.baseFontSize * 0.8)}px;">✗ ไม่อนุมัติ</span><span style="font-size:${Math.round(t.baseFontSize * 0.75)}px;color:#dc2626;margin-left:4px;">${colData.date || ''} ${colData.time || ''}</span></div>`
       : '';
-    return `<td style="width:${100/maxPerRow}%;padding:12px;border:1px solid #000;vertical-align:top;">
-      <div style="text-align:center;margin-bottom:12px;">
+    return `<td style="width:${100/maxPerRow}%;padding:8px 12px;border:1px solid #000;vertical-align:top;">
+      <div style="text-align:center;margin-bottom:8px;">
         <p style="font-weight:600;font-size:${t.baseFontSize}px;margin:0;">${colTitle}</p>
       </div>
       <div style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};">
-        <p style="margin:4px 0;">ลงชื่อ</p>
-        <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;min-height:20px;">${displayName ? `( ${displayName} )` : '(  )'}</p>
+        <p style="margin:2px 0;">ลงชื่อ</p>
+        <p style="border-bottom:1px dashed #999;padding-bottom:2px;margin:2px 0;">${displayName ? `( ${displayName} )` : '(  )'}</p>
         ${stampHtml}
-        <p style="margin:4px 0;">ตำแหน่ง</p>
-        <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;min-height:20px;">${displayTitle}</p>
+        <p style="margin:2px 0;">ตำแหน่ง</p>
+        <p style="border-bottom:1px dashed #999;padding-bottom:2px;margin:2px 0;">${displayTitle}</p>
         <div style="display:flex;gap:8px;">
           <div style="flex:1;">
-            <p style="margin:4px 0;">วันที่</p>
-            <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;">${colData.date || ''}</p>
+            <p style="margin:2px 0;">วันที่</p>
+            <p style="border-bottom:1px dashed #999;padding-bottom:2px;margin:2px 0;">${colData.date || ''}</p>
           </div>
           ${showTime ? `
           <div style="flex:1;">
-            <p style="margin:4px 0;">เวลา</p>
-            <p style="border-bottom:1px dashed #999;padding-bottom:4px;margin:4px 0;">${colData.time || ''}</p>
+            <p style="margin:2px 0;">เวลา</p>
+            <p style="border-bottom:1px dashed #999;padding-bottom:2px;margin:2px 0;">${colData.time || ''}</p>
           </div>
           ` : ''}
         </div>

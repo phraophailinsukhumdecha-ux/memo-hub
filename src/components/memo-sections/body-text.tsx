@@ -27,7 +27,7 @@ export function BodyText({ config, value = '', onChange, readonly, typography }:
       fontWeight: typo.boldBody ? 700 : 400,
     };
     return (
-      <div className="border border-slate-900 p-3 min-h-[200px]" style={{ fontFamily: typo.fontFamily }}>
+      <div className="p-0" style={{ fontFamily: typo.fontFamily }}>
         {value ? (
           <p className="text-slate-900 whitespace-pre-wrap" style={bodyStyle}>{value}</p>
         ) : (
