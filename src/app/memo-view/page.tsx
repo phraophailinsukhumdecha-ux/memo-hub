@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, Suspense, Component, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Memo, MemoTemplate, User } from '@/types';
-import { SectionRenderer } from '@/components/memo-sections';
+import { Memo } from '@/types';
 
 class MemoViewErrorBoundary extends Component<{ children: ReactNode }, { error: string }> {
   constructor(props: { children: ReactNode }) {
@@ -36,9 +35,7 @@ function MemoViewContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [memo, setMemo] = useState<Memo | null>(null);
-  const [template, setTemplate] = useState<MemoTemplate | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [owner, setOwner] = useState<User | null>(null);
+  const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -54,9 +51,9 @@ function MemoViewContent() {
         const data = await res.json();
         if (data.ok) {
           setMemo(data.memo);
-          setTemplate(data.template);
-          setUsers(data.users || []);
-          setOwner(data.owner || null);
+          const htmlRes = await fetch(`/api/memo-view-html?token=${token}`);
+          const htmlText = await htmlRes.text();
+          setHtml(htmlText);
         } else {
           setError(data.error || 'ไม่พบข้อมูล');
         }
@@ -101,14 +98,6 @@ function MemoViewContent() {
       <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">รออนุมัติ</span>
     );
 
-  const visibleFields = (template?.fields || []).filter(
-    (f) =>
-      f.type !== 'memo_type' &&
-      f.type !== 'section_title' &&
-      f.type !== 'checkbox_group' &&
-      !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์')
-  );
-
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4">
       <div className="max-w-3xl mx-auto">
@@ -116,39 +105,10 @@ function MemoViewContent() {
           <h1 className="text-lg font-bold text-slate-900">{memo.memoNumber}</h1>
           {statusBadge}
         </div>
-        <div className="memo-font bg-white border-2 border-slate-900 text-sm relative">
-          <div className="p-4 space-y-0">
-            {visibleFields.map((field) => (
-              <SectionRenderer
-                key={field.id}
-                field={field}
-                value={(memo.formData as Record<string, unknown>)?.[field.id]}
-                formData={{
-                  ...(memo.formData as Record<string, unknown>),
-                  memoNumber: memo.memoNumber,
-                }}
-                readonly={true}
-                ownerUser={owner}
-                users={users}
-                typography={template?.typography}
-              />
-            ))}
-          </div>
-          {memo.status === 'approved' && (
-            <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-green-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-              <span className="text-green-600 font-extrabold tracking-wider text-base">APPROVED</span>
-              <span className="text-green-600 text-sm mt-0.5">อนุมัติแล้ว</span>
-              <div className="w-4/5 h-px bg-green-600 my-1" />
-            </div>
-          )}
-          {memo.status === 'rejected' && (
-            <div className="absolute bottom-10 right-10 w-40 h-40 border-4 border-red-600 rounded-full flex flex-col items-center justify-center -rotate-12 opacity-80">
-              <span className="text-red-600 font-extrabold tracking-wider text-base">REJECTED</span>
-              <span className="text-red-600 text-sm mt-0.5">ถูกปฏิเสธ</span>
-              <div className="w-4/5 h-px bg-red-600 my-1" />
-            </div>
-          )}
-        </div>
+        <div
+          className="bg-white relative"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
         {memo.status === 'rejected' && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>

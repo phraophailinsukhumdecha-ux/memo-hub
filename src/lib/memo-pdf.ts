@@ -340,7 +340,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
   }
 }
 
-function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
+export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
   const isApproved = memo.status === 'approved';
   const templateTypo = template?.typography;
   const typo = resolveTypography(templateTypo);
