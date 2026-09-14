@@ -77,7 +77,7 @@ export function CompanyHeader({ config, readonly, memoNumber, refNo, quotationNo
           <div className="flex-1 p-4">
             <table
               className="w-full"
-              style={{ fontSize: `${typo.baseFontSize}px`, lineHeight: typo.lineHeight }}
+              style={{ fontSize: '14px', lineHeight: typo.lineHeight }}
             >
               <tbody>
                 <tr>
