@@ -41,7 +41,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
   const h = header || {};
   const t = typo || resolveTypography(null);
 
-  return `<div style="margin-bottom:16px;${typo ? `font-family:${typo.fontFamily};` : ''}">
+  return `<div style="margin-bottom:4px;${typo ? `font-family:${typo.fontFamily};` : ''}">
     <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
       <tr>
         <td style="vertical-align:middle;">
@@ -54,18 +54,18 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
     </table>
     <table style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
       <tr>
-        <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;">
-          ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;text-align:center;">${memorandumTitle}</p>` : ''}
+        <td style="width:55%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;text-align:center;">
+          ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;">${memorandumTitle}</p>` : ''}
           <p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;font-weight:600;">${companyNameTh}</p>
           ${addressLines.map(line => `<p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;">${line}</p>`).join('')}
         </td>
-        <td style="vertical-align:top;padding:16px;">
+        <td style="vertical-align:middle;padding:16px;text-align:center;">
            <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:${t.lineHeight};">
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${memoNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${refNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${quotationLabel}</td><td style="color:#0f172a;padding:0;">: ${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${jobNoLabel}</td><td style="color:#0f172a;padding:0;">: ${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;">${dateLabel}</td><td style="color:#0f172a;padding:0;">: ${h.date || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${memoNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${refNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${quotationLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${jobNoLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0 4px 0 0;white-space:nowrap;text-align:right;">${dateLabel}</td><td style="color:#0f172a;padding:0;text-align:left;">: ${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>
@@ -197,17 +197,17 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
     return `<span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};font-size:${t.baseFontSize}px;"> : ${displayVal}</span>`;
   };
 
-  const bodyRows = rows.map((row) => {
+  const bodyHtml = rows.map((row) => {
     if (row.full) {
-      return `<tr><td colspan="2" style="padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.full)}</td></tr>`;
+      return `<div style="padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.full)}</div>`;
     }
-    return `<tr>
-      <td style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.left!)}</td>
-      <td style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${row.right ? renderCell(row.right) : ''}</td>
-    </tr>`;
+    return `<div style="display:flex;">
+      <div style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${renderCell(row.left!)}</div>
+      <div style="width:50%;padding:2px 0;font-size:${t.baseFontSize}px;line-height:${t.lineHeight};color:#0f172a;font-family:${t.fontFamily};">${row.right ? renderCell(row.right) : ''}</div>
+    </div>`;
   }).join('');
 
-  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">${bodyRows}</table>`;
+  return `<div style="border:1px solid #0f172a;padding:8px 12px;margin-bottom:8px;">${bodyHtml}</div>`;
 }
 
 // Mirrors readonly BodyText preview: bordered box, content or ruled lines
@@ -218,13 +218,13 @@ function renderBodyTextInner(field: MemoField, value: string | undefined, typo?:
   const t = typo || resolveTypography(null);
 
   if (content) {
-    return `<div style="padding:0 0 12px 0;margin-bottom:12px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
+    return `<div style="border:1px solid #0f172a;padding:12px;margin-bottom:8px;font-family:${t.fontFamily};"><p style="font-size:${t.baseFontSize}px;line-height:${t.lineHeight};text-align:${t.textAlign};font-weight:${t.boldBody ? 700 : 400};color:#0f172a;white-space:pre-wrap;margin:0;">${content}</p></div>`;
   }
 
   const ruled = Array.from({ length: lines }).map(() =>
     '<div style="border-bottom:1px solid #cbd5e1;height:28px;"></div>'
   ).join('');
-  return `<div style="padding:0 0 12px 0;margin-bottom:12px;">${ruled}</div>`;
+  return `<div style="border:1px solid #0f172a;padding:12px;margin-bottom:8px;">${ruled}</div>`;
 }
 
 function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography, auditorUserId?: string): string {
@@ -357,7 +357,7 @@ function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTyp
 
     const flushBody = () => {
       if (bodyBuffer.length > 0) {
-        parts.push(`<div style="padding:10px 0;margin-bottom:12px;">${bodyBuffer.join('')}</div>`);
+        parts.push(`<div style="padding:0;margin-bottom:4px;">${bodyBuffer.join('')}</div>`);
         bodyBuffer = [];
       }
     };
