@@ -61,11 +61,11 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
         </td>
         <td style="vertical-align:middle;padding:16px;text-align:left;">
            <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:${t.lineHeight};">
-            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${memoNoLabel} : ${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${refNoLabel} : ${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${quotationLabel} : ${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${jobNoLabel} : ${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${dateLabel} : ${h.date || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${memoNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.memoNumber || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${refNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.refNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${quotationLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.quotationNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${jobNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.jobNo || '-'}</td></tr>
+            <tr><td style="font-weight:700;color:#0f172a;padding:0;white-space:nowrap;">${dateLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>
