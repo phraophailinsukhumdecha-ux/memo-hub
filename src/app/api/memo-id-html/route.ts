@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
     })) as User[];
     const owner = users.find((u) => u.id === memo.ownerId) || null;
 
-    const html = buildMemoHtml(memo, template, undefined, owner, users);
+    const rawHtml = buildMemoHtml(memo, template, undefined, owner, users);
+    const html = `<div style="max-width:210mm;width:100%;margin:0 auto;">${rawHtml}</div>`;
 
     return new Response(html, {
       status: 200,
