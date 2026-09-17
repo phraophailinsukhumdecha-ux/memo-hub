@@ -227,7 +227,7 @@ function renderBodyTextInner(field: MemoField, value: string | undefined, typo?:
   return `<div style="padding:0;margin-bottom:0;">${ruled}</div>`;
 }
 
-function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], typo?: ResolvedTypography, auditorUserId?: string): string {
+function renderApprovalGrid(field: MemoField, value: Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }> | undefined, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserIds?: string[], typo?: ResolvedTypography, auditorUserIds?: string[]): string {
   const config = (field.fieldConfig || {}) as Record<string, unknown>;
   const configColumns = (config.columns as { title: string; subtitle?: string }[]) || [];
   const showTime = config.showTime as boolean;
@@ -252,21 +252,17 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     // Same titles as ApprovalGrid preview: first = ผู้ขออนุมัติ, rest = อนุมัติ
     const colTitle = colData.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : 'อนุมัติ');
 
-  // Resolve non-first columns from ATTN TO / Auditor / CC, mirroring readonly ApprovalGrid preview
+  // Resolve non-first columns from Auditor / ATTN TO, mirroring readonly ApprovalGrid preview
   let resolvedName = colData.name || '';
   let resolvedTitle = colData.signerTitle || '';
   if (!isFirst && users) {
     const seq: { displayName: string; department?: string }[] = [];
-    if (auditorUserId) {
-      const u = users.find((x) => x.id === auditorUserId);
+    for (const audId of auditorUserIds || []) {
+      const u = users.find((x) => x.id === audId);
       if (u) seq.push(u);
     }
-    if (attnToUserId) {
-      const u = users.find((x) => x.id === attnToUserId);
-      if (u) seq.push(u);
-    }
-    for (const id of ccUserIds || []) {
-      const u = users.find((x) => x.id === id);
+    for (const attnId of attnToUserIds || []) {
+      const u = users.find((x) => x.id === attnId);
       if (u) seq.push(u);
     }
     const assigned = seq[i - 1];
@@ -315,7 +311,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
-function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserId?: string, ccUserIds?: string[], header?: MemoHeaderDetails, templateTypo?: MemoTypography, auditorUserId?: string): string {
+function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserIds?: string[], header?: MemoHeaderDetails, templateTypo?: MemoTypography, auditorUserIds?: string[]): string {
   // Effective typography: per-section override wins per-key, else template default
   const typo = resolveFieldTypography(templateTypo, field.typography);
   switch (field.type) {
@@ -334,7 +330,7 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
     case 'body_text':
       return renderBodyTextInner(field, value as string | undefined, typo);
     case 'approval_grid':
-      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, typo, auditorUserId);
+      return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, typo, auditorUserIds);
     default:
       return '';
   }
@@ -373,7 +369,7 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
         !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์')
     );
 
-    // Extract ATTN TO / CC from form_row for approval grid name resolution (mirrors SectionRenderer)
+    // Extract ATTN TO / Auditor from form_row for approval grid name resolution (mirrors SectionRenderer)
     const formDataObj = (memo.formData as Record<string, unknown>) || {};
     const formRowData = Object.values(formDataObj).find((v) => {
       if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -382,10 +378,10 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
       }
       return false;
     }) as Record<string, unknown> | undefined;
-    const attnToUserId = (formRowData?.attnTo as string) || '';
-    const auditorUserId = (formRowData?.auditor as string) || '';
-    const rawCc = formRowData?.cc;
-    const ccUserIds: string[] = Array.isArray(rawCc) ? (rawCc as string[]) : [];
+    const rawAttnTo = formRowData?.attnTo;
+    const attnToUserIds: string[] = Array.isArray(rawAttnTo) ? rawAttnTo as string[] : (rawAttnTo ? [rawAttnTo as string] : []);
+    const rawAuditor = formRowData?.auditor;
+    const auditorUserIds: string[] = Array.isArray(rawAuditor) ? rawAuditor as string[] : (rawAuditor ? [rawAuditor as string] : []);
 
     // Header box details (mirrors SectionRenderer company_header props).
     // memoNumber falls back to the saved memo number for memos created
@@ -401,12 +397,12 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'approval_grid') {
-        approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId);
+        approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds);
       } else if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
       } else {
         flushBody();
-        headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserId, ccUserIds, header, templateTypo, auditorUserId));
+        headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
       }
     }
     flushBody();

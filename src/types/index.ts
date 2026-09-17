@@ -105,11 +105,13 @@ export interface FormRowConfig {
   fields: {
     name: string;
     label: string;
-    type: 'text' | 'date' | 'dropdown';
+    type: string;
     placeholder?: string;
     width?: 'full' | 'half';
     requiredByType?: string[];
     options?: string[];
+    inputType?: 'text' | 'dropdown';
+    required?: boolean;
   }[];
 }
 

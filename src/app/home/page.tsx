@@ -96,13 +96,9 @@ export default function HomePage() {
     return formData;
   };
 
-  useEffect(() => { setMounted(true); }, []);
-
   useEffect(() => {
-    if (user && user.isApprover !== true && user.role !== 'admin') {
-      setActiveTab('mine');
-    }
-  }, [user]);
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -140,7 +136,7 @@ export default function HomePage() {
           .then((res) => res.text())
           .then((text) => setDetailHtml(text))
           .catch(() => setDetailHtml(''));
-        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && isApprover && !hasUserSigned(memo, user.id)) {
+        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id)) {
           setTimeout(() => handleApprove(memo.id), 500);
         }
         window.history.replaceState({}, '', '/home');
@@ -152,8 +148,6 @@ export default function HomePage() {
     if (!selectedMemo?.templateId) return null;
     return templates.find((t) => t.id === selectedMemo.templateId) || null;
   }, [selectedMemo, templates]);
-
-  const isApprover = user?.isApprover === true;
 
   const hasUserSigned = (memo: Memo, userId: string) => {
     const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
@@ -463,13 +457,14 @@ export default function HomePage() {
     try {
       const formData = { ...sectionFormData };
 
-      // Ensure approval grid columns are populated from ATTN TO / Auditor / CC before saving
+      // Ensure approval grid columns are populated from ATTN TO / Auditor before saving
       const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
       if (formRowField) {
         const formRowData = (formData[formRowField.id] as Record<string, string>) || {};
-        const attnToUserId = formRowData.attnTo || '';
-        const auditorUserId = (formRowData.auditor as string) || '';
-        const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
+        const rawAttnTo = formRowData.attnTo;
+        const attnToUserIds: string[] = Array.isArray(rawAttnTo) ? rawAttnTo as string[] : (rawAttnTo ? [rawAttnTo] : []);
+        const rawAuditor = formRowData.auditor;
+        const auditorUserIds: string[] = Array.isArray(rawAuditor) ? rawAuditor as string[] : (rawAuditor ? [rawAuditor] : []);
         const gridField = selectedTemplate.fields.find((f) => f.type === 'approval_grid');
         if (gridField) {
           const grid = (formData[gridField.id] as Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }>) || {};
@@ -485,30 +480,23 @@ export default function HomePage() {
             grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
             idx++;
           }
-          // col_1: Auditor (ผู้ตรวจสอบ)
-          if (auditorUserId) {
-            const audUser = allUsers.find((u) => u.id === auditorUserId);
+          // col_1+: Checked by (each auditor user gets own column)
+          for (const audId of auditorUserIds) {
+            const audUser = allUsers.find((u) => u.id === audId);
             if (audUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'ตรวจสอบโดยหัวหน้าแผนก' };
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'Checked by' };
               idx++;
             }
           }
-          // col_2: ATTN TO (ผู้อนุมัติคนแรก)
-          if (attnToUserId) {
-            const attnUser = allUsers.find((u) => u.id === attnToUserId);
+          // col_n+: ATTN TO (each approver user gets own column)
+          for (const attnId of attnToUserIds) {
+            const attnUser = allUsers.find((u) => u.id === attnId);
             if (attnUser) {
               grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ' };
               idx++;
             }
           }
-          // CC
-          for (const ccId of ccUserIds) {
-            const ccUser = allUsers.find((u) => u.id === ccId);
-            if (ccUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ' };
-              idx++;
-            }
-          }
+          // CC users get email only — no grid columns
           formData[gridField.id] = grid;
         }
       }
@@ -526,6 +514,16 @@ export default function HomePage() {
             if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
               const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
               if (approver?.email) toEmails.push(approver.email);
+            }
+          }
+          // Add CC users to email list (they have no grid columns)
+          const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
+          if (formRowField) {
+            const formRowData = (formData[formRowField.id] as Record<string, string>) || {};
+            const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
+            for (const ccId of ccUserIds) {
+              const ccUser = allUsers.find((u) => u.id === ccId);
+              if (ccUser?.email && !toEmails.includes(ccUser.email)) toEmails.push(ccUser.email);
             }
           }
           if (toEmails.length > 0) {
@@ -670,13 +668,11 @@ export default function HomePage() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
-            {isApprover && (
-              <TabsTrigger value="pending" className="gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                รายการทั้งหมด
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="pending" className="gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              รายการทั้งหมด
+              <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
+            </TabsTrigger>
             <TabsTrigger value="mine" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" />
               Memo ของฉัน
@@ -684,8 +680,7 @@ export default function HomePage() {
             </TabsTrigger>
           </TabsList>
 
-          {isApprover && (
-            <TabsContent value="pending">
+          <TabsContent value="pending">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base">รายการทั้งหมด</CardTitle>
@@ -714,7 +709,7 @@ export default function HomePage() {
                 )}</CardContent>
               </Card>
             </TabsContent>
-          )}
+
 
            <TabsContent value="mine">
              <Card>
@@ -764,7 +759,7 @@ export default function HomePage() {
             </div>
           )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isApprover && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
                   <CheckCircle className="h-4 w-4 mr-1" />

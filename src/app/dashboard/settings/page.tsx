@@ -203,7 +203,7 @@ export default function SettingsPage() {
 
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
-  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half' }>>([]);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>>([]);
   const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
 
@@ -213,6 +213,7 @@ export default function SettingsPage() {
     const rawFields = config.fields || [];
     const normalized = rawFields.map((f) => ({
       ...f,
+      inputType: (f as Record<string, unknown>).inputType as 'text' | 'dropdown' | undefined,
       options: Array.isArray(f.options) ? f.options : typeof f.options === 'string' ? f.options.split(',').map((s) => s.trim()).filter(Boolean) : [],
     }));
     setEditingFormFields(normalized);
@@ -252,7 +253,7 @@ export default function SettingsPage() {
     setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text', options: [] }]);
   };
 
-  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half' }>) => {
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>) => {
     const updated = [...editingFormFields];
     updated[index] = { ...updated[index], ...updates };
     setEditingFormFields(updated);
@@ -435,7 +436,7 @@ export default function SettingsPage() {
       newField.fieldConfig = {
         columns: [
           { title: 'ผู้ขออนุมัติ', subtitle: '' },
-          { title: 'ตรวจสอบโดยหัวหน้าแผนก', subtitle: '' },
+          { title: 'Checked by', subtitle: '' },
           { title: 'อนุมัติ', subtitle: '' },
         ],
         showTime: true,
@@ -1235,6 +1236,15 @@ Deadline: {deadline}
                                 </SelectContent>
                               </Select>
                               {f.type === 'dropdown' && (
+                                <Select value={f.inputType || 'dropdown'} onValueChange={(v) => updateFormField(i, { inputType: v as 'text' | 'dropdown' })}>
+                                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="dropdown">ดร็อปดาวน์</SelectItem>
+                                    <SelectItem value="text">ช่องพิมพ์</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {f.type === 'dropdown' && f.inputType !== 'text' && (
                                 <div className="flex-1 space-y-1">
                                   <div className="flex flex-wrap gap-1">
                                     {(Array.isArray(f.options) ? f.options : []).map((opt, oi) => (
@@ -1324,7 +1334,7 @@ Deadline: {deadline}
                                   {f.label || <span className="italic text-slate-400">ไม่มี label</span>}
                                   {f.required && <span className="text-red-500 ml-1">*</span>}
                                 </span>
-                                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type}</span>
+                                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{f.type === 'dropdown' && (f as Record<string, unknown>).inputType === 'text' ? 'text (from dropdown)' : f.type}</span>
                                 {f.type === 'dropdown' && Array.isArray(f.options) && f.options.length > 0 && (
                                   <span className="text-xs text-slate-500 ml-1">({f.options.join(', ')})</span>
                                 )}

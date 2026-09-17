@@ -117,6 +117,13 @@ export function MemoDocumentForm({
                       onChange={(e) => onChange(field.id, { ...value, [f.name]: e.target.value })}
                     />
                   ) : f.type === 'dropdown' ? (
+                    (f as Record<string, unknown>).inputType === 'text' ? (
+                      <Input
+                        value={value[f.name] || ''}
+                        onChange={(e) => onChange(field.id, { ...value, [f.name]: e.target.value })}
+                        placeholder={f.placeholder || 'กรอกข้อมูล'}
+                      />
+                    ) : (
                     (() => {
                       // CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required,
                       // both may be selected. × clears the value to re-pick.
@@ -152,13 +159,14 @@ export function MemoDocumentForm({
                         </div>
                       );
                     })()
+                    )
                   ) : f.type === 'user_dropdown' ? (
                     <Select value={value[f.name] || ''} onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}>
                       <SelectTrigger>
                         <SelectValue placeholder="เลือกผู้อนุมัติ" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.filter((u) => u.isApprover).map((u) => (
+                        {users.map((u) => (
                           <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
                         ))}
                       </SelectContent>
@@ -194,13 +202,13 @@ export function MemoDocumentForm({
                         }
                       }}>
                         <SelectTrigger>
-                          <SelectValue placeholder="เลือกผู้รับสำเนา" />
+                          <SelectValue placeholder={f.name === 'auditor' ? 'เลือกผู้ Checked by' : f.name === 'attnTo' ? 'เลือกผู้อนุมัติ' : 'เลือกผู้รับสำเนา'} />
                         </SelectTrigger>
                         <SelectContent>
                           {(() => {
                             const raw = value[f.name];
                             const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
-                            return users.filter((u) => u.isApprover && !selected.includes(u.id)).map((u) => (
+                            return users.filter((u) => !selected.includes(u.id)).map((u) => (
                               <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
                             ));
                           })()}
@@ -287,9 +295,10 @@ export function MemoDocumentForm({
         const gridConfig = config as unknown as ApprovalGridConfig;
         const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
         const formRowData = formRowField ? (formData[formRowField.id] as Record<string, string>) || {} : {};
-        const attnToUserId = formRowData.attnTo || '';
-        const auditorUserId = (formRowData.auditor as string) || '';
-        const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
+        const rawAttnTo = formRowData.attnTo;
+        const attnToUserIds: string[] = Array.isArray(rawAttnTo) ? rawAttnTo as string[] : (rawAttnTo ? [rawAttnTo] : []);
+        const rawAuditor = formRowData.auditor;
+        const auditorUserIds: string[] = Array.isArray(rawAuditor) ? rawAuditor as string[] : (rawAuditor ? [rawAuditor] : []);
         return (
           <div key={field.id} className="space-y-1">
             <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
@@ -300,9 +309,8 @@ export function MemoDocumentForm({
               readonly={false}
               ownerUser={ownerUser}
               users={users}
-              attnToUserId={attnToUserId}
-              auditorUserId={auditorUserId}
-              ccUserIds={ccUserIds}
+              attnToUserIds={attnToUserIds}
+              auditorUserIds={auditorUserIds}
             />
           </div>
         );

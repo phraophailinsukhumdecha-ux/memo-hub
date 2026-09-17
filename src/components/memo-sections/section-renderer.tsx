@@ -120,10 +120,10 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
         }
         return false;
       }) as Record<string, string> | undefined : undefined;
-      const attnToUserId = formRowField?.attnTo || '';
-      const auditorUserId = (formRowField?.auditor as string) || '';
-      const rawCc = formRowField?.cc;
-      const ccUserIds: string[] = Array.isArray(rawCc) ? rawCc as string[] : [];
+      const rawAttnTo = formRowField?.attnTo;
+      const attnToUserIds: string[] = Array.isArray(rawAttnTo) ? rawAttnTo as string[] : (rawAttnTo ? [rawAttnTo as string] : []);
+      const rawAuditor = formRowField?.auditor;
+      const auditorUserIds: string[] = Array.isArray(rawAuditor) ? rawAuditor as string[] : (rawAuditor ? [rawAuditor as string] : []);
       return (
         <ApprovalGrid
           config={field.fieldConfig as ApprovalGridConfig | undefined}
@@ -135,9 +135,8 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
           ownerUser={ownerUser}
           users={users}
           groups={groups}
-          attnToUserId={attnToUserId}
-          auditorUserId={auditorUserId}
-          ccUserIds={ccUserIds}
+          attnToUserIds={attnToUserIds}
+          auditorUserIds={auditorUserIds}
         />
       );
     }

@@ -16,21 +16,20 @@ interface ApprovalGridProps {
   ownerUser?: User | null;
   users?: User[];
   groups?: Group[];
-  attnToUserId?: string;
-  auditorUserId?: string;
-  ccUserIds?: string[];
+  attnToUserIds?: string[];
+  auditorUserIds?: string[];
   typography?: MemoTypography;
 }
 
 const DEFAULT_CONFIG: ApprovalGridConfig = {
   columns: [
     { title: 'ผู้ขออนุมัติ', subtitle: '' },
-    { title: 'ตรวจสอบ', subtitle: '' },
+    { title: 'Checked by', subtitle: '' },
     { title: 'อนุมัติ', subtitle: '' },
   ],
 };
 
-export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, attnToUserId, auditorUserId, ccUserIds = [], typography }: ApprovalGridProps) {
+export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, attnToUserIds, auditorUserIds, typography }: ApprovalGridProps) {
   const cfg = config || DEFAULT_CONFIG;
   const typo = resolveTypography(typography);
   const cellTextStyle: React.CSSProperties = {
@@ -53,15 +52,14 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     }
   }
 
-  // Auto-populate columns from ownerUser, attnToUserId, auditorUserId, ccUserIds
+  // Auto-populate columns from ownerUser, attnToUserIds, auditorUserIds
   useEffect(() => {
     if (readonly || !onChange) return;
-    if (!ownerUser && !attnToUserId && !auditorUserId && ccUserIds.length === 0) return;
+    if (!ownerUser && (attnToUserIds?.length ?? 0) === 0 && (auditorUserIds?.length ?? 0) === 0) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
     const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-    // Read titles from template config columns
     const colTitles = configColumns.map((c) => c.title || 'อนุมัติ');
 
     const autoValue: typeof value = { ...value };
@@ -75,22 +73,21 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       };
       idx++;
     }
-    // col_1: ATTN TO (ตรวจสอบโดยหัวหน้าแผนก)
-    // col_1: Auditor (ผู้ตรวจสอบ)
-    if (auditorUserId) {
-      const audUser = users?.find((u) => u.id === auditorUserId);
+    // col_1+: Checked by (each auditor user gets own column)
+    for (const audId of auditorUserIds || []) {
+      const audUser = users?.find((u) => u.id === audId);
       if (audUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
-          name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'ตรวจสอบโดยหัวหน้าแผนก',
+          name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'Checked by',
           date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
         };
         idx++;
       }
     }
-    // col_2: ATTN TO (ผู้อนุมัติคนแรก)
-    if (attnToUserId) {
-      const attnUser = users?.find((u) => u.id === attnToUserId);
+    // col_n+: ATTN TO (each approver user gets own column, title = อนุมัติ)
+    for (const attnId of attnToUserIds || []) {
+      const attnUser = users?.find((u) => u.id === attnId);
       if (attnUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
@@ -100,44 +97,28 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
         idx++;
       }
     }
-    // col_3+: CC (อนุมัติคนถัดไป)
-    for (const ccId of ccUserIds) {
-      const ccUser = users?.find((u) => u.id === ccId);
-      if (ccUser) {
-        autoValue[`col_${idx}`] = {
-          ...autoValue[`col_${idx}`],
-          name: ccUser.displayName, userId: ccUser.id, signerTitle: ccUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ',
-          date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
-        };
-        idx++;
-      }
-    }
     if (Object.keys(autoValue).length > 0) {
       onChange(autoValue);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownerUser?.id, attnToUserId, auditorUserId, ccUserIds.join(',')]);
+  }, [ownerUser?.id, (attnToUserIds || []).join(','), (auditorUserIds || []).join(',')]);
 
   const colIndices = Object.keys(value)
     .filter((k) => k.startsWith('col_'))
     .map((k) => parseInt(k.split('_')[1]))
     .sort((a, b) => a - b);
 
-  // Calculate required columns: ownerUser + attnTo + ccUsers
-  // Ordered user assignment for col_1+ (mirrors auto-populate order: Auditor, ATTN TO, CC...)
+  // Calculate required columns: ownerUser + attnTo + auditor
+  // Ordered user assignment for col_1+ (mirrors auto-populate order: Checked by, ATTN TO)
   const assignedUsers = (() => {
     if (!users) return [];
     const list: { displayName: string; department?: string }[] = [];
-    if (auditorUserId) {
-      const u = users.find((x) => x.id === auditorUserId);
+    for (const audId of auditorUserIds || []) {
+      const u = users.find((x) => x.id === audId);
       if (u) list.push(u);
     }
-    if (attnToUserId) {
-      const u = users.find((x) => x.id === attnToUserId);
-      if (u) list.push(u);
-    }
-    for (const ccId of ccUserIds) {
-      const u = users.find((x) => x.id === ccId);
+    for (const attnId of attnToUserIds || []) {
+      const u = users.find((x) => x.id === attnId);
       if (u) list.push(u);
     }
     return list;
@@ -302,7 +283,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     }
 
     if (isMiddle) {
-      // Always resolve from ATTN TO / Auditor / CC based on colIndex
+      // Always resolve from ATTN TO / Auditor based on colIndex
       let resolvedName = colData.name || '';
       let resolvedTitle = colData.signerTitle || '';
       const assigned = resolveAssigned(colIndex);
@@ -345,8 +326,8 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
                   onChange={(e) => handleUserSelect(colIndex, e.target.value)}
                   className="w-full border-b border-slate-700 bg-transparent pb-1 focus:outline-none text-sm text-slate-900"
                 >
-                  <option value="">เลือกผู้ตรวจสอบ</option>
-                  {users?.filter((u) => u.isApprover).map((u) => (
+                  <option value="">เลือกผู้ Checked by</option>
+                  {users?.map((u) => (
                     <option key={u.id} value={u.id}>{u.displayName}</option>
                   ))}
                 </select>
@@ -431,7 +412,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
                 className="w-full border-b border-slate-700 bg-transparent pb-1 focus:outline-none text-sm text-slate-900"
               >
                 <option value="">เลือกผู้อนุมัติ</option>
-                {users?.filter((u) => u.isApprover).map((u) => (
+                {users?.map((u) => (
                   <option key={u.id} value={u.id}>{u.displayName}</option>
                 ))}
               </select>
