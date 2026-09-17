@@ -18,7 +18,6 @@ export interface User {
   role: 'admin' | 'user';
   department?: string;
   position?: string;
-  isApprover?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
