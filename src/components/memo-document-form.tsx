@@ -94,7 +94,7 @@ export function MemoDocumentForm({
 
     switch (field.type) {
       case 'form_row': {
-        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[]; required?: boolean }>) || [];
+        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[]; required?: boolean; description?: string }>) || [];
         const value = (formData[field.id] as Record<string, string>) || {};
         const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
         const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
@@ -110,6 +110,9 @@ export function MemoDocumentForm({
                     {f.label}
                     {(f.required || f.name === 'clientSpecific' || f.name === 'vendorSpecific') && <span className="text-red-500 ml-1">*</span>}
                   </Label>
+                  {f.description && (
+                    <p className="text-xs text-slate-500 leading-snug">{f.description}</p>
+                  )}
                   {f.type === 'date' ? (
                     <Input
                       type="date"

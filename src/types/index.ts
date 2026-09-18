@@ -111,6 +111,7 @@ export interface FormRowConfig {
     options?: string[];
     inputType?: 'text' | 'dropdown';
     required?: boolean;
+    description?: string;
   }[];
 }
 
