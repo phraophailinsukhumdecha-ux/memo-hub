@@ -202,7 +202,7 @@ export default function SettingsPage() {
 
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
-  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown'; description?: string }>>([]);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>>([]);
   const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -253,7 +253,7 @@ export default function SettingsPage() {
     setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text', options: [] }]);
   };
 
-  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown'; description?: string }>) => {
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>) => {
     const updated = [...editingFormFields];
     updated[index] = { ...updated[index], ...updates };
     setEditingFormFields(updated);
@@ -1227,8 +1227,7 @@ Deadline: {deadline}
                       {editingFieldTemplateId === t.id ? (
                         <div className="space-y-2">
                           {editingFormFields.map((f, i) => (
-                            <div key={i} className="border rounded-lg bg-white">
-                            <div className="flex items-center gap-2 p-3">
+                            <div key={i} className="flex items-center gap-2 p-3 border rounded-lg bg-white">
                               <div className="flex items-center gap-1">
                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldUp(i)} disabled={i === 0}>
                                   <ChevronUp className="h-3 w-3" />
@@ -1326,15 +1325,6 @@ Deadline: {deadline}
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeFormField(i)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
-                            <div className="px-3 pb-3">
-                              <Input
-                                className="w-full text-xs"
-                                placeholder="หมายเหตุ/คำอธิบายสำหรับผู้กรอก (เช่น ระบุชื่อบริษัทลูกค้า)"
-                                value={f.description || ''}
-                                onChange={(e) => updateFormField(i, { description: e.target.value })}
-                              />
-                            </div>
                             </div>
                           ))}
                           <Button variant="outline" size="sm" onClick={addFormField}>

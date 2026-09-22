@@ -179,9 +179,6 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
               )}
             </Label>
             <div className="flex-1">
-              {row.left.description && (
-                <p className="text-xs text-slate-500 mb-1">{row.left.description}</p>
-              )}
               {row.left.type === 'date' ? (
                 <input
                   type="date"
@@ -210,9 +207,6 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
                 )}
               </Label>
               <div className="flex-1">
-                {row.right.description && (
-                  <p className="text-xs text-slate-500 mb-1">{row.right.description}</p>
-                )}
                 {row.right?.type === 'date' ? (
                   <input
                     type="date"
