@@ -10,6 +10,7 @@ interface AuthContextType {
   signIn: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
+  isApproveUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isAdmin = user?.role === 'admin';
+  const isApproveUser = user?.isApprover === true || user?.role === 'admin';
 
   return (
     <AuthContext.Provider
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         logout,
         isAdmin,
+        isApproveUser,
       }}
     >
       {children}

@@ -78,6 +78,7 @@ export default function SettingsPage() {
     role: 'user' as User['role'],
     department: '',
     position: '',
+    isApprover: false,
   });
 
   // Test email dialog
@@ -205,7 +206,6 @@ export default function SettingsPage() {
   const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>>([]);
   const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
-  const [migrating, setMigrating] = useState(false);
 
   const handleEditFormFields = (template: MemoTemplate) => {
     const formRow = (template.fields || []).find((f) => f.type === 'form_row');
@@ -494,7 +494,7 @@ export default function SettingsPage() {
   // User CRUD
   const handleCreateUser = () => {
     setEditingUser(null);
-    setUserForm({ username: '', password: '', email: '', displayName: '', role: 'user', department: '', position: '' });
+    setUserForm({ username: '', password: '', email: '', displayName: '', role: 'user', department: '', position: '', isApprover: false });
     setIsUserDialogOpen(true);
   };
 
@@ -508,6 +508,7 @@ export default function SettingsPage() {
       role: u.role,
       department: u.department || '',
       position: u.position || '',
+      isApprover: u.isApprover || false,
     });
     setIsUserDialogOpen(true);
   };
@@ -554,21 +555,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleMigrateTemplate = async () => {
-    setMigrating(true);
-    try {
-      const res = await fetch('/api/migrate-template', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        alert('อัปเดต Template สำเร็จ!');
-      } else {
-        alert('ไม่สำเร็จ: ' + (data.error || ''));
-      }
-    } catch {
-      alert('เกิดข้อผิดพลาดในการอัปเดต Template');
-    } finally {
-      setMigrating(false);
-    }
+  const handleToggleApprover = async (u: User) => {
+    await updateUser(u.id, { isApprover: !u.isApprover });
   };
 
   const getRoleLabel = (role: string) => {
@@ -1050,12 +1038,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>เทมเพลต Memo</CardTitle><CardDescription>จัดการเทมเพลตสำหรับสร้าง Memo</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={handleMigrateTemplate} disabled={migrating}>
-                    <RefreshCw className={`mr-2 h-4 w-4 ${migrating ? 'animate-spin' : ''}`} />{migrating ? 'กำลังอัปเดต...' : 'อัปเดต Template'}
-                  </Button>
-                  <Button onClick={handleCreateTemplate}><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
-                </div>
+                <Button onClick={handleCreateTemplate}><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 {templates.map((t) => (
@@ -1433,7 +1416,7 @@ Deadline: {deadline}
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
                 <TableBody>
                   {users.map((u) => (
                     <TableRow key={u.id}>
@@ -1442,6 +1425,15 @@ Deadline: {deadline}
                       <TableCell>{getRoleLabel(u.role)}</TableCell>
                       <TableCell>{u.position || '-'}</TableCell>
                       <TableCell>{u.department || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleApprover(u)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.isApprover ? 'bg-green-600' : 'bg-slate-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${u.isApprover ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-1">
                           <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)}><FileText className="h-4 w-4" /></Button>
@@ -1576,6 +1568,16 @@ Deadline: {deadline}
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-3">
+              <Label>เป็นผู้อนุมัติ</Label>
+              <button
+                type="button"
+                onClick={() => setUserForm({ ...userForm, isApprover: !userForm.isApprover })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${userForm.isApprover ? 'bg-green-600' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${userForm.isApprover ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
           </div>
           <DialogFooter>
