@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Select,
   SelectContent,
@@ -1700,25 +1701,21 @@ Deadline: {deadline}
             </div>
             <div className="grid gap-2">
               <Label>ตำแหน่ง</Label>
-              <Select value={userForm.position} onValueChange={(v) => setUserForm({ ...userForm, position: v })}>
-                <SelectTrigger><SelectValue placeholder="เลือกตำแหน่ง" /></SelectTrigger>
-                <SelectContent>
-                  {[...(settings?.positionOptions || [])].sort((a, b) => a.localeCompare(b, 'th')).map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={userForm.position}
+                onChange={(v) => setUserForm({ ...userForm, position: v })}
+                options={[...(settings?.positionOptions || [])].sort((a, b) => a.localeCompare(b, 'th'))}
+                placeholder="เลือกตำแหน่ง"
+              />
             </div>
             <div className="grid gap-2">
               <Label>แผนก</Label>
-              <Select value={userForm.department} onValueChange={(v) => setUserForm({ ...userForm, department: v })}>
-                <SelectTrigger><SelectValue placeholder="เลือกแผนก" /></SelectTrigger>
-                <SelectContent>
-                  {[...(settings?.departmentOptions || [])].sort((a, b) => a.localeCompare(b, 'th')).map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={userForm.department}
+                onChange={(v) => setUserForm({ ...userForm, department: v })}
+                options={[...(settings?.departmentOptions || [])].sort((a, b) => a.localeCompare(b, 'th'))}
+                placeholder="เลือกแผนก"
+              />
             </div>
             <div className="flex items-center gap-3">
               <Label>เป็นผู้อนุมัติ</Label>
