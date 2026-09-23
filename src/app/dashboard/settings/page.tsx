@@ -39,7 +39,7 @@ import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, d
 import { subscribeToUsers, createUser, updateUser, deleteUser } from '@/lib/users';
 import { subscribeToSyslogs } from '@/lib/syslogs';
 import { logSettingUpdated } from '@/lib/event-logs';
-import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog } from '@/types';
+import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig } from '@/types';
 import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
 import { ImportSheetDialog } from '@/components/import-sheet-dialog';
 import { SectionRenderer } from '@/components/memo-sections';
@@ -703,6 +703,19 @@ export default function SettingsPage() {
     if (newItemField !== 'position' && newItemField !== 'department') {
       await syncOptionsToTemplate(newItemField, merged);
     }
+  };
+
+  const handleSaveSheetConfig = async (cfg: SheetImportConfig) => {
+    if (!settings) return;
+    const updated = {
+      ...settings,
+      sheetImportConfigs: {
+        ...(settings.sheetImportConfigs || {}),
+        [newItemField]: cfg,
+      },
+    };
+    await saveSettings(updated, user?.id || 'system');
+    setSettings(updated);
   };
 
   const toggleInSet = (set: Set<string>, id: string): Set<string> => {
@@ -1970,11 +1983,14 @@ Deadline: {deadline}
       <ImportSheetDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
-        title={`นำเข้า${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : newItemField === 'clientSpecific' ? ' Client Specific' : newItemField === 'vendorSpecific' ? ' Vendor Specific' : ' DF Internal Affairs'}จาก Google Sheet`}
+        title="เชื่อมต่อ Google Sheet"
+        subtitle={`อัปเดต${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : newItemField === 'clientSpecific' ? ' Client Specific' : newItemField === 'vendorSpecific' ? ' Vendor Specific' : ' DF Internal Affairs'}โดยตรงจาก Google Sheet ของคุณ`}
+        config={settings?.sheetImportConfigs?.[newItemField]}
         existing={(() => {
           const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
           return settings ? (settings[fieldMap[newItemField]] || []) : [];
         })()}
+        onConfigSave={handleSaveSheetConfig}
         onImport={handleImportList}
       />
 

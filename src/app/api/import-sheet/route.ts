@@ -114,8 +114,26 @@ const MAX_ROWS = 5000;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    let target: { ok: true; url: string } | { ok: false; error: string };
+
+    const sheetId = typeof body?.sheetId === 'string' ? body.sheetId.trim() : '';
+    const gid = typeof body?.gid === 'string' ? body.gid.trim() : '0';
     const rawUrl = typeof body?.url === 'string' ? body.url : '';
-    const target = toCsvUrl(rawUrl);
+
+    if (sheetId) {
+      if (!/^(e\/)?[a-zA-Z0-9_-]+$/.test(sheetId)) {
+        return NextResponse.json({ ok: false, message: 'Google Sheet ID ไม่ถูกต้อง' }, { status: 400 });
+      }
+      const safeGid = /^\d+$/.test(gid) ? gid : '0';
+      const id = sheetId.startsWith('e/') ? sheetId.slice(2) : sheetId;
+      const url = sheetId.startsWith('e/')
+        ? `https://docs.google.com/spreadsheets/d/e/${id}/pub?gid=${safeGid}&single=true&output=csv`
+        : `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${safeGid}`;
+      target = { ok: true, url };
+    } else {
+      target = toCsvUrl(rawUrl);
+    }
+
     if (!target.ok) {
       return NextResponse.json({ ok: false, message: target.error }, { status: 400 });
     }

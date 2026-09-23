@@ -184,6 +184,14 @@ export interface Approval {
   actedAt: Date;
 }
 
+export interface SheetImportConfig {
+  sheetId: string;
+  gid: string;
+  columnRange: string;
+}
+
+export type MasterListField = 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs';
+
 export interface GlobalSettings {
   smtp: {
     host: string;
@@ -210,6 +218,7 @@ export interface GlobalSettings {
   clientSpecificOptions?: string[];
   vendorSpecificOptions?: string[];
   dfInternalAffairsOptions?: string[];
+  sheetImportConfigs?: Partial<Record<MasterListField, SheetImportConfig>>;
   updatedAt?: Date;
   updatedBy?: string;
 }
