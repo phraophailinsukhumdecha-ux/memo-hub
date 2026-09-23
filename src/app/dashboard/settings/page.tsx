@@ -58,6 +58,9 @@ export default function SettingsPage() {
   const [userSearch, setUserSearch] = useState('');
   const [positionSearch, setPositionSearch] = useState('');
   const [departmentSearch, setDepartmentSearch] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
+  const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set());
 
   // Template dialog (name + description only)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -608,6 +611,33 @@ export default function SettingsPage() {
     const updated = { ...settings, [settingField]: newList };
     await saveSettings(updated, user?.id || 'system');
     setSettings(updated);
+  };
+
+  const toggleInSet = (set: Set<string>, id: string): Set<string> => {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    if (selectedUserIds.size === 0) return;
+    if (!confirm(`ต้องการลบผู้ใช้ ${selectedUserIds.size} คนใช่หรือไม่?`)) return;
+    for (const id of selectedUserIds) {
+      await deleteUser(id);
+    }
+    setSelectedUserIds(new Set());
+  };
+
+  const handleBulkDeleteList = async (field: 'position' | 'department', selected: Set<string>) => {
+    if (selected.size === 0 || !settings) return;
+    if (!confirm(`ต้องการลบ ${selected.size} รายการใช่หรือไม่?`)) return;
+    const settingField = field === 'position' ? 'positionOptions' : 'departmentOptions';
+    const currentList = settings[settingField] || [];
+    const newList = currentList.filter((opt) => !selected.has(opt));
+    const updated = { ...settings, [settingField]: newList };
+    await saveSettings(updated, user?.id || 'system');
+    setSettings(updated);
+    if (field === 'position') setSelectedPositions(new Set()); else setSelectedDepartments(new Set());
   };
 
   return (
@@ -1418,20 +1448,54 @@ Deadline: {deadline}
               <Button onClick={handleCreateUser}><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
             </CardHeader>
             <CardContent>
-              <Input
-                placeholder="ค้นหาชื่อผู้ใช้..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="mb-4 max-w-sm"
-              />
+              <div className="flex items-center gap-3 mb-4">
+                <Input
+                  placeholder="ค้นหาชื่อผู้ใช้..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="max-w-sm"
+                />
+                {selectedUserIds.size > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteUsers}>
+                    <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedUserIds.size} รายการ
+                  </Button>
+                )}
+              </div>
               <Table>
-                <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded"
+                        checked={selectedUserIds.size > 0 && selectedUserIds.size === users.filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase())).length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const visible = users.filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase()));
+                            setSelectedUserIds(new Set(visible.map((u) => u.id)));
+                          } else {
+                            setSelectedUserIds(new Set());
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {users
                     .filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))
                     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'th'))
                     .map((u) => (
                     <TableRow key={u.id}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded"
+                          checked={selectedUserIds.has(u.id)}
+                          onChange={() => setSelectedUserIds(toggleInSet(selectedUserIds, u.id))}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{u.displayName}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>{getRoleLabel(u.role)}</TableCell>
@@ -1470,19 +1534,47 @@ Deadline: {deadline}
                 <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
-                <Input
-                  placeholder="ค้นหาตำแหน่ง..."
-                  value={positionSearch}
-                  onChange={(e) => setPositionSearch(e.target.value)}
-                  className="mb-3"
-                />
+                <div className="flex items-center gap-3 mb-3">
+                  <Input
+                    placeholder="ค้นหาตำแหน่ง..."
+                    value={positionSearch}
+                    onChange={(e) => setPositionSearch(e.target.value)}
+                    className="flex-1"
+                  />
+                  {selectedPositions.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('position', selectedPositions)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedPositions.size} รายการ
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded"
+                    checked={selectedPositions.size > 0 && selectedPositions.size === (settings?.positionOptions || []).filter((opt) => !positionSearch || opt.toLowerCase().includes(positionSearch.toLowerCase())).length}
+                    onChange={(e) => {
+                      const visible = (settings?.positionOptions || []).filter((opt) => !positionSearch || opt.toLowerCase().includes(positionSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedPositions(new Set(visible));
+                      else setSelectedPositions(new Set());
+                    }}
+                  />
+                  <span>เลือกทั้งหมด</span>
+                </div>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {(settings?.positionOptions || [])
                     .filter((opt) => !positionSearch || opt.toLowerCase().includes(positionSearch.toLowerCase()))
                     .sort((a, b) => a.localeCompare(b, 'th'))
                     .map((opt) => (
                       <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
-                        <span className="text-sm">{opt}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded"
+                            checked={selectedPositions.has(opt)}
+                            onChange={() => setSelectedPositions(toggleInSet(selectedPositions, opt))}
+                          />
+                          <span className="text-sm">{opt}</span>
+                        </div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('position', (settings?.positionOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('position', (settings?.positionOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -1503,19 +1595,47 @@ Deadline: {deadline}
                 <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
-                <Input
-                  placeholder="ค้นหาแผนก..."
-                  value={departmentSearch}
-                  onChange={(e) => setDepartmentSearch(e.target.value)}
-                  className="mb-3"
-                />
+                <div className="flex items-center gap-3 mb-3">
+                  <Input
+                    placeholder="ค้นหาแผนก..."
+                    value={departmentSearch}
+                    onChange={(e) => setDepartmentSearch(e.target.value)}
+                    className="flex-1"
+                  />
+                  {selectedDepartments.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('department', selectedDepartments)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedDepartments.size} รายการ
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded"
+                    checked={selectedDepartments.size > 0 && selectedDepartments.size === (settings?.departmentOptions || []).filter((opt) => !departmentSearch || opt.toLowerCase().includes(departmentSearch.toLowerCase())).length}
+                    onChange={(e) => {
+                      const visible = (settings?.departmentOptions || []).filter((opt) => !departmentSearch || opt.toLowerCase().includes(departmentSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedDepartments(new Set(visible));
+                      else setSelectedDepartments(new Set());
+                    }}
+                  />
+                  <span>เลือกทั้งหมด</span>
+                </div>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {(settings?.departmentOptions || [])
                     .filter((opt) => !departmentSearch || opt.toLowerCase().includes(departmentSearch.toLowerCase()))
                     .sort((a, b) => a.localeCompare(b, 'th'))
                     .map((opt) => (
                       <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
-                        <span className="text-sm">{opt}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded"
+                            checked={selectedDepartments.has(opt)}
+                            onChange={() => setSelectedDepartments(toggleInSet(selectedDepartments, opt))}
+                          />
+                          <span className="text-sm">{opt}</span>
+                        </div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('department', (settings?.departmentOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('department', (settings?.departmentOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
