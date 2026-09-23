@@ -207,7 +207,9 @@ export interface GlobalSettings {
   deadlineDays: number;
   positionOptions: string[];
   departmentOptions: string[];
-  dropdownOptions?: string[];
+  clientSpecificOptions?: string[];
+  vendorSpecificOptions?: string[];
+  dfInternalAffairsOptions?: string[];
   updatedAt?: Date;
   updatedBy?: string;
 }

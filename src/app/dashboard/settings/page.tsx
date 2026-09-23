@@ -59,11 +59,15 @@ export default function SettingsPage() {
   const [userSearch, setUserSearch] = useState('');
   const [positionSearch, setPositionSearch] = useState('');
   const [departmentSearch, setDepartmentSearch] = useState('');
-  const [dropdownSearch, setDropdownSearch] = useState('');
+  const [clientSpecificSearch, setClientSpecificSearch] = useState('');
+  const [vendorSpecificSearch, setVendorSpecificSearch] = useState('');
+  const [dfInternalSearch, setDfInternalSearch] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set());
-  const [selectedDropdowns, setSelectedDropdowns] = useState<Set<string>>(new Set());
+  const [selectedClientSpecific, setSelectedClientSpecific] = useState<Set<string>>(new Set());
+  const [selectedVendorSpecific, setSelectedVendorSpecific] = useState<Set<string>>(new Set());
+  const [selectedDfInternal, setSelectedDfInternal] = useState<Set<string>>(new Set());
 
   // Template dialog (name + description only)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -105,7 +109,7 @@ export default function SettingsPage() {
   // Master data state
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-  const [newItemField, setNewItemField] = useState<'position' | 'department' | 'dropdown'>('position');
+  const [newItemField, setNewItemField] = useState<'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs'>('position');
   const [newItemValue, setNewItemValue] = useState('');
 
   useEffect(() => { setTitle('การตั้งค่า'); }, [setTitle]);
@@ -127,6 +131,17 @@ export default function SettingsPage() {
       unsubSyslogs();
     };
   }, []);
+
+  const seededRef = React.useRef(false);
+  useEffect(() => {
+    if (seededRef.current || templates.length === 0 || !settings) return;
+    const seeded = seedDropdownOptionsFromTemplate(templates, settings);
+    if (seeded) {
+      setSettings(seeded);
+      saveSettings(seeded, 'system').catch(() => {});
+    }
+    seededRef.current = true;
+  }, [templates, settings]);
 
   const handleSaveSMTP = async () => {
     if (!settings || !user) return;
@@ -578,7 +593,7 @@ export default function SettingsPage() {
   // Master data handlers
   const handleSaveListItem = async () => {
     if (!newItemValue.trim() || !settings) return;
-    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
     const field = fieldMap[newItemField];
     const currentList = settings[field] || [];
 
@@ -597,10 +612,13 @@ export default function SettingsPage() {
     setIsNewItemDialogOpen(false);
     setEditingItemIndex(null);
     setNewItemValue('');
+    if (newItemField !== 'position' && newItemField !== 'department') {
+      syncOptionsToTemplate(newItemField, newList);
+    }
   };
 
-  const handleEditListItem = (field: 'position' | 'department' | 'dropdown', index: number) => {
-    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+  const handleEditListItem = (field: 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs', index: number) => {
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
     const list = settings?.[fieldMap[field]];
     setNewItemField(field);
     setNewItemValue(list?.[index] || '');
@@ -608,15 +626,60 @@ export default function SettingsPage() {
     setIsNewItemDialogOpen(true);
   };
 
-  const handleDeleteListItem = async (field: 'position' | 'department' | 'dropdown', index: number) => {
+  const handleDeleteListItem = async (field: 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs', index: number) => {
     if (!settings) return;
-    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
     const settingField = fieldMap[field];
     const currentList = settings[settingField] || [];
     const newList = currentList.filter((_, i) => i !== index);
     const updated = { ...settings, [settingField]: newList };
     await saveSettings(updated, user?.id || 'system');
     setSettings(updated);
+    if (field !== 'position' && field !== 'department') {
+      syncOptionsToTemplate(field, newList);
+    }
+  };
+
+  const syncOptionsToTemplate = async (fieldKey: 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs', options: string[]) => {
+    const tpl = templates.find((t) => t.id === 'tpl_purchasing') || templates[0];
+    if (!tpl) return;
+    const formRow = (tpl.fields || []).find((f) => f.type === 'form_row');
+    if (!formRow) return;
+    const config = (formRow.fieldConfig || {}) as { fields?: Array<{ name: string; options?: string[] }> };
+    const fields = (config.fields || []).map((f) => f.name === fieldKey ? { ...f, options } : f);
+    const newFormRow = { ...formRow, fieldConfig: { ...(formRow.fieldConfig as object || {}), fields } };
+    const newFields = (tpl.fields || []).map((f) => f.type === 'form_row' ? newFormRow : f);
+    try {
+      await fetch(`/api/templates/${tpl.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...tpl, fields: newFields }),
+      });
+      setTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, fields: newFields } : t));
+    } catch { /* ignore */ }
+  };
+
+  const seedDropdownOptionsFromTemplate = (tpls: MemoTemplate[], current: GlobalSettings): GlobalSettings | null => {
+    const tpl = tpls.find((t) => t.id === 'tpl_purchasing') || tpls[0];
+    if (!tpl) return null;
+    const formRow = (tpl.fields || []).find((f) => f.type === 'form_row');
+    if (!formRow) return null;
+    const config = (formRow.fieldConfig || {}) as { fields?: Array<{ name: string; options?: string[] }> };
+    const fields = config.fields || [];
+    const getClient = fields.find((f) => f.name === 'clientSpecific')?.options || [];
+    const getVendor = fields.find((f) => f.name === 'vendorSpecific')?.options || [];
+    const getDf = fields.find((f) => f.name === 'dfInternalAffairs')?.options || [];
+    const needSeed =
+      (current.clientSpecificOptions || []).length === 0 && getClient.length > 0 ||
+      (current.vendorSpecificOptions || []).length === 0 && getVendor.length > 0 ||
+      (current.dfInternalAffairsOptions || []).length === 0 && getDf.length > 0;
+    if (!needSeed) return null;
+    return {
+      ...current,
+      clientSpecificOptions: (current.clientSpecificOptions || []).length === 0 ? getClient : current.clientSpecificOptions,
+      vendorSpecificOptions: (current.vendorSpecificOptions || []).length === 0 ? getVendor : current.vendorSpecificOptions,
+      dfInternalAffairsOptions: (current.dfInternalAffairsOptions || []).length === 0 ? getDf : current.dfInternalAffairsOptions,
+    };
   };
 
   const toggleInSet = (set: Set<string>, id: string): Set<string> => {
@@ -634,10 +697,10 @@ export default function SettingsPage() {
     setSelectedUserIds(new Set());
   };
 
-  const handleBulkDeleteList = async (field: 'position' | 'department' | 'dropdown', selected: Set<string>) => {
+  const handleBulkDeleteList = async (field: 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs', selected: Set<string>) => {
     if (selected.size === 0 || !settings) return;
     if (!confirm(`ต้องการลบ ${selected.size} รายการใช่หรือไม่?`)) return;
-    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
     const settingField = fieldMap[field];
     const currentList = settings[settingField] || [];
     const newList = currentList.filter((opt) => !selected.has(opt));
@@ -646,7 +709,12 @@ export default function SettingsPage() {
     setSettings(updated);
     if (field === 'position') setSelectedPositions(new Set());
     else if (field === 'department') setSelectedDepartments(new Set());
-    else setSelectedDropdowns(new Set());
+    else if (field === 'clientSpecific') setSelectedClientSpecific(new Set());
+    else if (field === 'vendorSpecific') setSelectedVendorSpecific(new Set());
+    else setSelectedDfInternal(new Set());
+    if (field !== 'position' && field !== 'department') {
+      syncOptionsToTemplate(field, newList);
+    }
   };
 
   return (
@@ -1635,61 +1703,141 @@ Deadline: {deadline}
               </CardContent>
             </Card>
 
-            {/* Dropdown Options */}
+            {/* Client Specific */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <div><CardTitle>ตัวเลือกดรอปดาวน์</CardTitle><CardDescription>จัดการรายการตัวเลือกดรอปดาวน์</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('dropdown'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <div><CardTitle>Client Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
+                <Button size="sm" onClick={() => { setNewItemField('clientSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
-                  <Input
-                    placeholder="ค้นหาตัวเลือก..."
-                    value={dropdownSearch}
-                    onChange={(e) => setDropdownSearch(e.target.value)}
-                    className="flex-1"
-                  />
-                  {selectedDropdowns.size > 0 && (
-                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('dropdown', selectedDropdowns)}>
-                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedDropdowns.size} รายการ
+                  <Input placeholder="ค้นหา..." value={clientSpecificSearch} onChange={(e) => setClientSpecificSearch(e.target.value)} className="flex-1" />
+                  {selectedClientSpecific.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('clientSpecific', selectedClientSpecific)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedClientSpecific.size} รายการ
                     </Button>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded"
-                    checked={selectedDropdowns.size > 0 && selectedDropdowns.size === (settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase())).length}
+                  <input type="checkbox" className="h-4 w-4 rounded"
+                    checked={selectedClientSpecific.size > 0 && selectedClientSpecific.size === (settings?.clientSpecificOptions || []).filter((opt) => !clientSpecificSearch || opt.toLowerCase().includes(clientSpecificSearch.toLowerCase())).length}
                     onChange={(e) => {
-                      const visible = (settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase()));
-                      if (e.target.checked) setSelectedDropdowns(new Set(visible));
-                      else setSelectedDropdowns(new Set());
-                    }}
-                  />
+                      const visible = (settings?.clientSpecificOptions || []).filter((opt) => !clientSpecificSearch || opt.toLowerCase().includes(clientSpecificSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedClientSpecific(new Set(visible)); else setSelectedClientSpecific(new Set());
+                    }} />
                   <span>เลือกทั้งหมด</span>
                 </div>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {(settings?.dropdownOptions || [])
-                    .filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase()))
+                  {(settings?.clientSpecificOptions || [])
+                    .filter((opt) => !clientSpecificSearch || opt.toLowerCase().includes(clientSpecificSearch.toLowerCase()))
                     .sort((a, b) => a.localeCompare(b, 'th'))
                     .map((opt) => (
                       <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded"
-                            checked={selectedDropdowns.has(opt)}
-                            onChange={() => setSelectedDropdowns(toggleInSet(selectedDropdowns, opt))}
-                          />
+                          <input type="checkbox" className="h-4 w-4 rounded" checked={selectedClientSpecific.has(opt)} onChange={() => setSelectedClientSpecific(toggleInSet(selectedClientSpecific, opt))} />
                           <span className="text-sm">{opt}</span>
                         </div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('dropdown', (settings?.dropdownOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('dropdown', (settings?.dropdownOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('clientSpecific', (settings?.clientSpecificOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('clientSpecific', (settings?.clientSpecificOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
                         </div>
                       </div>
                     ))}
-                  {(settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase())).length === 0 && (
+                  {(settings?.clientSpecificOptions || []).filter((opt) => !clientSpecificSearch || opt.toLowerCase().includes(clientSpecificSearch.toLowerCase())).length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Vendor Specific */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div><CardTitle>Vendor Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
+                <Button size="sm" onClick={() => { setNewItemField('vendorSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3 mb-3">
+                  <Input placeholder="ค้นหา..." value={vendorSpecificSearch} onChange={(e) => setVendorSpecificSearch(e.target.value)} className="flex-1" />
+                  {selectedVendorSpecific.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('vendorSpecific', selectedVendorSpecific)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedVendorSpecific.size} รายการ
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
+                  <input type="checkbox" className="h-4 w-4 rounded"
+                    checked={selectedVendorSpecific.size > 0 && selectedVendorSpecific.size === (settings?.vendorSpecificOptions || []).filter((opt) => !vendorSpecificSearch || opt.toLowerCase().includes(vendorSpecificSearch.toLowerCase())).length}
+                    onChange={(e) => {
+                      const visible = (settings?.vendorSpecificOptions || []).filter((opt) => !vendorSpecificSearch || opt.toLowerCase().includes(vendorSpecificSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedVendorSpecific(new Set(visible)); else setSelectedVendorSpecific(new Set());
+                    }} />
+                  <span>เลือกทั้งหมด</span>
+                </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {(settings?.vendorSpecificOptions || [])
+                    .filter((opt) => !vendorSpecificSearch || opt.toLowerCase().includes(vendorSpecificSearch.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
+                    .map((opt) => (
+                      <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" className="h-4 w-4 rounded" checked={selectedVendorSpecific.has(opt)} onChange={() => setSelectedVendorSpecific(toggleInSet(selectedVendorSpecific, opt))} />
+                          <span className="text-sm">{opt}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('vendorSpecific', (settings?.vendorSpecificOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('vendorSpecific', (settings?.vendorSpecificOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  {(settings?.vendorSpecificOptions || []).filter((opt) => !vendorSpecificSearch || opt.toLowerCase().includes(vendorSpecificSearch.toLowerCase())).length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* DF Internal Affairs */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div><CardTitle>DF Internal Affairs.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
+                <Button size="sm" onClick={() => { setNewItemField('dfInternalAffairs'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3 mb-3">
+                  <Input placeholder="ค้นหา..." value={dfInternalSearch} onChange={(e) => setDfInternalSearch(e.target.value)} className="flex-1" />
+                  {selectedDfInternal.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('dfInternalAffairs', selectedDfInternal)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedDfInternal.size} รายการ
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
+                  <input type="checkbox" className="h-4 w-4 rounded"
+                    checked={selectedDfInternal.size > 0 && selectedDfInternal.size === (settings?.dfInternalAffairsOptions || []).filter((opt) => !dfInternalSearch || opt.toLowerCase().includes(dfInternalSearch.toLowerCase())).length}
+                    onChange={(e) => {
+                      const visible = (settings?.dfInternalAffairsOptions || []).filter((opt) => !dfInternalSearch || opt.toLowerCase().includes(dfInternalSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedDfInternal(new Set(visible)); else setSelectedDfInternal(new Set());
+                    }} />
+                  <span>เลือกทั้งหมด</span>
+                </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {(settings?.dfInternalAffairsOptions || [])
+                    .filter((opt) => !dfInternalSearch || opt.toLowerCase().includes(dfInternalSearch.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
+                    .map((opt) => (
+                      <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" className="h-4 w-4 rounded" checked={selectedDfInternal.has(opt)} onChange={() => setSelectedDfInternal(toggleInSet(selectedDfInternal, opt))} />
+                          <span className="text-sm">{opt}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('dfInternalAffairs', (settings?.dfInternalAffairsOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('dfInternalAffairs', (settings?.dfInternalAffairsOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  {(settings?.dfInternalAffairsOptions || []).filter((opt) => !dfInternalSearch || opt.toLowerCase().includes(dfInternalSearch.toLowerCase())).length === 0 && (
                     <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
                   )}
                 </div>
@@ -1784,7 +1932,7 @@ Deadline: {deadline}
       <Dialog open={isNewItemDialogOpen} onOpenChange={(open) => { setIsNewItemDialogOpen(open); if (!open) { setEditingItemIndex(null); setNewItemValue(''); } }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>{editingItemIndex !== null ? 'แก้ไข' : 'เพิ่ม'}{newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : 'ตัวเลือกดรอปดาวน์'}</DialogTitle>
+            <DialogTitle>{editingItemIndex !== null ? 'แก้ไข' : 'เพิ่ม'}{newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : newItemField === 'clientSpecific' ? 'Client Specific' : newItemField === 'vendorSpecific' ? 'Vendor Specific' : 'DF Internal Affairs'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">

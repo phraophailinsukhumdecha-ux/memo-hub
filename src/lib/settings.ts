@@ -7,7 +7,9 @@ const DEFAULT_SETTINGS: GlobalSettings = {
   deadlineDays: 7,
   positionOptions: ['CEO', 'หัวหน้าแผนก', 'ซัพพลายเออร์', 'ลูกค้า', 'ร้านค้า'],
   departmentOptions: ['ไอที', 'บัญชี', 'เซล'],
-  dropdownOptions: [],
+  clientSpecificOptions: [],
+  vendorSpecificOptions: [],
+  dfInternalAffairsOptions: [],
   updatedAt: new Date(),
   updatedBy: 'system',
 };
@@ -37,7 +39,9 @@ export async function getSettings(): Promise<GlobalSettings> {
     smtp: { ...DEFAULT_SETTINGS.smtp, ...(s.smtp || {}) },
     positionOptions: s.positionOptions || DEFAULT_SETTINGS.positionOptions,
     departmentOptions: s.departmentOptions || DEFAULT_SETTINGS.departmentOptions,
-    dropdownOptions: s.dropdownOptions || DEFAULT_SETTINGS.dropdownOptions,
+    clientSpecificOptions: s.clientSpecificOptions || DEFAULT_SETTINGS.clientSpecificOptions,
+    vendorSpecificOptions: s.vendorSpecificOptions || DEFAULT_SETTINGS.vendorSpecificOptions,
+    dfInternalAffairsOptions: s.dfInternalAffairsOptions || DEFAULT_SETTINGS.dfInternalAffairsOptions,
   };
 }
 
@@ -60,7 +64,9 @@ export function subscribeToSettings(callback: (settings: GlobalSettings) => void
         smtp: { ...DEFAULT_SETTINGS.smtp, ...(raw.smtp || {}) },
         positionOptions: raw.positionOptions || DEFAULT_SETTINGS.positionOptions,
         departmentOptions: raw.departmentOptions || DEFAULT_SETTINGS.departmentOptions,
-        dropdownOptions: raw.dropdownOptions || DEFAULT_SETTINGS.dropdownOptions,
+        clientSpecificOptions: raw.clientSpecificOptions || DEFAULT_SETTINGS.clientSpecificOptions,
+        vendorSpecificOptions: raw.vendorSpecificOptions || DEFAULT_SETTINGS.vendorSpecificOptions,
+        dfInternalAffairsOptions: raw.dfInternalAffairsOptions || DEFAULT_SETTINGS.dfInternalAffairsOptions,
       });
     } else {
       callback(DEFAULT_SETTINGS);
