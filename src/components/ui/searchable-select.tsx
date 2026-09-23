@@ -29,9 +29,9 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between border border-input bg-transparent px-3 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground"
+        className="flex w-full items-center justify-between border border-input bg-transparent px-3 py-2 text-sm text-slate-900 rounded-md hover:bg-accent hover:text-accent-foreground"
       >
-        <span className={value ? '' : 'text-muted-foreground'}>{value || placeholder}</span>
+        <span className={value ? 'text-slate-900' : 'text-slate-500'}>{value || placeholder}</span>
         <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
       {open && (
@@ -53,14 +53,14 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
             </div>
             <div className="max-h-60 overflow-y-auto">
               {filtered.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-3">ไม่พบรายการ</p>
+                <p className="text-sm text-slate-700 text-center py-3">ไม่พบรายการ</p>
               )}
               {filtered.map((opt) => (
                 <button
                   key={opt}
                   type="button"
                   onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 ${opt === value ? 'bg-blue-50 font-medium' : ''}`}
+                  className={`w-full text-left px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 ${opt === value ? 'bg-blue-50 font-medium' : ''}`}
                 >
                   {opt}
                 </button>
