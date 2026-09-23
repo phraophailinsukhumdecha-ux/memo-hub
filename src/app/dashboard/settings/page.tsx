@@ -1479,13 +1479,13 @@ Deadline: {deadline}
                         }}
                       />
                     </TableHead>
-                    <TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead>
+                    <TableHead>รหัสพนักงาน</TableHead><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users
                     .filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))
-                    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'th'))
+                    .sort((a, b) => (a.username || '').localeCompare(b.username || '', 'en', { numeric: true }))
                     .map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
@@ -1496,6 +1496,7 @@ Deadline: {deadline}
                           onChange={() => setSelectedUserIds(toggleInSet(selectedUserIds, u.id))}
                         />
                       </TableCell>
+                      <TableCell className="font-mono text-sm">{u.username}</TableCell>
                       <TableCell className="font-medium">{u.displayName}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>{getRoleLabel(u.role)}</TableCell>
@@ -1702,7 +1703,7 @@ Deadline: {deadline}
               <Select value={userForm.position} onValueChange={(v) => setUserForm({ ...userForm, position: v })}>
                 <SelectTrigger><SelectValue placeholder="เลือกตำแหน่ง" /></SelectTrigger>
                 <SelectContent>
-                  {(settings?.positionOptions || []).map((opt) => (
+                  {[...(settings?.positionOptions || [])].sort((a, b) => a.localeCompare(b, 'th')).map((opt) => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1713,7 +1714,7 @@ Deadline: {deadline}
               <Select value={userForm.department} onValueChange={(v) => setUserForm({ ...userForm, department: v })}>
                 <SelectTrigger><SelectValue placeholder="เลือกแผนก" /></SelectTrigger>
                 <SelectContent>
-                  {(settings?.departmentOptions || []).map((opt) => (
+                  {[...(settings?.departmentOptions || [])].sort((a, b) => a.localeCompare(b, 'th')).map((opt) => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                   ))}
                 </SelectContent>
