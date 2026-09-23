@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -14,7 +14,18 @@ interface SearchableSelectProps {
 export function SearchableSelect({ value, onChange, options, placeholder = 'เลือก' }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [openUp, setOpenUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && containerRef.current && dropdownRef.current) {
+      const btnRect = containerRef.current.getBoundingClientRect();
+      const ddHeight = dropdownRef.current.offsetHeight;
+      const spaceBelow = window.innerHeight - btnRect.bottom;
+      setOpenUp(spaceBelow < ddHeight + 16 && btnRect.top > spaceBelow);
+    }
+  }, [open]);
 
   const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
 
@@ -37,7 +48,10 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-1 w-full bg-white border rounded-md shadow-lg">
+          <div
+            ref={dropdownRef}
+            className={`absolute z-50 w-full bg-white border rounded-md shadow-lg ${openUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+          >
             <div className="p-2 border-b">
               <Input
                 autoFocus
