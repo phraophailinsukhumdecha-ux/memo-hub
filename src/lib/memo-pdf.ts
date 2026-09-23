@@ -256,7 +256,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   let resolvedName = colData.name || '';
   let resolvedTitle = colData.signerTitle || '';
   if (!isFirst && users) {
-    const seq: { displayName: string; department?: string }[] = [];
+    const seq: { displayName: string; position?: string }[] = [];
     for (const audId of auditorUserIds || []) {
       const u = users.find((x) => x.id === audId);
       if (u) seq.push(u);
@@ -268,7 +268,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     const assigned = seq[i - 1];
     if (assigned) {
       resolvedName = assigned.displayName;
-      resolvedTitle = assigned.department || '';
+      resolvedTitle = assigned.position || '';
     }
   }
 
@@ -276,7 +276,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     ? (ownerUser?.displayName || colData.name || '')
     : resolvedName;
   const displayTitle = isFirst
-    ? (ownerUser?.department || colData.signerTitle || '')
+    ? (ownerUser?.position || colData.signerTitle || '')
     : resolvedTitle;
 
     const t = typo || resolveTypography(null);

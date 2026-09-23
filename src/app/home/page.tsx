@@ -66,7 +66,7 @@ export default function HomePage() {
     const today = { date: todayStr, time: timeStr };
     let idx = 0;
     if (user) {
-      gridValue[`col_${idx}`] = { ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
+      gridValue[`col_${idx}`] = { ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
       idx++;
     }
 
@@ -477,14 +477,14 @@ export default function HomePage() {
           let idx = 0;
           // col_0: owner
           if (user) {
-            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
+            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
             idx++;
           }
           // col_1+: Checked by (each auditor user gets own column)
           for (const audId of auditorUserIds) {
             const audUser = allUsers.find((u) => u.id === audId);
             if (audUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'Checked by' };
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: colTitles[idx] || 'Checked by' };
               idx++;
             }
           }
@@ -492,7 +492,7 @@ export default function HomePage() {
           for (const attnId of attnToUserIds) {
             const attnUser = allUsers.find((u) => u.id === attnId);
             if (attnUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ' };
+              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: colTitles[idx] || 'อนุมัติ' };
               idx++;
             }
           }

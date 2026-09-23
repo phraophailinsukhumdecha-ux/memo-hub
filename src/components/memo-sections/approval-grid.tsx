@@ -68,7 +68,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     if (ownerUser) {
       autoValue[`col_${idx}`] = {
         ...autoValue[`col_${idx}`],
-        name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.department || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ',
+        name: ownerUser.displayName, userId: ownerUser.id, signerTitle: ownerUser.position || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ',
         date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
       };
       idx++;
@@ -79,7 +79,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       if (audUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
-          name: audUser.displayName, userId: audUser.id, signerTitle: audUser.department || '', colTitle: colTitles[idx] || 'Checked by',
+          name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: colTitles[idx] || 'Checked by',
           date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
         };
         idx++;
@@ -91,7 +91,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       if (attnUser) {
         autoValue[`col_${idx}`] = {
           ...autoValue[`col_${idx}`],
-          name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.department || '', colTitle: colTitles[idx] || 'อนุมัติ',
+          name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: colTitles[idx] || 'อนุมัติ',
           date: autoValue[`col_${idx}`]?.date || todayStr, time: autoValue[`col_${idx}`]?.time || timeStr,
         };
         idx++;
@@ -112,7 +112,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
   // Ordered user assignment for col_1+ (mirrors auto-populate order: Checked by, ATTN TO)
   const assignedUsers = (() => {
     if (!users) return [];
-    const list: { displayName: string; department?: string }[] = [];
+    const list: { displayName: string; position?: string }[] = [];
     for (const audId of auditorUserIds || []) {
       const u = users.find((x) => x.id === audId);
       if (u) list.push(u);
@@ -162,7 +162,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     const selectedUser = users?.find((u) => u.id === userId);
     if (!selectedUser || !onChange) return;
     const colKey = `col_${colIndex}`;
-    const signerTitle = colIndex === lastIndex ? (selectedUser.position || '') : (selectedUser.department || '');
+    const signerTitle = colIndex === lastIndex ? (selectedUser.position || '') : (selectedUser.position || '');
     onChange({
       ...value,
       [colKey]: {
@@ -226,7 +226,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
 
     if (isFirst) {
       const displayName = ownerUser?.displayName || colData.name || '';
-      const displayTitle = ownerUser?.department || colData.signerTitle || '';
+      const displayTitle = ownerUser?.position || colData.signerTitle || '';
       return (
         <div key={colIndex} className="p-4">
           {!readonly && (
@@ -289,7 +289,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       const assigned = resolveAssigned(colIndex);
       if (assigned) {
         resolvedName = assigned.displayName;
-        resolvedTitle = assigned.department || '';
+        resolvedTitle = assigned.position || '';
       }
 
       return (
@@ -380,7 +380,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       const assigned = resolveAssigned(colIndex);
       if (assigned) {
         resolvedName = assigned.displayName;
-        resolvedTitle = assigned.department || '';
+        resolvedTitle = assigned.position || '';
       }
     }
 

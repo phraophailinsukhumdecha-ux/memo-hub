@@ -116,7 +116,7 @@ export default function MemosPage() {
         const gridValue: Record<string, { date: string; time: string; name: string; signerTitle: string; colTitle: string }> = {};
         cols.forEach((_, i) => {
           if (i === 0) {
-            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.department || '', colTitle: colTitles[i] || 'ผู้ขออนุมัติ' };
+            gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: user?.displayName || '', signerTitle: user?.position || '', colTitle: colTitles[i] || 'ผู้ขออนุมัติ' };
           } else {
             gridValue[`col_${i}`] = { date: todayStr, time: timeStr, name: '', signerTitle: '', colTitle: colTitles[i] || 'อนุมัติ' };
           }
