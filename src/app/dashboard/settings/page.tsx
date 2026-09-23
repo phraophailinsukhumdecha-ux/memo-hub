@@ -114,10 +114,12 @@ export default function SettingsPage() {
 
   useEffect(() => { setTitle('การตั้งค่า'); }, [setTitle]);
 
+  const settingsLoadedRef = React.useRef(false);
   useEffect(() => {
     const loadData = async () => {
       const s = await getSettings();
       setSettings(s);
+      settingsLoadedRef.current = true;
     };
     loadData();
 
@@ -134,11 +136,27 @@ export default function SettingsPage() {
 
   const seededRef = React.useRef(false);
   useEffect(() => {
-    if (seededRef.current || templates.length === 0 || !settings) return;
-    const seeded = seedDropdownOptionsFromTemplate(templates, settings);
-    if (seeded) {
-      setSettings(seeded);
-      saveSettings(seeded, 'system').catch(() => {});
+    if (seededRef.current || templates.length === 0 || !settings || !settingsLoadedRef.current) return;
+    const tpl = templates.find((t) => t.id === 'tpl_purchasing') || templates[0];
+    if (!tpl) { seededRef.current = true; return; }
+    const formRow = (tpl.fields || []).find((f) => f.type === 'form_row');
+    if (!formRow) { seededRef.current = true; return; }
+    const config = (formRow.fieldConfig || {}) as { fields?: Array<{ name: string; options?: string[] }> };
+    const fields = config.fields || [];
+    const getClient = fields.find((f) => f.name === 'clientSpecific')?.options || [];
+    const getVendor = fields.find((f) => f.name === 'vendorSpecific')?.options || [];
+    const getDf = fields.find((f) => f.name === 'dfInternalAffairs')?.options || [];
+    const needClient = (settings.clientSpecificOptions || []).length === 0 && getClient.length > 0;
+    const needVendor = (settings.vendorSpecificOptions || []).length === 0 && getVendor.length > 0;
+    const needDf = (settings.dfInternalAffairsOptions || []).length === 0 && getDf.length > 0;
+    if (needClient || needVendor || needDf) {
+      const patch: Record<string, unknown> = {};
+      if (needClient) patch.clientSpecificOptions = getClient;
+      if (needVendor) patch.vendorSpecificOptions = getVendor;
+      if (needDf) patch.dfInternalAffairsOptions = getDf;
+      saveSettings(patch, 'system').then(() => {
+        setSettings((prev) => prev ? { ...prev, ...patch } as typeof prev : prev);
+      }).catch(() => {});
     }
     seededRef.current = true;
   }, [templates, settings]);
@@ -657,29 +675,6 @@ export default function SettingsPage() {
       });
       setTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, fields: newFields } : t));
     } catch { /* ignore */ }
-  };
-
-  const seedDropdownOptionsFromTemplate = (tpls: MemoTemplate[], current: GlobalSettings): GlobalSettings | null => {
-    const tpl = tpls.find((t) => t.id === 'tpl_purchasing') || tpls[0];
-    if (!tpl) return null;
-    const formRow = (tpl.fields || []).find((f) => f.type === 'form_row');
-    if (!formRow) return null;
-    const config = (formRow.fieldConfig || {}) as { fields?: Array<{ name: string; options?: string[] }> };
-    const fields = config.fields || [];
-    const getClient = fields.find((f) => f.name === 'clientSpecific')?.options || [];
-    const getVendor = fields.find((f) => f.name === 'vendorSpecific')?.options || [];
-    const getDf = fields.find((f) => f.name === 'dfInternalAffairs')?.options || [];
-    const needSeed =
-      (current.clientSpecificOptions || []).length === 0 && getClient.length > 0 ||
-      (current.vendorSpecificOptions || []).length === 0 && getVendor.length > 0 ||
-      (current.dfInternalAffairsOptions || []).length === 0 && getDf.length > 0;
-    if (!needSeed) return null;
-    return {
-      ...current,
-      clientSpecificOptions: (current.clientSpecificOptions || []).length === 0 ? getClient : current.clientSpecificOptions,
-      vendorSpecificOptions: (current.vendorSpecificOptions || []).length === 0 ? getVendor : current.vendorSpecificOptions,
-      dfInternalAffairsOptions: (current.dfInternalAffairsOptions || []).length === 0 ? getDf : current.dfInternalAffairsOptions,
-    };
   };
 
   const toggleInSet = (set: Set<string>, id: string): Set<string> => {
