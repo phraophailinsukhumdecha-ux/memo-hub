@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -82,23 +82,12 @@ export function ImportSheetDialog({
   onConfigSave,
   onImport,
 }: ImportSheetDialogProps) {
-  const [sheetId, setSheetId] = useState('');
-  const [gid, setGid] = useState('');
-  const [columnRange, setColumnRange] = useState('');
+  const [sheetId, setSheetId] = useState(config?.sheetId || '');
+  const [gid, setGid] = useState(config?.gid || '');
+  const [columnRange, setColumnRange] = useState(config?.columnRange || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  useEffect(() => {
-    if (open) {
-      setSheetId(config?.sheetId || '');
-      setGid(config?.gid || '');
-      setColumnRange(config?.columnRange || '');
-      setError('');
-      setSuccess('');
-      setLoading(false);
-    }
-  }, [open, config]);
 
   const handleOpenChange = (o: boolean) => {
     onOpenChange(o);

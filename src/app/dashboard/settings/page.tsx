@@ -1981,6 +1981,7 @@ Deadline: {deadline}
 
       {/* Import from Google Sheet Dialog */}
       <ImportSheetDialog
+        key={`${newItemField}:${settings?.sheetImportConfigs?.[newItemField]?.sheetId || 'none'}`}
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         title="เชื่อมต่อ Google Sheet"
