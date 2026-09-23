@@ -59,9 +59,11 @@ export default function SettingsPage() {
   const [userSearch, setUserSearch] = useState('');
   const [positionSearch, setPositionSearch] = useState('');
   const [departmentSearch, setDepartmentSearch] = useState('');
+  const [dropdownSearch, setDropdownSearch] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set());
+  const [selectedDropdowns, setSelectedDropdowns] = useState<Set<string>>(new Set());
 
   // Template dialog (name + description only)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -103,7 +105,7 @@ export default function SettingsPage() {
   // Master data state
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-  const [newItemField, setNewItemField] = useState<'position' | 'department'>('position');
+  const [newItemField, setNewItemField] = useState<'position' | 'department' | 'dropdown'>('position');
   const [newItemValue, setNewItemValue] = useState('');
 
   useEffect(() => { setTitle('การตั้งค่า'); }, [setTitle]);
@@ -576,7 +578,8 @@ export default function SettingsPage() {
   // Master data handlers
   const handleSaveListItem = async () => {
     if (!newItemValue.trim() || !settings) return;
-    const field = newItemField === 'position' ? 'positionOptions' : 'departmentOptions';
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const field = fieldMap[newItemField];
     const currentList = settings[field] || [];
 
     let newList: string[];
@@ -596,17 +599,19 @@ export default function SettingsPage() {
     setNewItemValue('');
   };
 
-  const handleEditListItem = (field: 'position' | 'department', index: number) => {
-    const list = field === 'position' ? settings?.positionOptions : settings?.departmentOptions;
+  const handleEditListItem = (field: 'position' | 'department' | 'dropdown', index: number) => {
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const list = settings?.[fieldMap[field]];
     setNewItemField(field);
     setNewItemValue(list?.[index] || '');
     setEditingItemIndex(index);
     setIsNewItemDialogOpen(true);
   };
 
-  const handleDeleteListItem = async (field: 'position' | 'department', index: number) => {
+  const handleDeleteListItem = async (field: 'position' | 'department' | 'dropdown', index: number) => {
     if (!settings) return;
-    const settingField = field === 'position' ? 'positionOptions' : 'departmentOptions';
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const settingField = fieldMap[field];
     const currentList = settings[settingField] || [];
     const newList = currentList.filter((_, i) => i !== index);
     const updated = { ...settings, [settingField]: newList };
@@ -629,16 +634,19 @@ export default function SettingsPage() {
     setSelectedUserIds(new Set());
   };
 
-  const handleBulkDeleteList = async (field: 'position' | 'department', selected: Set<string>) => {
+  const handleBulkDeleteList = async (field: 'position' | 'department' | 'dropdown', selected: Set<string>) => {
     if (selected.size === 0 || !settings) return;
     if (!confirm(`ต้องการลบ ${selected.size} รายการใช่หรือไม่?`)) return;
-    const settingField = field === 'position' ? 'positionOptions' : 'departmentOptions';
+    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', dropdown: 'dropdownOptions' } as const;
+    const settingField = fieldMap[field];
     const currentList = settings[settingField] || [];
     const newList = currentList.filter((opt) => !selected.has(opt));
     const updated = { ...settings, [settingField]: newList };
     await saveSettings(updated, user?.id || 'system');
     setSettings(updated);
-    if (field === 'position') setSelectedPositions(new Set()); else setSelectedDepartments(new Set());
+    if (field === 'position') setSelectedPositions(new Set());
+    else if (field === 'department') setSelectedDepartments(new Set());
+    else setSelectedDropdowns(new Set());
   };
 
   return (
@@ -1280,40 +1288,16 @@ Deadline: {deadline}
                               )}
                               {f.type === 'dropdown' && f.inputType !== 'text' && (
                                 <div className="flex-1 space-y-1">
+                                  <span className="text-xs text-slate-500">ตัวเลือกดรอปดาวน์ (แก้ไขที่หน้าตั้งค่าข้อมูลหลัก)</span>
                                   <div className="flex flex-wrap gap-1">
+                                    {(Array.isArray(f.options) ? f.options : []).length === 0 && (
+                                      <span className="text-xs text-slate-400 italic">ยังไม่มีตัวเลือก</span>
+                                    )}
                                     {(Array.isArray(f.options) ? f.options : []).map((opt, oi) => (
-                                      <span key={oi} className="inline-flex items-center gap-1 bg-slate-100 border rounded px-2 py-0.5 text-xs">
+                                      <span key={oi} className="inline-flex items-center bg-slate-100 border rounded px-2 py-0.5 text-xs text-slate-700">
                                         {opt}
-                                        <button type="button" onClick={() => {
-                                          const newOpts = (Array.isArray(f.options) ? f.options : []).filter((_, j) => j !== oi);
-                                          updateFormField(i, { options: newOpts });
-                                        }} className="text-red-400 hover:text-red-600">&times;</button>
                                       </span>
                                     ))}
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Input
-                                      className="flex-1 text-xs"
-                                      placeholder="เพิ่มรายการใหม่"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          const val = (e.target as HTMLInputElement).value.trim();
-                                          if (val) {
-                                            updateFormField(i, { options: [...(Array.isArray(f.options) ? f.options : []), val] });
-                                            (e.target as HTMLInputElement).value = '';
-                                          }
-                                        }
-                                      }}
-                                    />
-                                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={(e) => {
-                                      const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
-                                      const val = input?.value.trim();
-                                      if (val) {
-                                        updateFormField(i, { options: [...(Array.isArray(f.options) ? f.options : []), val] });
-                                        input.value = '';
-                                      }
-                                    }}>เพิ่ม</Button>
                                   </div>
                                 </div>
                               )}
@@ -1650,6 +1634,67 @@ Deadline: {deadline}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Dropdown Options */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div><CardTitle>ตัวเลือกดรอปดาวน์</CardTitle><CardDescription>จัดการรายการตัวเลือกดรอปดาวน์</CardDescription></div>
+                <Button size="sm" onClick={() => { setNewItemField('dropdown'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3 mb-3">
+                  <Input
+                    placeholder="ค้นหาตัวเลือก..."
+                    value={dropdownSearch}
+                    onChange={(e) => setDropdownSearch(e.target.value)}
+                    className="flex-1"
+                  />
+                  {selectedDropdowns.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => handleBulkDeleteList('dropdown', selectedDropdowns)}>
+                      <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedDropdowns.size} รายการ
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2 px-1 text-xs text-slate-500">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded"
+                    checked={selectedDropdowns.size > 0 && selectedDropdowns.size === (settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase())).length}
+                    onChange={(e) => {
+                      const visible = (settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase()));
+                      if (e.target.checked) setSelectedDropdowns(new Set(visible));
+                      else setSelectedDropdowns(new Set());
+                    }}
+                  />
+                  <span>เลือกทั้งหมด</span>
+                </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {(settings?.dropdownOptions || [])
+                    .filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
+                    .map((opt) => (
+                      <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded"
+                            checked={selectedDropdowns.has(opt)}
+                            onChange={() => setSelectedDropdowns(toggleInSet(selectedDropdowns, opt))}
+                          />
+                          <span className="text-sm">{opt}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('dropdown', (settings?.dropdownOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('dropdown', (settings?.dropdownOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  {(settings?.dropdownOptions || []).filter((opt) => !dropdownSearch || opt.toLowerCase().includes(dropdownSearch.toLowerCase())).length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -1739,12 +1784,12 @@ Deadline: {deadline}
       <Dialog open={isNewItemDialogOpen} onOpenChange={(open) => { setIsNewItemDialogOpen(open); if (!open) { setEditingItemIndex(null); setNewItemValue(''); } }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>{editingItemIndex !== null ? 'แก้ไข' : 'เพิ่ม'}{newItemField === 'position' ? 'ตำแหน่ง' : 'แผนก'}</DialogTitle>
+            <DialogTitle>{editingItemIndex !== null ? 'แก้ไข' : 'เพิ่ม'}{newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : 'ตัวเลือกดรอปดาวน์'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>ชื่อ</Label>
-              <Input value={newItemValue} onChange={(e) => setNewItemValue(e.target.value)} placeholder={`กรอกชื่อ${newItemField === 'position' ? 'ตำแหน่ง' : 'แผนก'}`} />
+              <Input value={newItemValue} onChange={(e) => setNewItemValue(e.target.value)} placeholder={`กรอกชื่อ${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : 'ตัวเลือก'}`} />
             </div>
           </div>
           <DialogFooter>

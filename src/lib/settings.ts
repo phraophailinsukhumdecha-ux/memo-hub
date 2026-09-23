@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS: GlobalSettings = {
   deadlineDays: 7,
   positionOptions: ['CEO', 'หัวหน้าแผนก', 'ซัพพลายเออร์', 'ลูกค้า', 'ร้านค้า'],
   departmentOptions: ['ไอที', 'บัญชี', 'เซล'],
+  dropdownOptions: [],
   updatedAt: new Date(),
   updatedBy: 'system',
 };
@@ -36,6 +37,7 @@ export async function getSettings(): Promise<GlobalSettings> {
     smtp: { ...DEFAULT_SETTINGS.smtp, ...(s.smtp || {}) },
     positionOptions: s.positionOptions || DEFAULT_SETTINGS.positionOptions,
     departmentOptions: s.departmentOptions || DEFAULT_SETTINGS.departmentOptions,
+    dropdownOptions: s.dropdownOptions || DEFAULT_SETTINGS.dropdownOptions,
   };
 }
 
@@ -58,6 +60,7 @@ export function subscribeToSettings(callback: (settings: GlobalSettings) => void
         smtp: { ...DEFAULT_SETTINGS.smtp, ...(raw.smtp || {}) },
         positionOptions: raw.positionOptions || DEFAULT_SETTINGS.positionOptions,
         departmentOptions: raw.departmentOptions || DEFAULT_SETTINGS.departmentOptions,
+        dropdownOptions: raw.dropdownOptions || DEFAULT_SETTINGS.dropdownOptions,
       });
     } else {
       callback(DEFAULT_SETTINGS);

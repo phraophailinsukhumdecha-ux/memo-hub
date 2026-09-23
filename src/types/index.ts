@@ -207,6 +207,7 @@ export interface GlobalSettings {
   deadlineDays: number;
   positionOptions: string[];
   departmentOptions: string[];
+  dropdownOptions?: string[];
   updatedAt?: Date;
   updatedBy?: string;
 }
