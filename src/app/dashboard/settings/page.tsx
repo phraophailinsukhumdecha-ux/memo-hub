@@ -55,6 +55,9 @@ export default function SettingsPage() {
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [saving, setSaving] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [positionSearch, setPositionSearch] = useState('');
+  const [departmentSearch, setDepartmentSearch] = useState('');
 
   // Template dialog (name + description only)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -1415,10 +1418,19 @@ Deadline: {deadline}
               <Button onClick={handleCreateUser}><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
             </CardHeader>
             <CardContent>
+              <Input
+                placeholder="ค้นหาชื่อผู้ใช้..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="mb-4 max-w-sm"
+              />
               <Table>
                 <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {users.map((u) => (
+                  {users
+                    .filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))
+                    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'th'))
+                    .map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.displayName}</TableCell>
                       <TableCell>{u.email}</TableCell>
@@ -1458,17 +1470,26 @@ Deadline: {deadline}
                 <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {(settings?.positionOptions || []).map((opt, i) => (
-                    <div key={i} className="flex items-center justify-between border rounded-md px-3 py-2">
-                      <span className="text-sm">{opt}</span>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('position', i)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('position', i)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Input
+                  placeholder="ค้นหาตำแหน่ง..."
+                  value={positionSearch}
+                  onChange={(e) => setPositionSearch(e.target.value)}
+                  className="mb-3"
+                />
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {(settings?.positionOptions || [])
+                    .filter((opt) => !positionSearch || opt.toLowerCase().includes(positionSearch.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
+                    .map((opt) => (
+                      <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <span className="text-sm">{opt}</span>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('position', (settings?.positionOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('position', (settings?.positionOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {(!settings?.positionOptions || settings.positionOptions.length === 0) && (
+                    ))}
+                  {(settings?.positionOptions || []).filter((opt) => !positionSearch || opt.toLowerCase().includes(positionSearch.toLowerCase())).length === 0 && (
                     <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
                   )}
                 </div>
@@ -1482,17 +1503,26 @@ Deadline: {deadline}
                 <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {(settings?.departmentOptions || []).map((opt, i) => (
-                    <div key={i} className="flex items-center justify-between border rounded-md px-3 py-2">
-                      <span className="text-sm">{opt}</span>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('department', i)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('department', i)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Input
+                  placeholder="ค้นหาแผนก..."
+                  value={departmentSearch}
+                  onChange={(e) => setDepartmentSearch(e.target.value)}
+                  className="mb-3"
+                />
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {(settings?.departmentOptions || [])
+                    .filter((opt) => !departmentSearch || opt.toLowerCase().includes(departmentSearch.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
+                    .map((opt) => (
+                      <div key={opt} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <span className="text-sm">{opt}</span>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditListItem('department', (settings?.departmentOptions || []).indexOf(opt))}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDeleteListItem('department', (settings?.departmentOptions || []).indexOf(opt))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {(!settings?.departmentOptions || settings.departmentOptions.length === 0) && (
+                    ))}
+                  {(settings?.departmentOptions || []).filter((opt) => !departmentSearch || opt.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
                     <p className="text-sm text-slate-500 text-center py-4">ยังไม่มีข้อมูล</p>
                   )}
                 </div>
