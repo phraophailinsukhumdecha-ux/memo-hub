@@ -26,7 +26,7 @@ import { resolveTypography } from '@/lib/typography';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isApproveUser, refreshUser } = useAuth();
   const router = useRouter();
   const [memos, setMemos] = useState<Memo[]>([]);
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
@@ -98,7 +98,8 @@ export default function HomePage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    refreshUser();
+  }, [refreshUser]);
 
   useEffect(() => {
     if (!user) return;
@@ -666,13 +667,15 @@ export default function HomePage() {
       </div>
 
       <div className="p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={isApproveUser ? activeTab : 'mine'} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
-            <TabsTrigger value="pending" className="gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              รายการทั้งหมด
-              <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
-            </TabsTrigger>
+            {isApproveUser && (
+              <TabsTrigger value="pending" className="gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                รายการทั้งหมด
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="mine" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" />
               Memo ของฉัน
@@ -680,7 +683,8 @@ export default function HomePage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending">
+          {isApproveUser && (
+            <TabsContent value="pending">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base">รายการทั้งหมด</CardTitle>
@@ -709,7 +713,7 @@ export default function HomePage() {
                 )}</CardContent>
               </Card>
             </TabsContent>
-
+          )}
 
            <TabsContent value="mine">
              <Card>

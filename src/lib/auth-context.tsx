@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { User } from '@/types';
 import { login as apiLogin, getStoredUser, storeUser, clearStoredUser } from '@/lib/auth-service';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +13,7 @@ interface AuthContextType {
   logout: () => void;
   isAdmin: boolean;
   isApproveUser: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +42,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearStoredUser();
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const current = getStoredUser();
+    if (!current) return;
+    try {
+      const snap = await getDoc(doc(db, 'users', current.id));
+      if (!snap.exists()) return;
+      const data = snap.data() as Record<string, unknown>;
+      delete data.password;
+      const fresh = { id: snap.id, ...data } as User;
+      setUser(fresh);
+      storeUser(fresh);
+    } catch {
+      /* keep cached user */
+    }
+  }, []);
+
   const isAdmin = user?.role === 'admin';
   const isApproveUser = user?.isApprover === true || user?.role === 'admin';
 
@@ -51,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         isAdmin,
         isApproveUser,
+        refreshUser,
       }}
     >
       {children}
