@@ -41,7 +41,7 @@ import { subscribeToSyslogs } from '@/lib/syslogs';
 import { logSettingUpdated } from '@/lib/event-logs';
 import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig } from '@/types';
 import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
-import { ImportSheetDialog } from '@/components/import-sheet-dialog';
+import { ImportSheetDialog, ImportUserRow } from '@/components/import-sheet-dialog';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoTypography } from '@/types';
 
@@ -112,7 +112,7 @@ export default function SettingsPage() {
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [newItemField, setNewItemField] = useState<'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs'>('position');
   const [newItemValue, setNewItemValue] = useState('');
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isUserImportDialogOpen, setIsUserImportDialogOpen] = useState(false);
 
   useEffect(() => { setTitle('การตั้งค่า'); }, [setTitle]);
 
@@ -679,42 +679,49 @@ export default function SettingsPage() {
     } catch { /* ignore */ }
   };
 
-  const openImportDialog = (field: 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs') => {
-    setNewItemField(field);
-    setIsImportDialogOpen(true);
-  };
-
-  const handleImportList = async (values: string[]) => {
-    if (!settings || values.length === 0) return;
-    const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
-    const field = fieldMap[newItemField];
-    const currentList = settings[field] || [];
-    const seen = new Set(currentList);
-    const merged = [...currentList];
-    for (const v of values) {
-      if (!seen.has(v)) {
-        seen.add(v);
-        merged.push(v);
-      }
-    }
-    const updated = { ...settings, [field]: merged };
-    await saveSettings(updated, user?.id || 'system');
-    setSettings(updated);
-    if (newItemField !== 'position' && newItemField !== 'department') {
-      await syncOptionsToTemplate(newItemField, merged);
-    }
-  };
-
-  const handleSaveSheetConfig = async (cfg: SheetImportConfig) => {
+  const handleSaveUserSheetConfig = async (cfg: SheetImportConfig) => {
     if (!settings) return;
     const updated = {
       ...settings,
       sheetImportConfigs: {
         ...(settings.sheetImportConfigs || {}),
-        [newItemField]: cfg,
+        users: cfg,
       },
     };
     await saveSettings(updated, user?.id || 'system');
+    setSettings(updated);
+  };
+
+  const handleImportUsers = async (rows: ImportUserRow[]) => {
+    if (!settings || rows.length === 0) return;
+    for (const r of rows) {
+      await createUser({
+        username: r.username,
+        password: r.password,
+        email: r.email,
+        displayName: r.displayName,
+        role: 'user',
+        position: r.position,
+        department: r.department,
+        isApprover: false,
+      });
+    }
+    const positions = [...(settings.positionOptions || [])];
+    const posSet = new Set(positions);
+    const departments = [...(settings.departmentOptions || [])];
+    const deptSet = new Set(departments);
+    for (const r of rows) {
+      if (r.position && !posSet.has(r.position)) {
+        posSet.add(r.position);
+        positions.push(r.position);
+      }
+      if (r.department && !deptSet.has(r.department)) {
+        deptSet.add(r.department);
+        departments.push(r.department);
+      }
+    }
+    const updated = { ...settings, positionOptions: positions, departmentOptions: departments };
+    await saveSettings({ positionOptions: positions, departmentOptions: departments }, user?.id || 'system');
     setSettings(updated);
   };
 
@@ -1534,7 +1541,10 @@ Deadline: {deadline}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div><CardTitle>จัดการผู้ใช้</CardTitle><CardDescription>เพิ่ม/แก้ไข/ลบ ผู้ใช้งานในระบบ</CardDescription></div>
-              <Button onClick={handleCreateUser}><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsUserImportDialogOpen(true)}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าจากชีท</Button>
+                <Button onClick={handleCreateUser}><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3 mb-4">
@@ -1621,10 +1631,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>ตำแหน่ง</CardTitle><CardDescription>จัดการรายการตำแหน่ง</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openImportDialog('position')}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าชีท</Button>
-                  <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
-                </div>
+                <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1685,10 +1692,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>แผนก</CardTitle><CardDescription>จัดการรายการแผนก</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openImportDialog('department')}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าชีท</Button>
-                  <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
-                </div>
+                <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1749,10 +1753,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>Client Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openImportDialog('clientSpecific')}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าชีท</Button>
-                  <Button size="sm" onClick={() => { setNewItemField('clientSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
-                </div>
+                <Button size="sm" onClick={() => { setNewItemField('clientSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1799,10 +1800,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>Vendor Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openImportDialog('vendorSpecific')}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าชีท</Button>
-                  <Button size="sm" onClick={() => { setNewItemField('vendorSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
-                </div>
+                <Button size="sm" onClick={() => { setNewItemField('vendorSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1849,10 +1847,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>DF Internal Affairs.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openImportDialog('dfInternalAffairs')}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าชีท</Button>
-                  <Button size="sm" onClick={() => { setNewItemField('dfInternalAffairs'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
-                </div>
+                <Button size="sm" onClick={() => { setNewItemField('dfInternalAffairs'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1979,21 +1974,21 @@ Deadline: {deadline}
         </DialogContent>
       </Dialog>
 
-      {/* Import from Google Sheet Dialog */}
-      <ImportSheetDialog
-        key={`${newItemField}:${settings?.sheetImportConfigs?.[newItemField]?.sheetId || 'none'}`}
-        open={isImportDialogOpen}
-        onOpenChange={setIsImportDialogOpen}
-        title="เชื่อมต่อ Google Sheet"
-        subtitle={`อัปเดต${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : newItemField === 'clientSpecific' ? ' Client Specific' : newItemField === 'vendorSpecific' ? ' Vendor Specific' : ' DF Internal Affairs'}โดยตรงจาก Google Sheet ของคุณ`}
-        config={settings?.sheetImportConfigs?.[newItemField]}
-        existing={(() => {
-          const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
-          return settings ? (settings[fieldMap[newItemField]] || []) : [];
-        })()}
-        onConfigSave={handleSaveSheetConfig}
-        onImport={handleImportList}
-      />
+      {/* Import users from Google Sheet Dialog */}
+      {isUserImportDialogOpen && (
+        <ImportSheetDialog
+          open={isUserImportDialogOpen}
+          onOpenChange={setIsUserImportDialogOpen}
+          title="เชื่อมต่อ Google Sheet"
+          subtitle="นำเข้ารายชื่อผู้ใช้ — ตำแหน่ง/แผนกจะเข้าดรอปดาวข้อมูลหลักอัตโนมัติ"
+          config={settings?.sheetImportConfigs?.users}
+          existingUsernames={users.map((u) => u.username)}
+          existingPositions={settings?.positionOptions || []}
+          existingDepartments={settings?.departmentOptions || []}
+          onConfigSave={handleSaveUserSheetConfig}
+          onImport={handleImportUsers}
+        />
+      )}
 
       {/* Add/Edit List Item Dialog */}
       <Dialog open={isNewItemDialogOpen} onOpenChange={(open) => { setIsNewItemDialogOpen(open); if (!open) { setEditingItemIndex(null); setNewItemValue(''); } }}>

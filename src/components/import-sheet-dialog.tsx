@@ -15,15 +15,26 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Table2, CheckCircle } from 'lucide-react';
 import { SheetImportConfig } from '@/types';
 
+export interface ImportUserRow {
+  username: string;
+  displayName: string;
+  position: string;
+  department: string;
+  password: string;
+  email: string;
+}
+
 interface ImportSheetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
   subtitle?: string;
   config?: SheetImportConfig;
-  existing?: string[];
+  existingUsernames?: string[];
+  existingPositions?: string[];
+  existingDepartments?: string[];
   onConfigSave: (cfg: SheetImportConfig) => Promise<void>;
-  onImport: (values: string[]) => void | Promise<void>;
+  onImport: (users: ImportUserRow[]) => Promise<void>;
 }
 
 function extractSheetId(input: string): string | null {
@@ -35,41 +46,17 @@ function extractSheetId(input: string): string | null {
   return null;
 }
 
-function colLetterToIndex(letters: string): number {
-  let n = 0;
-  for (const ch of letters.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
-  return n - 1;
-}
-
-function parseColumnRange(range: string): number[] | null {
-  const r = range.trim().toUpperCase().replace(/\s+/g, '');
-  if (!r) return [0];
-  if (/^[A-Z]+$/.test(r)) return [colLetterToIndex(r)];
-  const m = r.match(/^([A-Z]+)[-:]([A-Z]+)$/);
-  if (m) {
-    const a = colLetterToIndex(m[1]);
-    const b = colLetterToIndex(m[2]);
-    const lo = Math.min(a, b);
-    const hi = Math.max(a, b);
-    if (hi - lo > 50) return null;
-    return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
-  }
-  return null;
-}
-
-function extractValues(rows: string[][], cols: number[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const row of rows) {
-    for (const ci of cols) {
-      const v = (row[ci] || '').trim();
-      if (v && !seen.has(v)) {
-        seen.add(v);
-        out.push(v);
-      }
-    }
-  }
-  return out;
+function mapHeaders(headers: string[]) {
+  const norm = headers.map((h) => (h || '').toLowerCase().replace(/\s+/g, ''));
+  const find = (pred: (h: string) => boolean) => norm.findIndex(pred);
+  return {
+    username: find((h) => h.includes('รหัสพนักงาน') || h.includes('username')),
+    displayName: find((h) => h.includes('ชื่อ') && !h.includes('ผู้ใช้')),
+    position: find((h) => h.includes('ตำแหน่ง')),
+    department: find((h) => h.includes('แผนก')),
+    password: find((h) => h.includes('เบอร์') || h.includes('โทร') || h.includes('password')),
+    email: find((h) => h.includes('เมล')),
+  };
 }
 
 export function ImportSheetDialog({
@@ -78,24 +65,20 @@ export function ImportSheetDialog({
   title,
   subtitle,
   config,
-  existing = [],
+  existingUsernames = [],
+  existingPositions = [],
+  existingDepartments = [],
   onConfigSave,
   onImport,
 }: ImportSheetDialogProps) {
   const [sheetId, setSheetId] = useState(config?.sheetId || '');
   const [gid, setGid] = useState(config?.gid || '');
-  const [columnRange, setColumnRange] = useState(config?.columnRange || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleOpenChange = (o: boolean) => {
     onOpenChange(o);
-    if (!o) {
-      setError('');
-      setSuccess('');
-      setLoading(false);
-    }
   };
 
   const handleSave = async () => {
@@ -109,20 +92,14 @@ export function ImportSheetDialog({
       return;
     }
     const safeGid = gid.trim() || '0';
-    if (!/^\d*$/.test(safeGid)) {
+    if (!/^\d+$/.test(safeGid)) {
       setError('Sheet GID ต้องเป็นตัวเลข');
-      return;
-    }
-    const range = columnRange.trim() || 'A';
-    const cols = parseColumnRange(range);
-    if (!cols) {
-      setError('รูปแบบช่องคอลัมน์ไม่ถูกต้อง (เช่น A หรือ A-I)');
       return;
     }
 
     setLoading(true);
     try {
-      const cfg: SheetImportConfig = { sheetId: id, gid: safeGid || '0', columnRange: range };
+      const cfg: SheetImportConfig = { sheetId: id, gid: safeGid, columnRange: '' };
       await onConfigSave(cfg);
 
       const res = await fetch('/api/import-sheet', {
@@ -136,28 +113,88 @@ export function ImportSheetDialog({
         return;
       }
 
-      const values = extractValues(json.rows || [], cols);
-      if (values.length === 0) {
-        setError('ไม่พบข้อมูลในคอลัมน์ที่ระบุ');
+      const headers: string[] = json.headers || [];
+      const rows: string[][] = json.rows || [];
+      const cols = mapHeaders(headers);
+      if (cols.username < 0) {
+        setError('ไม่พบคอลัมน์ "รหัสพนักงาน" ในชีท');
+        return;
+      }
+      if (cols.password < 0) {
+        setError('ไม่พบคอลัมน์ "เบอร์" (ใช้เป็นรหัสผ่าน) ในชีท');
+        return;
+      }
+      if (cols.displayName < 0) {
+        setError('ไม่พบคอลัมน์ "ชื่อ - นามสกุล" ในชีท');
         return;
       }
 
-      const existingSet = new Set(existing);
-      const newValues = values.filter((v) => !existingSet.has(v));
-      const dup = values.length - newValues.length;
+      const existingSet = new Set(existingUsernames);
+      const seenInSheet = new Set<string>();
+      const newUsers: ImportUserRow[] = [];
+      let skipped = 0;
+      let invalid = 0;
 
-      if (newValues.length === 0) {
-        setSuccess(`บันทึกการตั้งค่าแล้ว — ไม่มีรายการใหม่ (ซ้ำ ${dup} รายการ)`);
+      for (const row of rows) {
+        const username = (row[cols.username] || '').trim();
+        const password = (row[cols.password] || '').trim();
+        if (!username || !password) {
+          invalid++;
+          continue;
+        }
+        if (existingSet.has(username) || seenInSheet.has(username)) {
+          skipped++;
+          continue;
+        }
+        seenInSheet.add(username);
+        newUsers.push({
+          username,
+          password,
+          displayName: (row[cols.displayName] || '').trim() || username,
+          position: cols.position >= 0 ? (row[cols.position] || '').trim() : '',
+          department: cols.department >= 0 ? (row[cols.department] || '').trim() : '',
+          email: cols.email >= 0 ? (row[cols.email] || '').trim() : '',
+        });
+      }
+
+      if (newUsers.length === 0) {
+        setSuccess(`บันทึกการตั้งค่าแล้ว — ไม่มีผู้ใช้ใหม่ (ข้าม ${skipped} คน${invalid ? `, ข้อมูลไม่ครบ ${invalid} คน` : ''})`);
         return;
       }
 
-      if (!confirm(`พบข้อมูล ${values.length} รายการ (ใหม่ ${newValues.length} / ซ้ำ ${dup})\nต้องการนำเข้าใช่หรือไม่?`)) {
+      const posSet = new Set(existingPositions);
+      let newPos = 0;
+      for (const u of newUsers) {
+        if (u.position && !posSet.has(u.position)) {
+          posSet.add(u.position);
+          newPos++;
+        }
+      }
+      const deptSet = new Set(existingDepartments);
+      let newDept = 0;
+      for (const u of newUsers) {
+        if (u.department && !deptSet.has(u.department)) {
+          deptSet.add(u.department);
+          newDept++;
+        }
+      }
+
+      const lines = [
+        `พบผู้ใช้ ${rows.length} คน — ใหม่ ${newUsers.length} / ข้าม ${skipped}${invalid ? ` / ข้อมูลไม่ครบ ${invalid}` : ''}`,
+        `ตำแหน่งใหม่ในดรอปดาว +${newPos}, แผนกใหม่ +${newDept}`,
+        '',
+        'ผู้นำเข้าจะยังไม่มีสิทธิ์อนุมัติ (เปิดภายหลังได้ในหน้าผู้ใช้)',
+        'ต้องการนำเข้าใช่หรือไม่?',
+      ];
+      if (!confirm(lines.join('\n'))) {
         setSuccess('บันทึกการตั้งค่าแล้ว ยังไม่นำเข้าข้อมูล');
         return;
       }
 
-      await onImport(newValues);
-      setSuccess(`นำเข้าสำเร็จ ${newValues.length} รายการ (ข้าม ${dup} รายการซ้ำ)`);
+      await onImport(newUsers);
+      setSuccess(
+        `นำเข้าสำเร็จ ${newUsers.length} คน (ข้าม ${skipped}) — เพิ่มตำแหน่ง +${newPos}, แผนก +${newDept}`
+      );
     } catch {
       setError('บันทึกการตั้งค่า/นำเข้าไม่สำเร็จ');
     } finally {
@@ -174,7 +211,7 @@ export function ImportSheetDialog({
             {title || 'เชื่อมต่อ Google Sheet'}
           </DialogTitle>
           <DialogDescription>
-            {subtitle || 'อัปเดตรายการข้อมูลโดยตรงจาก Google Sheet ของคุณ'}
+            {subtitle || 'นำเข้ารายชื่อผู้ใช้จาก Google Sheet — ตำแหน่ง/แผนกจะเข้าดรอปดาวข้อมูลหลักอัตโนมัติ'}
           </DialogDescription>
         </DialogHeader>
 
@@ -200,15 +237,10 @@ export function ImportSheetDialog({
             <p className="text-xs text-slate-500">คัดลอกจาก URL ของชีท (เช่น #gid=0). ถ้าไม่ระบุจะใช้ค่าตั้งต้น.</p>
           </div>
 
-          <div className="grid gap-2">
-            <Label>ช่องคอลัมน์</Label>
-            <Input
-              value={columnRange}
-              onChange={(e) => { setColumnRange(e.target.value); setError(''); setSuccess(''); }}
-              placeholder="เช่น A-I"
-              disabled={loading}
-            />
-            <p className="text-xs text-slate-500">ระบุคอลัมน์ที่ต้องการ (เช่น A หรือ A-I). ถ้าไม่ระบุจะใช้คอลัมน์ A.</p>
+          <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 space-y-1">
+            <p className="font-medium text-slate-700">คอลัมน์ที่รองรับ (แถวแรกเป็นหัวตาราง)</p>
+            <p>รหัสพนักงาน → ชื่อผู้ใช้ | ชื่อ - นามสกุล | ตำแหน่ง | แผนก | เบอร์ → รหัสผ่าน | อีเมล</p>
+            <p>แถวที่รหัสพนักงานซ้ำกับในระบบหรือซ้ำกันเองในชีทจะถูกข้ามอัตโนมัติ</p>
           </div>
 
           {error && (

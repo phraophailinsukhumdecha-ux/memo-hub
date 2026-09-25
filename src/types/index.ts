@@ -218,7 +218,7 @@ export interface GlobalSettings {
   clientSpecificOptions?: string[];
   vendorSpecificOptions?: string[];
   dfInternalAffairsOptions?: string[];
-  sheetImportConfigs?: Partial<Record<MasterListField, SheetImportConfig>>;
+  sheetImportConfigs?: Partial<Record<MasterListField | 'users', SheetImportConfig>>;
   updatedAt?: Date;
   updatedBy?: string;
 }
