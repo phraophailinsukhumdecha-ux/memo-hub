@@ -439,19 +439,19 @@ export default function HomePage() {
       const fields = config.fields || [];
       const value = (sectionFormData[formRowField.id] as Record<string, string>) || {};
       for (const f of fields) {
+        // CLIENT/VENDOR SPECIFIC are validated together below (at least one)
+        if (f.name === 'clientSpecific' || f.name === 'vendorSpecific') continue;
         if (f.required && !value[f.name]) {
           alert(`กรุณากรอก "${f.label}" (จำเป็น)`);
           return;
         }
       }
-    }
 
-    // Validate CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required (both allowed)
-    const clientVal = (sectionFormData.form_row_1 as Record<string, string>)?.clientSpecific || '';
-    const vendorVal = (sectionFormData.form_row_1 as Record<string, string>)?.vendorSpecific || '';
-    if (!clientVal && !vendorVal) {
-      alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างน้อย 1 อัน');
-      return;
+      // Validate CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required (both allowed)
+      if (!value.clientSpecific && !value.vendorSpecific) {
+        alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างน้อย 1 อัน');
+        return;
+      }
     }
 
     setCreating(true);
