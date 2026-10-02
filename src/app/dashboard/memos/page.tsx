@@ -395,11 +395,22 @@ export default function MemosPage() {
                     <TableCell className="whitespace-nowrap">{memo.status === 'draft' ? '—' : <DateTimeCell date={memo.deadlineAt} />}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
-                        {memo.status === 'draft' && memo.ownerId === user?.id && (
+                        {memo.status === 'draft' && memo.ownerId === user?.id ? (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => openDraft(memo)}
+                            title="แก้ไข"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="invisible pointer-events-none"
+                            tabIndex={-1}
+                            aria-hidden
                             title="แก้ไข"
                           >
                             <Pencil className="h-4 w-4" />
