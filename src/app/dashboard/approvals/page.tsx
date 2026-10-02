@@ -64,6 +64,21 @@ export default function ApprovalsPage() {
     };
   }, [user]);
 
+  // Show only memos where the current admin is selected as checker/approver
+  // (appears in an approval-grid column other than col_0, which is the owner's slot)
+  const myPendingMemos = memos.filter((m) => {
+    if (!user) return false;
+    return Object.values(m.formData || {}).some((v) => {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+      return Object.entries(v as Record<string, unknown>).some(([colKey, col]) => {
+        if (!colKey.startsWith('col_') || colKey === 'col_0') return false;
+        if (!col || typeof col !== 'object') return false;
+        const c = col as { userId?: string; name?: string };
+        return c.userId === user.id || (!!c.name && c.name === user.displayName);
+      });
+    });
+  });
+
   const handleViewDetail = (memo: Memo) => {
     setSelectedMemo(memo);
     setIsDetailDialogOpen(true);
@@ -133,14 +148,14 @@ export default function ApprovalsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {memos.length === 0 ? (
+              {myPendingMemos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-slate-600 py-8">
-                    ไม่มี Memo ที่รอการอนุมัติ
+                    ไม่มี Memo ที่มอบหมายให้คุณตรวจสอบหรืออนุมัติ
                   </TableCell>
                 </TableRow>
               ) : (
-                memos.map((memo) => (
+                myPendingMemos.map((memo) => (
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
