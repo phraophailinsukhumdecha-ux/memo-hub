@@ -247,13 +247,13 @@ export default function SettingsPage() {
 
   // Form field editing state
   const [editingFieldTemplateId, setEditingFieldTemplateId] = useState<string | null>(null);
-  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>>([]);
+  const [editingFormFields, setEditingFormFields] = useState<Array<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; description?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>>([]);
   const [editingFormRowTypo, setEditingFormRowTypo] = useState<MemoTypography>({});
   const [fieldSaving, setFieldSaving] = useState(false);
 
   const handleEditFormFields = (template: MemoTemplate) => {
     const formRow = (template.fields || []).find((f) => f.type === 'form_row');
-    const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] | string; placeholder?: string }> };
+    const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[] | string; placeholder?: string; description?: string }> };
     const rawFields = config.fields || [];
     const normalized = rawFields.map((f) => ({
       ...f,
@@ -297,7 +297,7 @@ export default function SettingsPage() {
     setEditingFormFields([...editingFormFields, { name: `field_${Date.now()}`, label: '', type: 'text', options: [] }]);
   };
 
-  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>) => {
+  const updateFormField = (index: number, updates: Partial<{ name: string; label: string; type: string; options?: string[]; placeholder?: string; description?: string; required?: boolean; width?: 'full' | 'half'; inputType?: 'text' | 'dropdown' }>) => {
     const updated = [...editingFormFields];
     updated[index] = { ...updated[index], ...updates };
     setEditingFormFields(updated);
@@ -1363,7 +1363,8 @@ Deadline: {deadline}
                       {editingFieldTemplateId === t.id ? (
                         <div className="space-y-2">
                           {editingFormFields.map((f, i) => (
-                            <div key={i} className="flex items-center gap-2 p-3 border rounded-lg bg-white">
+                            <div key={i} className="p-3 border rounded-lg bg-white space-y-2">
+                              <div className="flex items-center gap-2">
                               <div className="flex items-center gap-1">
                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldUp(i)} disabled={i === 0}>
                                   <ChevronUp className="h-3 w-3" />
@@ -1437,6 +1438,13 @@ Deadline: {deadline}
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => removeFormField(i)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                              </div>
+                              <Input
+                                className="w-full"
+                                placeholder="คำอธิบาย (แสดงตอนสร้าง Memo ฝั่งซ้าย)"
+                                value={f.description || ''}
+                                onChange={(e) => updateFormField(i, { description: e.target.value })}
+                              />
                             </div>
                           ))}
                           <Button variant="outline" size="sm" onClick={addFormField}>
@@ -1452,13 +1460,14 @@ Deadline: {deadline}
                         <div className="space-y-1">
                           {(() => {
                             const formRow = (t.fields || []).find((f) => f.type === 'form_row');
-                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[]; required?: boolean }> };
+                            const config = (formRow?.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; type: string; options?: string[]; required?: boolean; description?: string }> };
                             const fields = config.fields || [];
                             if (fields.length === 0) {
                               return <p className="text-xs text-slate-500 text-center py-2">ยังไม่มีช่องกรอกข้อมูล — กด &quot;แก้ไข&quot; เพื่อเพิ่ม</p>;
                             }
                             return fields.map((f, i) => (
-                              <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded border text-sm">
+                              <div key={i} className="p-2 bg-slate-50 rounded border text-sm space-y-1">
+                                <div className="flex items-center gap-3">
                                 <span className="font-medium text-slate-700 w-40">
                                   {f.label || <span className="italic text-slate-400">ไม่มี label</span>}
                                   {f.required && <span className="text-red-500 ml-1">*</span>}
@@ -1471,6 +1480,10 @@ Deadline: {deadline}
                                   <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">บังคับ</span>
                                 )}
                                 <span className="text-xs text-slate-400 ml-auto">key: {f.name}</span>
+                                </div>
+                                {f.description && (
+                                  <p className="text-xs text-slate-400 italic">{f.description}</p>
+                                )}
                               </div>
                             ));
                           })()}

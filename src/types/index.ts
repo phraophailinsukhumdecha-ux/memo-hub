@@ -107,6 +107,7 @@ export interface FormRowConfig {
     label: string;
     type: string;
     placeholder?: string;
+    description?: string;
     width?: 'full' | 'half';
     requiredByType?: string[];
     options?: string[];

@@ -4,11 +4,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
+export type SearchableOption = string | { value: string; label: string };
+
 interface SearchableSelectProps {
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: SearchableOption[];
   placeholder?: string;
+}
+
+function normalize(options: SearchableOption[]): Array<{ value: string; label: string }> {
+  return options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
 }
 
 export function SearchableSelect({ value, onChange, options, placeholder = 'เลือก' }: SearchableSelectProps) {
@@ -27,10 +33,12 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
     }
   }, [open]);
 
-  const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+  const normalized = normalize(options);
+  const filtered = normalized.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()));
+  const displayLabel = value ? normalized.find((o) => o.value === value)?.label ?? value : '';
 
-  const handleSelect = (opt: string) => {
-    onChange(opt === value ? '' : opt);
+  const handleSelect = (opt: { value: string }) => {
+    onChange(opt.value === value ? '' : opt.value);
     setOpen(false);
     setSearch('');
   };
@@ -42,7 +50,7 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between border border-input bg-transparent px-3 py-2 text-sm text-slate-900 rounded-md hover:bg-accent hover:text-accent-foreground"
       >
-        <span className={value ? 'text-slate-900' : 'text-slate-500'}>{value || placeholder}</span>
+        <span className={value ? 'text-slate-900' : 'text-slate-500'}>{displayLabel || placeholder}</span>
         <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
       {open && (
@@ -71,12 +79,12 @@ export function SearchableSelect({ value, onChange, options, placeholder = 'เ�
               )}
               {filtered.map((opt) => (
                 <button
-                  key={opt}
+                  key={opt.value}
                   type="button"
                   onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 ${opt === value ? 'bg-blue-50 font-medium' : ''}`}
+                  className={`w-full text-left px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 ${opt.value === value ? 'bg-blue-50 font-medium' : ''}`}
                 >
-                  {opt}
+                  {opt.label}
                 </button>
               ))}
             </div>

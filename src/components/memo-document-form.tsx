@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ApprovalGrid, SectionRenderer } from '@/components/memo-sections';
 import { MemoTemplate, User, Group, ApprovalGridConfig } from '@/types';
 import { Mail, Save, X } from 'lucide-react';
@@ -94,7 +94,7 @@ export function MemoDocumentForm({
 
     switch (field.type) {
       case 'form_row': {
-        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; options?: string[]; required?: boolean }>) || [];
+        const fields = (config?.fields as Array<{ name: string; label: string; type: string; placeholder?: string; description?: string; options?: string[]; required?: boolean }>) || [];
         const value = (formData[field.id] as Record<string, string>) || {};
         const checkboxField = selectedTemplate.fields.find((f) => f.type === 'checkbox_group');
         const checkboxConfig = checkboxField ? (checkboxField.fieldConfig || {}) as Record<string, unknown> : null;
@@ -110,6 +110,7 @@ export function MemoDocumentForm({
                     {f.label}
                     {(f.required || f.name === 'clientSpecific' || f.name === 'vendorSpecific') && <span className="text-red-500 ml-1">*</span>}
                   </Label>
+                  {f.description && <p className="text-xs text-slate-500 mt-0.5">{f.description}</p>}
                   {f.type === 'date' ? (
                     <Input
                       type="date"
@@ -132,19 +133,12 @@ export function MemoDocumentForm({
                       return (
                         <div className="flex items-center gap-1">
                           <div className="flex-1 min-w-0">
-                            <Select
+                            <SearchableSelect
                               value={currentVal}
-                              onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="เลือก" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {((f as Record<string, unknown>).options as string[] || []).map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              onChange={(val) => onChange(field.id, { ...value, [f.name]: val })}
+                              options={(f as Record<string, unknown>).options as string[] || []}
+                              placeholder="เลือก"
+                            />
                           </div>
                           {isExclusive && currentVal && (
                             <button
@@ -161,16 +155,12 @@ export function MemoDocumentForm({
                     })()
                     )
                   ) : f.type === 'user_dropdown' ? (
-                    <Select value={value[f.name] || ''} onValueChange={(val) => onChange(field.id, { ...value, [f.name]: val })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="เลือกผู้อนุมัติ" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={value[f.name] || ''}
+                      onChange={(val) => onChange(field.id, { ...value, [f.name]: val })}
+                      options={users.map((u) => ({ value: u.id, label: u.displayName }))}
+                      placeholder="เลือกผู้อนุมัติ"
+                    />
                   ) : f.type === 'auto_from' ? (
                     <Input value={ownerUser?.displayName || ''} disabled className="bg-slate-50" />
                   ) : f.type === 'auto_dept' ? (
@@ -194,26 +184,22 @@ export function MemoDocumentForm({
                           });
                         })()}
                       </div>
-                      <Select onValueChange={(val) => {
-                        const raw = value[f.name];
-                        const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
-                        if (!selected.includes(val)) {
-                          onChange(field.id, { ...value, [f.name]: [...selected, val] });
-                        }
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={f.name === 'auditor' ? 'เลือกผู้ Checked by' : f.name === 'attnTo' ? 'เลือกผู้อนุมัติ' : 'เลือกผู้รับสำเนา'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(() => {
-                            const raw = value[f.name];
-                            const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
-                            return users.filter((u) => !selected.includes(u.id)).map((u) => (
-                              <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
-                            ));
-                          })()}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value=""
+                        onChange={(val) => {
+                          const raw = value[f.name];
+                          const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
+                          if (val && !selected.includes(val)) {
+                            onChange(field.id, { ...value, [f.name]: [...selected, val] });
+                          }
+                        }}
+                        options={(() => {
+                          const raw = value[f.name];
+                          const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
+                          return users.filter((u) => !selected.includes(u.id)).map((u) => ({ value: u.id, label: u.displayName }));
+                        })()}
+                        placeholder={f.name === 'auditor' ? 'เลือกผู้ Checked by' : f.name === 'attnTo' ? 'เลือกผู้อนุมัติ' : 'เลือกผู้รับสำเนา'}
+                      />
                     </div>
                   ) : (
                     <Input
@@ -277,16 +263,7 @@ export function MemoDocumentForm({
         return (
           <div key={field.id} className="space-y-1">
             <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
-            <Select value={value} onValueChange={(val) => onChange(field.id, val)}>
-              <SelectTrigger>
-                <SelectValue placeholder={placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect value={value} onChange={(val) => onChange(field.id, val)} options={options} placeholder={placeholder} />
           </div>
         );
       }
