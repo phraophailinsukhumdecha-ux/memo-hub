@@ -27,13 +27,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Download, Printer, XCircle, X, Pencil } from 'lucide-react';
+import { Plus, Search, Printer, X, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
-import { subscribeToMemos, createMemo, updateMemoDraft, cancelMemo } from '@/lib/memos';
+import { subscribeToMemos, createMemo, updateMemoDraft, deleteMemo } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
-import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
+import { printMemo } from '@/lib/memo-pdf';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
@@ -53,7 +53,6 @@ export default function MemosPage() {
   const [creating, setCreating] = useState(false);
   const [creatingAction, setCreatingAction] = useState<'publish' | 'draft'>('publish');
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -300,20 +299,13 @@ export default function MemosPage() {
     setSectionFormData((prev) => ({ ...prev, [fieldId]: value }));
   };
 
-  const handleCancelMemo = async (memoId: string) => {
-    if (confirm('คุณต้องการยกเลิก Memo นี้ใช่หรือไม่?')) {
-      await cancelMemo(memoId);
-    }
-  };
-
-  const handleDownloadPdf = async (memo: Memo) => {
-    setDownloadingId(memo.id);
+  const handleDeleteMemo = async (memoId: string) => {
+    if (!confirm('คุณต้องการลบ Memo นี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้')) return;
     try {
-      const tpl = templates.find((t) => t.id === memo.templateId);
-      const ownerUserData = allUsers.find((u) => u.id === memo.ownerId) || null;
-      await downloadMemoPdf(memo, tpl, undefined, ownerUserData, allUsers, []);
-    } finally {
-      setDownloadingId(null);
+      await deleteMemo(memoId);
+    } catch (e) {
+      console.error('Error deleting memo:', e);
+      alert('ไม่สามารถลบ Memo ได้');
     }
   };
 
@@ -416,15 +408,6 @@ export default function MemosPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDownloadPdf(memo)}
-                          disabled={downloadingId === memo.id}
-                          title="ดาวน์โหลด PDF"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
                           onClick={() => handlePrint(memo)}
                           title="พิมพ์"
                         >
@@ -436,10 +419,10 @@ export default function MemosPage() {
                             variant="ghost"
                             size="icon"
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => handleCancelMemo(memo.id)}
-                            title="ยกเลิก"
+                            onClick={() => handleDeleteMemo(memo.id)}
+                            title="ลบ"
                           >
-                            <XCircle className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
