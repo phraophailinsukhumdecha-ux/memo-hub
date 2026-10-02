@@ -335,13 +335,13 @@ export function MemoDocumentForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-[1400px] h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="shrink-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">สร้าง Memo ใหม่</h2>
           <Button variant="ghost" size="icon" onClick={onCancel}>
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-slate-900" />
           </Button>
         </div>
 
