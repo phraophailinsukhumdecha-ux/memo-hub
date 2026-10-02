@@ -413,18 +413,15 @@ export default function MemosPage() {
                         >
                           <Printer className="h-4 w-4" />
                         </Button>
-                        {(memo.status === 'new' || memo.status === 'waiting') &&
-                          memo.ownerId === user?.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteMemo(memo.id)}
-                            title="ลบ"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteMemo(memo.id)}
+                          title="ลบ"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
