@@ -15,9 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle } from 'lucide-react';
+import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, deleteMemos } from '@/lib/memos';
+import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
@@ -48,6 +48,8 @@ export default function HomePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
   const [creating, setCreating] = useState(false);
+  const [creatingAction, setCreatingAction] = useState<'publish' | 'draft'>('publish');
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [approverFilter, setApproverFilter] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -186,6 +188,7 @@ export default function HomePage() {
   const pendingMemos = useMemo(() => {
     if (!user) return [];
     return memos.filter((m) => {
+      if (m.status === 'draft') return false;
       if (m.status === 'approved' || m.status === 'rejected' || m.status === 'cancel') return false;
       if (m.ownerId === user.id) return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
@@ -197,6 +200,7 @@ export default function HomePage() {
   const approverMemos = useMemo(() => {
     if (!user) return [];
     return memos.filter((m) => {
+      if (m.status === 'draft') return false;
       if (m.ownerId === user.id) return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
       if (!grid) return false;
@@ -242,6 +246,7 @@ export default function HomePage() {
   };
 
   const getStatusBadge = (memo: Memo) => {
+    if (memo.status === 'draft') return <Badge className="bg-slate-200 text-slate-700 border-slate-300">แบบร่าง</Badge>;
     const isOwner = memo.ownerId === user?.id;
 
     if (isOwner) {
@@ -429,32 +434,56 @@ export default function HomePage() {
     return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleCreateMemo = async (sendEmail = false) => {
-    if (!selectedTemplate || !user) return;
+  const openDraft = (memo: Memo) => {
+    const t = templates.find((tpl) => tpl.id === memo.templateId);
+    if (!t) {
+      alert('ไม่พบเทมเพลตของ Memo นี้');
+      return;
+    }
+    setSelectedTemplate(t);
+    setSectionFormData({ ...memo.formData });
+    setEditingDraftId(memo.id);
+    setIsCreating(true);
+  };
 
-    // Validate required fields in form_row
-    const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
-    if (formRowField) {
-      const config = (formRowField.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; required?: boolean }> };
-      const fields = config.fields || [];
-      const value = (sectionFormData[formRowField.id] as Record<string, string>) || {};
-      for (const f of fields) {
-        // CLIENT/VENDOR SPECIFIC are validated together below (at least one)
-        if (f.name === 'clientSpecific' || f.name === 'vendorSpecific') continue;
-        if (f.required && !value[f.name]) {
-          alert(`กรุณากรอก "${f.label}" (จำเป็น)`);
+  const handleCreateMemo = async (action: 'publish' | 'draft') => {
+    if (!selectedTemplate || !user) return;
+    const isDraftSave = action === 'draft';
+
+    if (!isDraftSave) {
+      // Validate required fields in form_row
+      const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
+      if (formRowField) {
+        const config = (formRowField.fieldConfig || {}) as { fields?: Array<{ name: string; label: string; required?: boolean }> };
+        const fields = config.fields || [];
+        const value = (sectionFormData[formRowField.id] as Record<string, string>) || {};
+        for (const f of fields) {
+          // CLIENT/VENDOR SPECIFIC are validated together below (at least one)
+          if (f.name === 'clientSpecific' || f.name === 'vendorSpecific') continue;
+          if (f.required && !value[f.name]) {
+            alert(`กรุณากรอก "${f.label}" (จำเป็น)`);
+            return;
+          }
+        }
+
+        // Validate CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required (both allowed)
+        if (!value.clientSpecific && !value.vendorSpecific) {
+          alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างน้อย 1 อัน');
           return;
         }
-      }
 
-      // Validate CLIENT SPECIFIC / VENDOR SPECIFIC: at least one required (both allowed)
-      if (!value.clientSpecific && !value.vendorSpecific) {
-        alert('กรุณาเลือก CLIENT SPECIFIC หรือ VENDOR SPECIFIC อย่างน้อย 1 อัน');
-        return;
+        // At least one recipient required before publishing
+        const attnTo = Array.isArray(value.attnTo) ? (value.attnTo as unknown[]).length > 0 : Boolean(value.attnTo);
+        const auditor = Array.isArray(value.auditor) ? (value.auditor as unknown[]).length > 0 : Boolean(value.auditor);
+        if (!attnTo && !auditor) {
+          alert('กรุณาเลือก ATTN To หรือ Checked by อย่างน้อย 1 คน');
+          return;
+        }
       }
     }
 
     setCreating(true);
+    setCreatingAction(action);
     try {
       const formData = { ...sectionFormData };
 
@@ -502,12 +531,24 @@ export default function HomePage() {
         }
       }
 
-      const memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department);
+      let memoId: string;
+      if (editingDraftId) {
+        await updateMemoDraft(editingDraftId, formData, user.id, !isDraftSave);
+        memoId = editingDraftId;
+      } else {
+        memoId = await createMemo(selectedTemplate.id, selectedTemplate.name, formData, user.id, user.displayName, user.department, isDraftSave ? 'draft' : undefined);
+      }
       setIsCreating(false);
       setSelectedTemplate(null);
       setSectionFormData({});
+      setEditingDraftId(null);
 
-      if (sendEmail && memoId) {
+      if (isDraftSave) {
+        alert('บันทึกแบบร่างสำเร็จ');
+        return;
+      }
+
+      if (memoId) {
         const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
         if (grid) {
           const toEmails: string[] = [];
@@ -544,7 +585,11 @@ export default function HomePage() {
             } catch {
               alert('สร้าง Memo สำเร็จ แต่ไม่สามารถส่งอีเมลได้');
             }
+          } else {
+            alert('สร้าง Memo สำเร็จ!');
           }
+        } else {
+          alert('สร้าง Memo สำเร็จ!');
         }
       }
     } catch (e) {
@@ -591,7 +636,7 @@ export default function HomePage() {
                 className="h-4 w-4 rounded shrink-0"
               />
             )}
-            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openDetail(memo)}>
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (memo.status === 'draft' && memo.ownerId === user.id ? openDraft(memo) : openDetail(memo))}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{memo.memoNumber}</span>
                 <span className="text-sm text-slate-600 truncate">{memo.title}</span>
@@ -604,6 +649,18 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
+            {memo.status === 'draft' ? (
+              <>
+                <Button variant="ghost" size="sm" className="text-slate-700 hover:bg-slate-100" onClick={() => openDraft(memo)}>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  แก้ไข
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
             {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
               <>
                 <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
@@ -628,6 +685,8 @@ export default function HomePage() {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -719,7 +778,7 @@ export default function HomePage() {
              <Card>
                <CardHeader className="flex flex-row items-center justify-between pb-3">
                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
-                   <Button size="sm" onClick={() => setIsCreating(true)}>
+                   <Button size="sm" onClick={() => { setEditingDraftId(null); setIsCreating(true); }}>
                      <Plus className="h-4 w-4 mr-1" />
                      สร้าง Memo
                   </Button>
@@ -814,8 +873,10 @@ export default function HomePage() {
             onSelectTemplate={(t) => { setSelectedTemplate(t); setSectionFormData(initFormData(t)); }}
             onChange={(fieldId, val) => setSectionFormData({ ...sectionFormData, [fieldId]: val })}
             onSubmit={handleCreateMemo}
-            onCancel={() => { setIsCreating(false); setSelectedTemplate(null); setSectionFormData({}); }}
+            onCancel={() => { setIsCreating(false); setSelectedTemplate(null); setSectionFormData({}); setEditingDraftId(null); }}
             creating={creating}
+            creatingAction={creatingAction}
+            title={editingDraftId ? 'แก้ไข Memo (แบบร่าง)' : undefined}
             ownerUser={user}
             users={allUsers}
           />

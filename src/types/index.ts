@@ -157,7 +157,7 @@ export interface Memo {
   memoNumber: string;
   templateId: string;
   templateName: string;
-  status: 'new' | 'waiting' | 'approved' | 'rejected' | 'cancel';
+  status: 'new' | 'waiting' | 'approved' | 'rejected' | 'cancel' | 'draft';
   title: string;
   formData: Record<string, unknown>;
   ownerId: string;

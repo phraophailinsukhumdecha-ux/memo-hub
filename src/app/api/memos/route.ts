@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { generateMemoId } from '@/lib/memo-id';
+import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
 
 export async function POST(request: NextRequest) {
   try {
-    const { templateId, title, formData, ownerId, ownerName, department } = await request.json();
+    const { templateId, title, formData, ownerId, ownerName, department, status } = await request.json();
+    const isDraft = status === 'draft';
 
     const templateDoc = await getDoc(doc(db, 'memoTemplates', templateId));
     if (!templateDoc.exists()) {
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
       memoNumber: memoId,
       templateId,
       templateName: template.name,
-      status: 'new',
+      status: isDraft ? 'draft' : 'new',
       title,
       formData,
       ownerId,
@@ -39,44 +41,16 @@ export async function POST(request: NextRequest) {
       currentApprovalIndex: 0,
       currentApprovalLevel: firstLevel?.approvalLevel || null,
       approvals: [],
-      deadlineAt: new Date(Date.now() + 7 * 86400000),
+      deadlineAt: isDraft ? null : new Date(Date.now() + 7 * 86400000),
       createdAt: now,
       updatedAt: now,
     };
 
     await setDoc(doc(db, 'memos', memoId), memoData);
 
-    await addDoc(collection(db, 'eventLogs'), {
-      userId: ownerId,
-      userName: ownerName,
-      action: 'MEMO_CREATED',
-      details: `สร้าง Memo ใหม่: ${title}`,
-      timestamp: now,
-    });
-
-    // Create notifications for all approvers in the approval grid
-    const notifiedUserIds = new Set<string>();
-
-    for (const fieldKey of Object.keys(formData)) {
-      const fieldValue = formData[fieldKey];
-      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
-        for (const colKey of Object.keys(fieldValue)) {
-          if (colKey.startsWith('col_') && colKey !== 'col_0' && (fieldValue as Record<string, Record<string, string>>)[colKey]?.userId) {
-            const userId = (fieldValue as Record<string, Record<string, string>>)[colKey].userId;
-            if (!notifiedUserIds.has(userId) && userId !== ownerId) {
-              notifiedUserIds.add(userId);
-              await addDoc(collection(db, 'notifications'), {
-                userId,
-                type: 'new_memo',
-                memoId,
-                message: `มี Memo ใหม่รอการอนุมัติ: ${title}`,
-                isRead: false,
-                createdAt: now,
-              });
-            }
-          }
-        }
-      }
+    if (!isDraft) {
+      await logMemoCreated(ownerId, ownerName, title, now);
+      await notifyApprovers(formData, memoId, title, ownerId, now);
     }
 
     return NextResponse.json({ memoId });

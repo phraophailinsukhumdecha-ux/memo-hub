@@ -16,9 +16,11 @@ interface MemoDocumentFormProps {
   formData: Record<string, unknown>;
   onSelectTemplate: (template: MemoTemplate) => void;
   onChange: (fieldId: string, value: unknown) => void;
-  onSubmit: (sendEmail: boolean) => void;
+  onSubmit: (action: 'publish' | 'draft') => void;
   onCancel: () => void;
   creating: boolean;
+  creatingAction?: 'publish' | 'draft';
+  title?: string;
   ownerUser: User | null;
   users: User[];
 }
@@ -32,6 +34,8 @@ export function MemoDocumentForm({
   onSubmit,
   onCancel,
   creating,
+  creatingAction,
+  title,
   ownerUser,
   users,
 }: MemoDocumentFormProps) {
@@ -316,7 +320,7 @@ export function MemoDocumentForm({
       <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-[1400px] h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="shrink-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">สร้าง Memo ใหม่</h2>
+          <h2 className="text-lg font-bold text-slate-900">{title || 'สร้าง Memo ใหม่'}</h2>
           <Button variant="ghost" size="icon" onClick={onCancel}>
             <X className="h-5 w-5 text-slate-900" />
           </Button>
@@ -362,13 +366,13 @@ export function MemoDocumentForm({
           <Button variant="outline" onClick={onCancel} disabled={creating}>
             ยกเลิก
           </Button>
-          <Button variant="outline" onClick={() => onSubmit(true)} disabled={creating}>
-            <Mail className="h-4 w-4 mr-1" />
-            {creating ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
-          </Button>
-          <Button onClick={() => onSubmit(false)} disabled={creating} className="bg-slate-900 hover:bg-slate-800">
+          <Button variant="outline" onClick={() => onSubmit('draft')} disabled={creating}>
             <Save className="h-4 w-4 mr-1" />
-            {creating ? 'กำลังสร้าง...' : 'สร้าง Memo'}
+            {creating && creatingAction === 'draft' ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
+          </Button>
+          <Button onClick={() => onSubmit('publish')} disabled={creating} className="bg-slate-900 hover:bg-slate-800">
+            <Mail className="h-4 w-4 mr-1" />
+            {creating && creatingAction !== 'draft' ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
           </Button>
         </div>
       </div>

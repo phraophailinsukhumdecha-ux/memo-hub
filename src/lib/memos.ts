@@ -32,16 +32,34 @@ export async function createMemo(
   formData: Record<string, unknown>,
   ownerId: string,
   ownerName: string,
-  department?: string
+  department?: string,
+  status?: 'draft'
 ): Promise<string> {
   const res = await fetch('/api/memos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ templateId, title, formData, ownerId, ownerName, department }),
+    body: JSON.stringify({ templateId, title, formData, ownerId, ownerName, department, status }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to create memo');
   return data.memoId;
+}
+
+export async function updateMemoDraft(
+  memoId: string,
+  formData: Record<string, unknown>,
+  ownerId: string,
+  publish: boolean
+): Promise<void> {
+  const res = await fetch(`/api/memos/${memoId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formData, publish, ownerId }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to update memo');
+  }
 }
 
 export async function approveMemo(memoId: string, approverId: string, approverName: string, comment?: string): Promise<void> {

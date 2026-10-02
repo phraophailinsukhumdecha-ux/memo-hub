@@ -38,7 +38,7 @@ export default function DashboardPage() {
 
   const nearDeadline = memos
     .filter((m) => {
-      if (m.status === 'approved' || m.status === 'rejected' || m.status === 'cancel') return false;
+      if (m.status === 'approved' || m.status === 'rejected' || m.status === 'cancel' || m.status === 'draft') return false;
       const deadline = new Date(m.deadlineAt);
       const now = new Date();
       const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -53,6 +53,7 @@ export default function DashboardPage() {
       case 'approved': return <Badge variant="approved">อนุมัติแล้ว</Badge>;
       case 'rejected': return <Badge variant="rejected">ปฏิเสธ</Badge>;
       case 'cancel': return <Badge variant="cancel">ยกเลิก</Badge>;
+      case 'draft': return <Badge variant="draft">แบบร่าง</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
