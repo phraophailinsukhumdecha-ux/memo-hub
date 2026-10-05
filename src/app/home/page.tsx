@@ -21,6 +21,7 @@ import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, upda
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
+import { runScheduledJobs } from '@/lib/scheduled-jobs';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { MemoDocumentForm } from '@/components/memo-document-form';
@@ -102,6 +103,10 @@ export default function HomePage() {
     setMounted(true);
     refreshUser();
   }, [refreshUser]);
+
+  useEffect(() => {
+    runScheduledJobs().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!user) return;

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 
+const ENABLE_AUTO_CANCEL = false;
+
 export async function POST() {
   try {
     const now = new Date();
@@ -19,7 +21,7 @@ export async function POST() {
       const memo = d.data();
       const deadline = memo.deadlineAt?.toDate ? memo.deadlineAt.toDate() : new Date(memo.deadlineAt);
 
-      if (deadline <= now) {
+      if (ENABLE_AUTO_CANCEL && deadline <= now) {
         await updateDoc(doc(db, 'memos', d.id), {
           status: 'cancel',
           currentApprovalIndex: memo.approvalRoute?.length || 0,

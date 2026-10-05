@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { runScheduledJobs } from '@/lib/scheduled-jobs';
 
 const DashboardTitleContext = createContext<{
   title: string;
@@ -28,6 +29,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace('/home');
     }
   }, [user, router]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    runScheduledJobs().catch(() => {});
+  }, [user]);
 
   if (!mounted || !user || user.role !== 'admin') {
     return (
