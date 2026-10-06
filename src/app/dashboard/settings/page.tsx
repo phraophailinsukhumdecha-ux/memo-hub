@@ -112,6 +112,7 @@ export default function SettingsPage() {
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [newItemField, setNewItemField] = useState<'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs'>('position');
   const [newItemValue, setNewItemValue] = useState('');
+  const [newItemError, setNewItemError] = useState('');
   const [isUserImportDialogOpen, setIsUserImportDialogOpen] = useState(false);
 
   useEffect(() => { setTitle('การตั้งค่า'); }, [setTitle]);
@@ -616,14 +617,25 @@ export default function SettingsPage() {
     const fieldMap = { position: 'positionOptions', department: 'departmentOptions', clientSpecific: 'clientSpecificOptions', vendorSpecific: 'vendorSpecificOptions', dfInternalAffairs: 'dfInternalAffairsOptions' } as const;
     const field = fieldMap[newItemField];
     const currentList = settings[field] || [];
+    const value = newItemValue.trim();
+    const norm = (s: string) => s.trim().toLowerCase();
+
+    const nameUnchanged = editingItemIndex !== null && norm(currentList[editingItemIndex] || '') === norm(value);
+    const isDup = !nameUnchanged && currentList.some((item, i) =>
+      norm(item) === norm(value) &&
+      (editingItemIndex === null || i !== editingItemIndex)
+    );
+    if (isDup) {
+      setNewItemError(`"${value}" มีอยู่ในระบบแล้ว — ไม่บันทึกซ้ำ`);
+      return;
+    }
 
     let newList: string[];
     if (editingItemIndex !== null) {
       newList = [...currentList];
-      newList[editingItemIndex] = newItemValue.trim();
+      newList[editingItemIndex] = value;
     } else {
-      if (currentList.includes(newItemValue.trim())) return;
-      newList = [...currentList, newItemValue.trim()];
+      newList = [...currentList, value];
     }
 
     const updated = { ...settings, [field]: newList };
@@ -632,6 +644,7 @@ export default function SettingsPage() {
     setIsNewItemDialogOpen(false);
     setEditingItemIndex(null);
     setNewItemValue('');
+    setNewItemError('');
     if (newItemField !== 'position' && newItemField !== 'department') {
       syncOptionsToTemplate(newItemField, newList);
     }
@@ -642,6 +655,7 @@ export default function SettingsPage() {
     const list = settings?.[fieldMap[field]];
     setNewItemField(field);
     setNewItemValue(list?.[index] || '');
+    setNewItemError('');
     setEditingItemIndex(index);
     setIsNewItemDialogOpen(true);
   };
@@ -1644,7 +1658,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>ตำแหน่ง</CardTitle><CardDescription>จัดการรายการตำแหน่ง</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <Button size="sm" onClick={() => { setNewItemField('position'); setNewItemValue(''); setNewItemError(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1705,7 +1719,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>แผนก</CardTitle><CardDescription>จัดการรายการแผนก</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <Button size="sm" onClick={() => { setNewItemField('department'); setNewItemValue(''); setNewItemError(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1766,7 +1780,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>Client Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('clientSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <Button size="sm" onClick={() => { setNewItemField('clientSpecific'); setNewItemValue(''); setNewItemError(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1813,7 +1827,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>Vendor Specific.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('vendorSpecific'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <Button size="sm" onClick={() => { setNewItemField('vendorSpecific'); setNewItemValue(''); setNewItemError(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -1860,7 +1874,7 @@ Deadline: {deadline}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div><CardTitle>DF Internal Affairs.</CardTitle><CardDescription>จัดการรายการตัวเลือก</CardDescription></div>
-                <Button size="sm" onClick={() => { setNewItemField('dfInternalAffairs'); setNewItemValue(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
+                <Button size="sm" onClick={() => { setNewItemField('dfInternalAffairs'); setNewItemValue(''); setNewItemError(''); setIsNewItemDialogOpen(true); }}><Plus className="mr-1 h-3 w-3" />เพิ่ม</Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 mb-3">
@@ -2004,7 +2018,7 @@ Deadline: {deadline}
       )}
 
       {/* Add/Edit List Item Dialog */}
-      <Dialog open={isNewItemDialogOpen} onOpenChange={(open) => { setIsNewItemDialogOpen(open); if (!open) { setEditingItemIndex(null); setNewItemValue(''); } }}>
+      <Dialog open={isNewItemDialogOpen} onOpenChange={(open) => { setIsNewItemDialogOpen(open); if (!open) { setEditingItemIndex(null); setNewItemValue(''); setNewItemError(''); } }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>{editingItemIndex !== null ? 'แก้ไข' : 'เพิ่ม'}{newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : newItemField === 'clientSpecific' ? 'Client Specific' : newItemField === 'vendorSpecific' ? 'Vendor Specific' : 'DF Internal Affairs'}</DialogTitle>
@@ -2012,11 +2026,14 @@ Deadline: {deadline}
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>ชื่อ</Label>
-              <Input value={newItemValue} onChange={(e) => setNewItemValue(e.target.value)} placeholder={`กรอกชื่อ${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : 'ตัวเลือก'}`} />
+              {newItemError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-md">{newItemError}</div>
+              )}
+              <Input value={newItemValue} onChange={(e) => { setNewItemValue(e.target.value); setNewItemError(''); }} placeholder={`กรอกชื่อ${newItemField === 'position' ? 'ตำแหน่ง' : newItemField === 'department' ? 'แผนก' : 'ตัวเลือก'}`} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsNewItemDialogOpen(false); setEditingItemIndex(null); setNewItemValue(''); }}>ยกเลิก</Button>
+            <Button variant="outline" onClick={() => { setIsNewItemDialogOpen(false); setEditingItemIndex(null); setNewItemValue(''); setNewItemError(''); }}>ยกเลิก</Button>
             <Button onClick={handleSaveListItem} disabled={!newItemValue.trim()}>บันทึก</Button>
           </DialogFooter>
         </DialogContent>
