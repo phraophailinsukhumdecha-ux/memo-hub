@@ -27,7 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Printer, X, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Printer, X, Pencil, Trash2, Copy } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToMemos, createMemo, updateMemoDraft, deleteMemo } from '@/lib/memos';
@@ -141,6 +141,31 @@ export default function MemosPage() {
     setSelectedTemplateObj(t);
     setSectionFormData({ ...memo.formData });
     setEditingDraftId(memo.id);
+    setIsCreating(true);
+  };
+
+  const handleDuplicate = (memo: Memo) => {
+    const t = templates.find((tpl) => tpl.id === memo.templateId);
+    if (!t) {
+      alert('ไม่พบเทมเพลตของ Memo นี้');
+      return;
+    }
+    const data: Record<string, unknown> = JSON.parse(JSON.stringify(memo.formData || {}));
+    delete data.memoNumber;
+    const fresh = initFormData(t);
+    const gridField = t.fields.find((f) => f.type === 'approval_grid');
+    if (gridField) data[gridField.id] = fresh[gridField.id];
+    const rowField = t.fields.find((f) => f.type === 'form_row');
+    if (rowField && data[rowField.id] && typeof data[rowField.id] === 'object') {
+      const row = data[rowField.id] as Record<string, unknown>;
+      const cfg = (rowField.fieldConfig || {}) as { fields?: Array<{ name: string; type?: string }> };
+      for (const f of cfg.fields || []) {
+        if (f.name === 'date' || f.type === 'auto_from' || f.type === 'auto_dept') delete row[f.name];
+      }
+    }
+    setSelectedTemplateObj(t);
+    setSectionFormData(data);
+    setEditingDraftId(null);
     setIsCreating(true);
   };
 
@@ -416,6 +441,14 @@ export default function MemosPage() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDuplicate(memo)}
+                          title="Dup เอกสาร"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { generateMemoId } from '@/lib/memo-id';
+import { getDeadlineDays } from '@/lib/deadline';
 import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
 
 export async function POST(request: NextRequest) {
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const firstLevel = approvalRoute.length > 0 ? approvalRoute[0] : null;
 
+    const deadlineDays = await getDeadlineDays();
+
     const memoData = {
       memoNumber: memoId,
       templateId,
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
       currentApprovalIndex: 0,
       currentApprovalLevel: firstLevel?.approvalLevel || null,
       approvals: [],
-      deadlineAt: isDraft ? null : new Date(Date.now() + 7 * 86400000),
+      deadlineAt: isDraft ? null : new Date(Date.now() + deadlineDays * 86400000),
       createdAt: now,
       updatedAt: now,
     };

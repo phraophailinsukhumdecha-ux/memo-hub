@@ -19,8 +19,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const memo = memoDoc.data()!;
-    const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
     const now = new Date();
+
+    if (memo.status !== 'new' && memo.status !== 'waiting') {
+      return NextResponse.json({ error: 'Memo นี้ถูกปิดการอนุมัติแล้ว (สถานะ: ' + memo.status + ')' }, { status: 400 });
+    }
+    const deadline = memo.deadlineAt?.toDate ? memo.deadlineAt.toDate() : memo.deadlineAt ? new Date(memo.deadlineAt) : null;
+    if (deadline && deadline.getTime() < now.getTime()) {
+      return NextResponse.json({ error: 'เลยกำหนดเวลาอนุมัติของ Memo นี้แล้ว' }, { status: 400 });
+    }
+
+    const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
     const formData = memo.formData || {};
 
     // Find the approver's column in the approval grid and mark as signed

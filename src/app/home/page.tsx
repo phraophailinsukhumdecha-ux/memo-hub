@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil } from 'lucide-react';
+import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
@@ -451,6 +451,31 @@ export default function HomePage() {
     setIsCreating(true);
   };
 
+  const handleDuplicate = (memo: Memo) => {
+    const t = templates.find((tpl) => tpl.id === memo.templateId);
+    if (!t) {
+      alert('ไม่พบเทมเพลตของ Memo นี้');
+      return;
+    }
+    const data: Record<string, unknown> = JSON.parse(JSON.stringify(memo.formData || {}));
+    delete data.memoNumber;
+    const fresh = initFormData(t);
+    const gridField = t.fields.find((f) => f.type === 'approval_grid');
+    if (gridField) data[gridField.id] = fresh[gridField.id];
+    const rowField = t.fields.find((f) => f.type === 'form_row');
+    if (rowField && data[rowField.id] && typeof data[rowField.id] === 'object') {
+      const row = data[rowField.id] as Record<string, unknown>;
+      const cfg = (rowField.fieldConfig || {}) as { fields?: Array<{ name: string; type?: string }> };
+      for (const f of cfg.fields || []) {
+        if (f.name === 'date' || f.type === 'auto_from' || f.type === 'auto_dept') delete row[f.name];
+      }
+    }
+    setSelectedTemplate(t);
+    setSectionFormData(data);
+    setEditingDraftId(null);
+    setIsCreating(true);
+  };
+
   const handleCreateMemo = async (action: 'publish' | 'draft') => {
     if (!selectedTemplate || !user) return;
     const isDraftSave = action === 'draft';
@@ -660,6 +685,9 @@ export default function HomePage() {
                   <Pencil className="h-4 w-4 mr-1" />
                   แก้ไข
                 </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
+                  <Copy className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -678,6 +706,9 @@ export default function HomePage() {
                 </Button>
               </>
             )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
+              <Copy className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(memo)} disabled={downloadingId === memo.id}>
               <Download className="h-4 w-4" />
             </Button>

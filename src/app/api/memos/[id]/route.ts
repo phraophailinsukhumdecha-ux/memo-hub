@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, deleteDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
+import { getDeadlineDays } from '@/lib/deadline';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,10 +24,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const now = new Date();
 
     if (publish) {
+      const deadlineDays = await getDeadlineDays();
       await updateDoc(doc(db, 'memos', id), {
         formData,
         status: 'new',
-        deadlineAt: new Date(Date.now() + 7 * 86400000),
+        deadlineAt: new Date(Date.now() + deadlineDays * 86400000),
         updatedAt: now,
       });
       await logMemoCreated(memo.ownerId, memo.ownerName, memo.title, now);

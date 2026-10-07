@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToPendingMemos, approveMemo, rejectMemo } from '@/lib/memos';
@@ -155,7 +156,9 @@ export default function ApprovalsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                myPendingMemos.map((memo) => (
+                myPendingMemos.map((memo) => {
+                  const isOverdue = Boolean(memo.deadlineAt) && new Date(memo.deadlineAt) < new Date();
+                  return (
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
@@ -173,6 +176,10 @@ export default function ApprovalsPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {isOverdue ? (
+                          <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>
+                        ) : (
+                          <>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -191,10 +198,13 @@ export default function ApprovalsPage() {
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

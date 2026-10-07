@@ -17,6 +17,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const now = new Date();
     const formData = memo.formData || {};
 
+    if (memo.status !== 'new' && memo.status !== 'waiting') {
+      return NextResponse.json({ error: 'Memo นี้ถูกปิดการอนุมัติแล้ว (สถานะ: ' + memo.status + ')' }, { status: 400 });
+    }
+    const deadline = memo.deadlineAt?.toDate ? memo.deadlineAt.toDate() : memo.deadlineAt ? new Date(memo.deadlineAt) : null;
+    if (deadline && deadline.getTime() < now.getTime()) {
+      return NextResponse.json({ error: 'เลยกำหนดเวลาอนุมัติของ Memo นี้แล้ว' }, { status: 400 });
+    }
+
     let approverColKey: string | null = null;
     for (const fieldKey of Object.keys(formData)) {
       const fieldValue = formData[fieldKey];

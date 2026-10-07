@@ -121,6 +121,19 @@ export async function GET(request: NextRequest) {
         </body></html>
       `, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
+    const _deadline = memo.deadlineAt?.toDate ? memo.deadlineAt.toDate() : memo.deadlineAt ? new Date(memo.deadlineAt) : null;
+    if (_deadline && _deadline.getTime() < Date.now()) {
+      return new Response(`
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8"><title>MemoHub</title></head>
+        <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
+          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:400px;">
+            <h2 style="color:#dc2626;">เลยกำหนดเวลา</h2>
+            <p style="color:#64748b;">Memo นี้เลยกำหนดการอนุมัติแล้ว ไม่สามารถดำเนินการได้</p>
+          </div>
+        </body></html>
+      `, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
 
     const now = new Date();
     const formData = memo.formData || {};
@@ -368,6 +381,10 @@ export async function POST(request: NextRequest) {
     const memo = memoDoc.data()!;
     if (memo.status !== 'waiting' && memo.status !== 'new') {
       return NextResponse.json({ ok: false, error: 'Memo ดำเนินการแล้ว' }, { status: 400 });
+    }
+    const _deadline2 = memo.deadlineAt?.toDate ? memo.deadlineAt.toDate() : memo.deadlineAt ? new Date(memo.deadlineAt) : null;
+    if (_deadline2 && _deadline2.getTime() < Date.now()) {
+      return NextResponse.json({ ok: false, error: 'เลยกำหนดเวลาอนุมัติของ Memo นี้แล้ว' }, { status: 400 });
     }
 
     const now = new Date();
