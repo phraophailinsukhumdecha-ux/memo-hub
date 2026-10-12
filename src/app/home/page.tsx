@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy } from 'lucide-react';
+import { Plus, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
-import { downloadMemoPdf, printMemo } from '@/lib/memo-pdf';
+import { printMemo } from '@/lib/memo-pdf';
 import { runScheduledJobs } from '@/lib/scheduled-jobs';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
@@ -36,7 +36,6 @@ export default function HomePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailHtml, setDetailHtml] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [selectedMemos, setSelectedMemos] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -358,19 +357,6 @@ export default function HomePage() {
       setSelectedMemos(new Set());
     } else {
       setSelectedMemos(new Set(items.map((m) => m.id)));
-    }
-  };
-
-  const handleDownload = async (memo: Memo) => {
-    const memoTemplate = templates.find((t) => t.id === memo.templateId) || null;
-    const memoOwner = allUsers.find((u) => u.id === memo.ownerId) || null;
-    setDownloadingId(memo.id);
-    try {
-      await downloadMemoPdf(memo, memoTemplate, [], memoOwner, allUsers);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDownloadingId(null);
     }
   };
 
@@ -708,9 +694,6 @@ export default function HomePage() {
             )}
             <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
               <Copy className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(memo)} disabled={downloadingId === memo.id}>
-              <Download className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleSendEmail(memo)} title="ส่งอีเมล">
               <Mail className="h-4 w-4" />
