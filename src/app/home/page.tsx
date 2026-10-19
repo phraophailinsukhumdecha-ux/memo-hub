@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/list-pagination';
-import { Plus, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy, Search } from 'lucide-react';
+import { Plus, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy, Search, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
@@ -27,6 +27,7 @@ import { runScheduledJobs } from '@/lib/scheduled-jobs';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { MemoDocumentForm } from '@/components/memo-document-form';
+import { UserManualDialog } from '@/components/user-manual-dialog';
 
 export default function HomePage() {
   const { user, logout, isApproveUser, refreshUser } = useAuth();
@@ -55,6 +56,7 @@ export default function HomePage() {
   const [approverFilter, setApproverFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mineStatusFilter, setMineStatusFilter] = useState('all');
+  const [isManualOpen, setIsManualOpen] = useState(false);
   const [pendingPage, setPendingPage] = useState(1);
   const [minePage, setMinePage] = useState(1);
   const PAGE_SIZE = 10;
@@ -784,20 +786,34 @@ export default function HomePage() {
 
       <div className="p-6">
         <Tabs value={isApproveUser ? activeTab : 'mine'} onValueChange={(v) => { setActiveTab(v); setPendingPage(1); setMinePage(1); setSearchQuery(''); }}>
-          <TabsList className="mb-6">
-            {isApproveUser && (
-              <TabsTrigger value="pending" className="gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                รายการทั้งหมด
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
+          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+            <TabsList>
+              {isApproveUser && (
+                <TabsTrigger value="pending" className="gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  รายการทั้งหมด
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="mine" className="gap-1.5">
+                <FileText className="h-3.5 w-3.5" />
+                Memo ของฉัน
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{myCount}</Badge>
               </TabsTrigger>
-            )}
-            <TabsTrigger value="mine" className="gap-1.5">
-              <FileText className="h-3.5 w-3.5" />
-              Memo ของฉัน
-              <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{myCount}</Badge>
-            </TabsTrigger>
-          </TabsList>
+            </TabsList>
+
+            <button
+              type="button"
+              onClick={() => setIsManualOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-400 text-slate-700 hover:text-blue-600 shadow-xs transition-all group cursor-pointer"
+              title="คู่มือการใช้งาน"
+            >
+              <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                ?
+              </div>
+              <span className="text-xs font-medium">คู่มือการใช้งาน</span>
+            </button>
+          </div>
 
           {isApproveUser && (
             <TabsContent value="pending">
@@ -984,6 +1000,13 @@ export default function HomePage() {
           />
         </div>
       )}
+
+      {/* User Manual Dialog */}
+      <UserManualDialog
+        open={isManualOpen}
+        onOpenChange={setIsManualOpen}
+        isApprover={isApproveUser}
+      />
     </div>
   );
 }
