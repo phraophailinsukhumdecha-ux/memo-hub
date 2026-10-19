@@ -39,6 +39,7 @@ import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { SectionRenderer } from '@/components/memo-sections';
+import { ListPagination } from '@/components/list-pagination';
 
 export default function MemosPage() {
   const { user, isAdmin } = useAuth();
@@ -47,6 +48,8 @@ export default function MemosPage() {
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTemplateObj, setSelectedTemplateObj] = useState<MemoTemplate | null>(null);
   const [sectionFormData, setSectionFormData] = useState<Record<string, unknown>>({});
@@ -82,13 +85,20 @@ export default function MemosPage() {
   }, [user]);
 
   const filteredMemos = memos.filter((memo) => {
+    const needle = searchQuery.trim().toLowerCase();
     const matchesSearch =
-      memo.title.includes(searchQuery) ||
-      memo.id.includes(searchQuery) ||
-      memo.ownerName.includes(searchQuery);
+      !needle ||
+      memo.title.toLowerCase().includes(needle) ||
+      memo.id.toLowerCase().includes(needle) ||
+      memo.memoNumber.toLowerCase().includes(needle) ||
+      memo.ownerName.toLowerCase().includes(needle);
     const matchesStatus = statusFilter === 'all' || memo.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredMemos.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageMemos = filteredMemos.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const initFormData = (t: MemoTemplate) => {
     const now = new Date();
@@ -362,10 +372,10 @@ export default function MemosPage() {
               placeholder="ค้นหา Memo..."
               className="w-64 pl-8"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="สถานะ" />
             </SelectTrigger>
@@ -409,7 +419,7 @@ export default function MemosPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredMemos.map((memo) => (
+                pageMemos.map((memo) => (
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{memo.id}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{memo.title}</TableCell>
@@ -474,6 +484,13 @@ export default function MemosPage() {
             </TableBody>
           </Table>
       </div>
+
+      <ListPagination
+        page={safePage}
+        totalPages={totalPages}
+        totalItems={filteredMemos.length}
+        onPageChange={setPage}
+      />
 
       {/* Memo Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>

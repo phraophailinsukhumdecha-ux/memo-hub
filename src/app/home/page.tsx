@@ -15,7 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/list-pagination';
+import { Plus, Printer, Trash2, CheckCircle, Clock, FileText, LogOut, Mail, X, XCircle, Pencil, Copy, Search } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
@@ -51,6 +53,11 @@ export default function HomePage() {
   const [creatingAction, setCreatingAction] = useState<'publish' | 'draft'>('publish');
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [approverFilter, setApproverFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mineStatusFilter, setMineStatusFilter] = useState('all');
+  const [pendingPage, setPendingPage] = useState(1);
+  const [minePage, setMinePage] = useState(1);
+  const PAGE_SIZE = 10;
   const [mounted, setMounted] = useState(false);
 
   const initFormData = (t: MemoTemplate) => {
@@ -234,6 +241,37 @@ export default function HomePage() {
     return new Date(m.deadlineAt) < new Date();
   }).length;
   const myCount = myMemos.length;
+
+  const matchesSearch = (m: Memo, q: string) => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    return (
+      m.memoNumber.toLowerCase().includes(needle) ||
+      m.id.toLowerCase().includes(needle) ||
+      m.title.toLowerCase().includes(needle) ||
+      m.ownerName.toLowerCase().includes(needle)
+    );
+  };
+
+  const pendingBaseList = (
+    approverFilter === 'pending' ? approverMemos.filter((m) => getUserAction(m) === null && m.status !== 'approved' && m.status !== 'rejected' && m.status !== 'cancel') :
+    approverFilter === 'approved' ? approverMemos.filter((m) => getUserAction(m) === 'approve') :
+    approverFilter === 'rejected' ? approverMemos.filter((m) => getUserAction(m) === 'reject') :
+    approverFilter === 'overdue' ? approverMemos.filter((m) => getUserAction(m) === null && (m.status === 'waiting' || m.status === 'new') && new Date(m.deadlineAt) < new Date()) :
+    approverMemos
+  ).filter((m) => matchesSearch(m, searchQuery));
+
+  const mineFilteredList = myMemos
+    .filter((m) => mineStatusFilter === 'all' || m.status === mineStatusFilter)
+    .filter((m) => matchesSearch(m, searchQuery));
+
+  const pendingTotalPages = Math.max(1, Math.ceil(pendingBaseList.length / PAGE_SIZE));
+  const safePendingPage = Math.min(pendingPage, pendingTotalPages);
+  const pendingPageItems = pendingBaseList.slice((safePendingPage - 1) * PAGE_SIZE, safePendingPage * PAGE_SIZE);
+
+  const mineTotalPages = Math.max(1, Math.ceil(mineFilteredList.length / PAGE_SIZE));
+  const safeMinePage = Math.min(minePage, mineTotalPages);
+  const minePageItems = mineFilteredList.slice((safeMinePage - 1) * PAGE_SIZE, safeMinePage * PAGE_SIZE);
 
   const getApprovalProgress = (memo: Memo) => {
     const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
@@ -745,7 +783,7 @@ export default function HomePage() {
       </div>
 
       <div className="p-6">
-        <Tabs value={isApproveUser ? activeTab : 'mine'} onValueChange={setActiveTab}>
+        <Tabs value={isApproveUser ? activeTab : 'mine'} onValueChange={(v) => { setActiveTab(v); setPendingPage(1); setMinePage(1); setSearchQuery(''); }}>
           <TabsList className="mb-6">
             {isApproveUser && (
               <TabsTrigger value="pending" className="gap-1.5">
@@ -764,45 +802,90 @@ export default function HomePage() {
           {isApproveUser && (
             <TabsContent value="pending">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 gap-3 flex-wrap">
                   <CardTitle className="text-base">รายการทั้งหมด</CardTitle>
-                  <div className="flex gap-2 text-xs">
-                    <button onClick={() => setApproverFilter(approverFilter === 'pending' ? null : 'pending')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'pending' ? 'bg-blue-100 ring-2 ring-blue-400 font-semibold' : 'hover:bg-blue-50'}`}>
-                      <span className="text-blue-600">รออนุมัติ {pendingCount}</span>
-                    </button>
-                    <button onClick={() => setApproverFilter(approverFilter === 'approved' ? null : 'approved')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'approved' ? 'bg-green-100 ring-2 ring-green-400 font-semibold' : 'hover:bg-green-50'}`}>
-                      <span className="text-green-600">อนุมัติแล้ว {approvedCount}</span>
-                    </button>
-                    <button onClick={() => setApproverFilter(approverFilter === 'rejected' ? null : 'rejected')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'rejected' ? 'bg-red-100 ring-2 ring-red-400 font-semibold' : 'hover:bg-red-50'}`}>
-                      <span className="text-red-600">ถูกปฏิเสธ {rejectedCount}</span>
-                    </button>
-                    <button onClick={() => setApproverFilter(approverFilter === 'overdue' ? null : 'overdue')} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'overdue' ? 'bg-orange-100 ring-2 ring-orange-400 font-semibold' : 'hover:bg-orange-50'}`}>
-                      <span className="text-orange-600">เลยเวลา {overdueCount}</span>
-                    </button>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
+                        className="w-64 pl-8 h-8 text-sm"
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPendingPage(1); }}
+                      />
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <button onClick={() => { setApproverFilter(approverFilter === 'pending' ? null : 'pending'); setPendingPage(1); }} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'pending' ? 'bg-blue-100 ring-2 ring-blue-400 font-semibold' : 'hover:bg-blue-50'}`}>
+                        <span className="text-blue-600">รออนุมัติ {pendingCount}</span>
+                      </button>
+                      <button onClick={() => { setApproverFilter(approverFilter === 'approved' ? null : 'approved'); setPendingPage(1); }} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'approved' ? 'bg-green-100 ring-2 ring-green-400 font-semibold' : 'hover:bg-green-50'}`}>
+                        <span className="text-green-600">อนุมัติแล้ว {approvedCount}</span>
+                      </button>
+                      <button onClick={() => { setApproverFilter(approverFilter === 'rejected' ? null : 'rejected'); setPendingPage(1); }} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'rejected' ? 'bg-red-100 ring-2 ring-red-400 font-semibold' : 'hover:bg-red-50'}`}>
+                        <span className="text-red-600">ถูกปฏิเสธ {rejectedCount}</span>
+                      </button>
+                      <button onClick={() => { setApproverFilter(approverFilter === 'overdue' ? null : 'overdue'); setPendingPage(1); }} className={`px-2 py-1 rounded-full transition-colors ${approverFilter === 'overdue' ? 'bg-orange-100 ring-2 ring-orange-400 font-semibold' : 'hover:bg-orange-50'}`}>
+                        <span className="text-orange-600">เลยเวลา {overdueCount}</span>
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>{renderMemoList(
-                  approverFilter === 'pending' ? approverMemos.filter((m) => getUserAction(m) === null && m.status !== 'approved' && m.status !== 'rejected' && m.status !== 'cancel') :
-                  approverFilter === 'approved' ? approverMemos.filter((m) => getUserAction(m) === 'approve') :
-                  approverFilter === 'rejected' ? approverMemos.filter((m) => getUserAction(m) === 'reject') :
-                  approverFilter === 'overdue' ? approverMemos.filter((m) => getUserAction(m) === null && (m.status === 'waiting' || m.status === 'new') && new Date(m.deadlineAt) < new Date()) :
-                  approverMemos,
-                  true
-                )}</CardContent>
+                <CardContent>
+                  {renderMemoList(pendingPageItems, true)}
+                  <ListPagination
+                    page={safePendingPage}
+                    totalPages={pendingTotalPages}
+                    totalItems={pendingBaseList.length}
+                    onPageChange={setPendingPage}
+                  />
+                </CardContent>
               </Card>
             </TabsContent>
           )}
 
            <TabsContent value="mine">
              <Card>
-               <CardHeader className="flex flex-row items-center justify-between pb-3">
+               <CardHeader className="flex flex-row items-center justify-between pb-3 gap-3 flex-wrap">
                  <CardTitle className="text-base">Memo ของฉัน</CardTitle>
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <div className="relative">
+                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                     <Input
+                       placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
+                       className="w-56 pl-8 h-8 text-sm"
+                       value={searchQuery}
+                       onChange={(e) => { setSearchQuery(e.target.value); setMinePage(1); }}
+                     />
+                   </div>
+                   <Select value={mineStatusFilter} onValueChange={(v) => { setMineStatusFilter(v); setMinePage(1); }}>
+                     <SelectTrigger className="w-36 h-8 text-sm">
+                       <SelectValue placeholder="สถานะ" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="all">ทั้งหมด</SelectItem>
+                       <SelectItem value="draft">แบบร่าง</SelectItem>
+                       <SelectItem value="new">ใหม่</SelectItem>
+                       <SelectItem value="waiting">รออนุมัติ</SelectItem>
+                       <SelectItem value="approved">อนุมัติแล้ว</SelectItem>
+                       <SelectItem value="rejected">ปฏิเสธ</SelectItem>
+                       <SelectItem value="cancel">ยกเลิก</SelectItem>
+                     </SelectContent>
+                   </Select>
                    <Button size="sm" onClick={() => { setEditingDraftId(null); setIsCreating(true); }}>
                      <Plus className="h-4 w-4 mr-1" />
                      สร้าง Memo
                   </Button>
+                 </div>
                </CardHeader>
-               <CardContent>{renderMemoList(myMemos, false)}</CardContent>
+               <CardContent>
+                 {renderMemoList(minePageItems, false)}
+                 <ListPagination
+                   page={safeMinePage}
+                   totalPages={mineTotalPages}
+                   totalItems={mineFilteredList.length}
+                   onPageChange={setMinePage}
+                 />
+               </CardContent>
              </Card>
            </TabsContent>
         </Tabs>

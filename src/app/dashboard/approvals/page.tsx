@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ListPagination } from '@/components/list-pagination';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToPendingMemos, approveMemo, rejectMemo } from '@/lib/memos';
@@ -47,6 +48,9 @@ export default function ApprovalsPage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [comment, setComment] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     if (!user) return;
@@ -79,6 +83,21 @@ export default function ApprovalsPage() {
       });
     });
   });
+
+  const filteredMemos = myPendingMemos.filter((m) => {
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle) return true;
+    return (
+      m.memoNumber.toLowerCase().includes(needle) ||
+      m.id.toLowerCase().includes(needle) ||
+      m.title.toLowerCase().includes(needle) ||
+      m.ownerName.toLowerCase().includes(needle)
+    );
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredMemos.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageMemos = filteredMemos.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const handleViewDetail = (memo: Memo) => {
     setSelectedMemo(memo);
@@ -131,7 +150,12 @@ export default function ApprovalsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Input placeholder="ค้นหา Memo..." className="w-64" />
+          <Input
+            placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
+            className="w-64"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+          />
         </div>
       </div>
 
@@ -149,14 +173,14 @@ export default function ApprovalsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {myPendingMemos.length === 0 ? (
+              {filteredMemos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-slate-600 py-8">
                     ไม่มี Memo ที่มอบหมายให้คุณตรวจสอบหรืออนุมัติ
                   </TableCell>
                 </TableRow>
               ) : (
-                myPendingMemos.map((memo) => {
+                pageMemos.map((memo) => {
                   const isOverdue = Boolean(memo.deadlineAt) && new Date(memo.deadlineAt) < new Date();
                   return (
                   <TableRow key={memo.id}>
@@ -209,6 +233,13 @@ export default function ApprovalsPage() {
             </TableBody>
           </Table>
       </div>
+
+      <ListPagination
+        page={safePage}
+        totalPages={totalPages}
+        totalItems={filteredMemos.length}
+        onPageChange={setPage}
+      />
 
       {/* View Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
