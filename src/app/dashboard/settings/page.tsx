@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getSettings, saveSettings } from '@/lib/settings';
 import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, duplicateTemplate } from '@/lib/templates';
@@ -44,6 +44,8 @@ import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/componen
 import { ImportSheetDialog, ImportUserRow } from '@/components/import-sheet-dialog';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoTypography } from '@/types';
+import { DEFAULT_APPROVER_MANUAL, DEFAULT_CREATOR_MANUAL } from '@/lib/default-manual';
+import { ManualContentRenderer } from '@/components/user-manual-dialog';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -122,6 +124,8 @@ export default function SettingsPage() {
     const loadData = async () => {
       const s = await getSettings();
       setSettings(s);
+      if (s?.userManual?.approverManual) setApproverManualText(s.userManual.approverManual);
+      if (s?.userManual?.creatorManual) setCreatorManualText(s.userManual.creatorManual);
       settingsLoadedRef.current = true;
     };
     loadData();
@@ -243,6 +247,42 @@ export default function SettingsPage() {
       await logSettingUpdated(user.id, user.displayName, 'Deadline', oldSettings.deadlineDays, settings.deadlineDays);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // User manual state & handlers
+  const [approverManualText, setApproverManualText] = useState(DEFAULT_APPROVER_MANUAL);
+  const [creatorManualText, setCreatorManualText] = useState(DEFAULT_CREATOR_MANUAL);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualSaveSuccess, setManualSaveSuccess] = useState(false);
+  const [activeManualEditTab, setActiveManualEditTab] = useState<'approver' | 'creator'>('approver');
+  const [showManualPreview, setShowManualPreview] = useState(false);
+
+  const handleSaveManual = async () => {
+    if (!settings || !user) return;
+    setManualSaving(true);
+    try {
+      const manualData = {
+        approverManual: approverManualText,
+        creatorManual: creatorManualText,
+        updatedAt: new Date(),
+        updatedBy: user.displayName || user.username,
+      };
+      await saveSettings({ userManual: manualData }, user.id);
+      await logSettingUpdated(user.id, user.displayName, 'UserManual', 'Updated manual', 'Updated');
+      setSettings((prev) => prev ? { ...prev, userManual: manualData } : prev);
+      setManualSaveSuccess(true);
+      setTimeout(() => setManualSaveSuccess(false), 3000);
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
+  const handleResetManualToDefault = (type: 'approver' | 'creator') => {
+    if (type === 'approver') {
+      setApproverManualText(DEFAULT_APPROVER_MANUAL);
+    } else {
+      setCreatorManualText(DEFAULT_CREATOR_MANUAL);
     }
   };
 
@@ -784,6 +824,7 @@ export default function SettingsPage() {
           <TabsTrigger value="smtp" className="flex items-center space-x-2"><Mail className="h-4 w-4" /><span>ตั้งค่าอีเมล</span></TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เทมเพลต</span></TabsTrigger>
           <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Deadline</span></TabsTrigger>
+          <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4" /><span>คู่มือการใช้งาน</span></TabsTrigger>
         </TabsList>
 
         {/* Syslog */}
@@ -1115,6 +1156,153 @@ Deadline: {deadline}
                 <p className="text-sm text-slate-600">Memo จะถูกยกเลิกอัตโนมัติหากไม่ได้รับการอนุมัติภายใน {settings?.deadlineDays || 7} วัน</p>
               </div>
               <Button onClick={handleSaveDeadline} disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึก'}</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* User Manual Tab */}
+        <TabsContent value="manual">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-4 flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-blue-600" />
+                  จัดการเนื้อหาคู่มือการใช้งาน (User Manual)
+                </CardTitle>
+                <CardDescription>
+                  แก้ไขเนื้อหาคู่มือที่จะแสดงให้กับผู้ใช้งานในระบบ ทั้งฝั่งผู้อนุมัติ (Approver) และผู้สร้างเอกสาร (Creator)
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowManualPreview(!showManualPreview)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Eye className="h-4 w-4 text-slate-600" />
+                  {showManualPreview ? 'ซ่อนตัวอย่าง' : 'ดูตัวอย่างผลลัพธ์'}
+                </Button>
+                <Button
+                  onClick={handleSaveManual}
+                  disabled={manualSaving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5"
+                >
+                  {manualSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : manualSaveSuccess ? (
+                    <CheckCircle className="h-4 w-4 text-green-300" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {manualSaving ? 'กำลังบันทึก...' : manualSaveSuccess ? 'บันทึกสำเร็จ!' : 'บันทึกคู่มือ'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Manual Type Switcher */}
+              <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setActiveManualEditTab('approver')}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeManualEditTab === 'approver'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    คู่มือสำหรับ Approver (มีสิทธิ์อนุมัติ)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveManualEditTab('creator')}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeManualEditTab === 'creator'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    คู่มือสำหรับ Creator (สร้างและจัดการ Memo)
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleResetManualToDefault(activeManualEditTab)}
+                  className="text-xs text-slate-500 hover:text-red-600"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  รีเซ็ตเป็นค่าเริ่มต้น
+                </Button>
+              </div>
+
+              {/* Format Help / Tip */}
+              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-900 flex items-start gap-2">
+                <span className="font-bold text-blue-600 shrink-0">💡 รูปแบบการเขียน:</span>
+                <span className="text-slate-600 leading-relaxed">
+                  ใช้ <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[11px]">### หัวข้อข้อความ</code> สำหรับสร้างการ์ดหัวข้อใหม่, 
+                  ใช้ <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[11px]">• ข้อความ</code> หรือ <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[11px]">- ข้อความ</code> สำหรับรายการย่อย, 
+                  และใช้ <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[11px]">**ตัวหนา**</code> เพื่อเน้นข้อความ
+                </span>
+              </div>
+
+              {/* Textarea */}
+              <div className="grid grid-cols-1 gap-4">
+                {activeManualEditTab === 'approver' ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-slate-700">
+                      เนื้อหาคู่มือ: ฝั่งผู้อนุมัติ (Approver Manual)
+                    </Label>
+                    <Textarea
+                      rows={16}
+                      className="font-mono text-xs leading-relaxed"
+                      value={approverManualText}
+                      onChange={(e) => setApproverManualText(e.target.value)}
+                      placeholder="ใส่เนื้อหาคู่มือการอนุมัติ..."
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-slate-700">
+                      เนื้อหาคู่มือ: ฝั่งผู้สร้างเอกสาร (Creator Manual)
+                    </Label>
+                    <Textarea
+                      rows={16}
+                      className="font-mono text-xs leading-relaxed"
+                      value={creatorManualText}
+                      onChange={(e) => setCreatorManualText(e.target.value)}
+                      placeholder="ใส่เนื้อหาคู่มือการสร้าง Memo..."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Live Preview Panel */}
+              {showManualPreview && (
+                <div className="mt-4 pt-4 border-t space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-slate-800 flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-blue-600" />
+                      ตัวอย่างการแสดงผลจริงในหน้าต่างคู่มือ (
+                      {activeManualEditTab === 'approver' ? 'ฝั่ง Approver' : 'ฝั่ง Creator'}
+                      )
+                    </h4>
+                    <span className="text-xs text-slate-400">Live Preview</span>
+                  </div>
+                  <div className="border rounded-xl p-5 bg-slate-50/70 max-h-[500px] overflow-y-auto">
+                    <ManualContentRenderer
+                      content={
+                        activeManualEditTab === 'approver'
+                          ? approverManualText
+                          : creatorManualText
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

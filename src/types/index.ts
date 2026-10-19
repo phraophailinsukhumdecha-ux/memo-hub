@@ -193,6 +193,13 @@ export interface SheetImportConfig {
 
 export type MasterListField = 'position' | 'department' | 'clientSpecific' | 'vendorSpecific' | 'dfInternalAffairs';
 
+export interface UserManualSettings {
+  approverManual: string;
+  creatorManual: string;
+  updatedAt?: Date;
+  updatedBy?: string;
+}
+
 export interface GlobalSettings {
   smtp: {
     host: string;
@@ -220,6 +227,7 @@ export interface GlobalSettings {
   vendorSpecificOptions?: string[];
   dfInternalAffairsOptions?: string[];
   sheetImportConfigs?: Partial<Record<MasterListField | 'users', SheetImportConfig>>;
+  userManual?: UserManualSettings;
   updatedAt?: Date;
   updatedBy?: string;
 }

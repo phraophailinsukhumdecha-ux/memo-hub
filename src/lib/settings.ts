@@ -1,6 +1,7 @@
 import { GlobalSettings } from '@/types';
 import { db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_APPROVER_MANUAL, DEFAULT_CREATOR_MANUAL } from './default-manual';
 
 const DEFAULT_SETTINGS: GlobalSettings = {
   smtp: { host: '', port: 587, secure: false, user: '', password: '', fromEmail: '', fromName: 'MemoHub' },
@@ -10,6 +11,10 @@ const DEFAULT_SETTINGS: GlobalSettings = {
   clientSpecificOptions: [],
   vendorSpecificOptions: [],
   dfInternalAffairsOptions: [],
+  userManual: {
+    approverManual: DEFAULT_APPROVER_MANUAL,
+    creatorManual: DEFAULT_CREATOR_MANUAL,
+  },
   updatedAt: new Date(),
   updatedBy: 'system',
 };
@@ -42,6 +47,12 @@ export async function getSettings(): Promise<GlobalSettings> {
     clientSpecificOptions: s.clientSpecificOptions || DEFAULT_SETTINGS.clientSpecificOptions,
     vendorSpecificOptions: s.vendorSpecificOptions || DEFAULT_SETTINGS.vendorSpecificOptions,
     dfInternalAffairsOptions: s.dfInternalAffairsOptions || DEFAULT_SETTINGS.dfInternalAffairsOptions,
+    userManual: {
+      approverManual: s.userManual?.approverManual || DEFAULT_APPROVER_MANUAL,
+      creatorManual: s.userManual?.creatorManual || DEFAULT_CREATOR_MANUAL,
+      updatedAt: s.userManual?.updatedAt,
+      updatedBy: s.userManual?.updatedBy,
+    },
   };
 }
 
@@ -67,6 +78,12 @@ export function subscribeToSettings(callback: (settings: GlobalSettings) => void
         clientSpecificOptions: raw.clientSpecificOptions || DEFAULT_SETTINGS.clientSpecificOptions,
         vendorSpecificOptions: raw.vendorSpecificOptions || DEFAULT_SETTINGS.vendorSpecificOptions,
         dfInternalAffairsOptions: raw.dfInternalAffairsOptions || DEFAULT_SETTINGS.dfInternalAffairsOptions,
+        userManual: {
+          approverManual: raw.userManual?.approverManual || DEFAULT_APPROVER_MANUAL,
+          creatorManual: raw.userManual?.creatorManual || DEFAULT_CREATOR_MANUAL,
+          updatedAt: raw.userManual?.updatedAt,
+          updatedBy: raw.userManual?.updatedBy,
+        },
       });
     } else {
       callback(DEFAULT_SETTINGS);
