@@ -18,18 +18,6 @@ export default function HomePage() {
             </div>
             <span className="text-xl font-bold text-slate-900">MemoHub</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/auth/login">
-              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium">
-                เข้าสู่ระบบ
-              </Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button className="bg-slate-900 text-white hover:bg-slate-800">
-                เริ่มใช้งาน
-              </Button>
-            </Link>
-          </div>
         </div>
       </header>
 
@@ -45,13 +33,10 @@ export default function HomePage() {
           <p className="mb-8 text-slate-500 max-w-2xl mx-auto">
             สร้าง ส่ง และอนุมัติ Memo ได้ง่ายในที่เดียว ช่วยให้การจัดการเอกสารสะดวกและเป็นระเบียบมากขึ้น
           </p>
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center">
             <Link href="/auth/login">
-              <Button size="lg">เริ่มใช้งาน</Button>
-            </Link>
-            <Link href="#features">
-              <Button variant="outline" size="lg">
-                ดูฟีเจอร์ทั้งหมด
+              <Button size="lg" className="bg-slate-900 text-white hover:bg-slate-800 px-8">
+                เริ่มต้นใช้งาน
               </Button>
             </Link>
           </div>
