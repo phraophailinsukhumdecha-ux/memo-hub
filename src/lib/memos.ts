@@ -97,8 +97,12 @@ export async function cancelMemo(memoId: string): Promise<void> {
   }
 }
 
-export async function deleteMemo(memoId: string): Promise<void> {
-  const res = await fetch(`/api/memos/${memoId}`, {
+export async function deleteMemo(memoId: string, currentUser?: { id: string; role?: string } | null): Promise<void> {
+  const params = new URLSearchParams();
+  if (currentUser?.id) params.set('userId', currentUser.id);
+  if (currentUser?.role) params.set('userRole', currentUser.role);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`/api/memos/${memoId}${qs}`, {
     method: 'DELETE',
   });
   if (!res.ok) {
@@ -107,11 +111,15 @@ export async function deleteMemo(memoId: string): Promise<void> {
   }
 }
 
-export async function deleteMemos(memoIds: string[]): Promise<void> {
+export async function deleteMemos(memoIds: string[], currentUser?: { id: string; role?: string } | null): Promise<void> {
   const res = await fetch('/api/memos/batch-delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ memoIds }),
+    body: JSON.stringify({
+      memoIds,
+      userId: currentUser?.id,
+      userRole: currentUser?.role,
+    }),
   });
   if (!res.ok) {
     const data = await res.json();

@@ -353,14 +353,51 @@ export default function HomePage() {
     }
   };
 
+    const canDeleteMemo = (memo: Memo): boolean => {
+    if (!user) return false;
+    if (isAdmin) return true;
+    if (memo.ownerId !== user.id) return false;
+    if (memo.status === 'draft') return true;
+    if (memo.status === 'approved' || memo.status === 'rejected') return false;
+
+    if (Array.isArray(memo.approvals) && memo.approvals.length > 0) return false;
+    const progress = getApprovalProgress(memo);
+    if (progress.signed > 0) return false;
+
+    if (memo.formData && typeof memo.formData === 'object') {
+      const fd = memo.formData as Record<string, unknown>;
+      for (const key of Object.keys(fd)) {
+        const val = fd[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          const grid = val as Record<string, { signed?: boolean; action?: string }>;
+          for (const colKey of Object.keys(grid)) {
+            if (colKey.startsWith('col_') && colKey !== 'col_0') {
+              const col = grid[colKey];
+              if (col && (col.signed || col.action === 'approve' || col.action === 'reject')) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return true;
+  };
+
   const handleDelete = async (memoId: string) => {
+    const target = memos.find((m) => m.id === memoId);
+    if (target && !canDeleteMemo(target)) {
+      alert('ไม่สามารถลบเอกสารนี้ได้ เนื่องจากมีผู้อนุมัติเริ่มลงนามแล้ว หรือได้รับการอนุมัติ/ปฏิเสธแล้ว (ลบได้เฉพาะผู้ดูแลระบบ)');
+      return;
+    }
     if (!confirm('คุณต้องการลบ memo นี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้')) return;
     try {
       const { deleteMemo } = await import('@/lib/memos');
-      await deleteMemo(memoId);
+      await deleteMemo(memoId, user);
     } catch (e) {
       console.error(e);
-      alert('ลบไม่สำเร็จ');
+      alert(e instanceof Error ? e.message : 'ลบไม่สำเร็จ');
     }
   };
 
@@ -369,12 +406,12 @@ export default function HomePage() {
     if (!confirm(`คุณต้องการลบ ${selectedMemos.size} memo ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้`)) return;
     setDeleting(true);
     try {
-      await deleteMemos(Array.from(selectedMemos));
+      await deleteMemos(Array.from(selectedMemos), user);
       setSelectedMemos(new Set());
       setIsSelectMode(false);
     } catch (e) {
       console.error(e);
-      alert('ลบไม่สำเร็จ');
+      alert(e instanceof Error ? e.message : 'ลบไม่สำเร็จ');
     } finally {
       setDeleting(false);
     }
@@ -393,10 +430,11 @@ export default function HomePage() {
   };
 
   const toggleSelectAll = (items: Memo[]) => {
-    if (selectedMemos.size === items.length) {
+    const deletable = items.filter(canDeleteMemo);
+    if (selectedMemos.size === deletable.length && deletable.length > 0) {
       setSelectedMemos(new Set());
     } else {
-      setSelectedMemos(new Set(items.map((m) => m.id)));
+      setSelectedMemos(new Set(deletable.map((m) => m.id)));
     }
   };
 
@@ -668,11 +706,11 @@ export default function HomePage() {
         <div className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={selectedMemos.size === items.length}
+            checked={items.filter(canDeleteMemo).length > 0 && selectedMemos.size === items.filter(canDeleteMemo).length}
             onChange={() => toggleSelectAll(items)}
             className="h-4 w-4 rounded"
           />
-          <span className="text-slate-600">เลือกทั้งหมด ({selectedMemos.size}/{items.length})</span>
+          <span className="text-slate-600">เลือกทั้งหมด ({selectedMemos.size}/{items.filter(canDeleteMemo).length})</span>
           {selectedMemos.size > 0 && (
             <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 ml-auto" onClick={handleBulkDelete} disabled={deleting}>
               <Trash2 className="h-4 w-4 mr-1" />
@@ -684,7 +722,7 @@ export default function HomePage() {
       {items.map((memo) => (
         <div key={memo.id} className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {isSelectMode && (
+            {isSelectMode && canDeleteMemo(memo) && (
               <input
                 type="checkbox"
                 checked={selectedMemos.has(memo.id)}
@@ -714,9 +752,11 @@ export default function HomePage() {
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {canDeleteMemo(memo) && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </>
             ) : (
               <>
@@ -741,9 +781,11 @@ export default function HomePage() {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)}>
               <Printer className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {canDeleteMemo(memo) && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
               </>
             )}
           </div>

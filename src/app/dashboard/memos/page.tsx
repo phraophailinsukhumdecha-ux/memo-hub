@@ -337,7 +337,7 @@ export default function MemosPage() {
   const handleDeleteMemo = async (memoId: string) => {
     if (!confirm('คุณต้องการลบ Memo นี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้')) return;
     try {
-      await deleteMemo(memoId);
+      await deleteMemo(memoId, user);
     } catch (e) {
       console.error('Error deleting memo:', e);
       alert('ไม่สามารถลบ Memo ได้');
