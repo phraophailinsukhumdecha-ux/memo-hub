@@ -386,7 +386,6 @@ export default function MemosPage() {
               <SelectItem value="waiting">รออนุมัติ</SelectItem>
               <SelectItem value="approved">อนุมัติแล้ว</SelectItem>
               <SelectItem value="rejected">ปฏิเสธ</SelectItem>
-              <SelectItem value="cancel">ยกเลิก</SelectItem>
             </SelectContent>
           </Select>
         </div>

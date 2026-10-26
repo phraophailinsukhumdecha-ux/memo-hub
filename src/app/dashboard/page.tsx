@@ -31,7 +31,6 @@ const STATUS_SEGMENTS = [
   { key: 'waiting', label: 'รออนุมัติ', color: '#eab308' },
   { key: 'approved', label: 'อนุมัติแล้ว', color: '#22c55e' },
   { key: 'rejected', label: 'ปฏิเสธ', color: '#ef4444' },
-  { key: 'cancel', label: 'ยกเลิก', color: '#94a3b8' },
   { key: 'draft', label: 'แบบร่าง', color: '#64748b' },
 ] as const;
 
@@ -163,7 +162,7 @@ export default function DashboardPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">ปฏิเสธ/ยกเลิก</CardTitle>
+                <CardTitle className="text-sm font-medium">ปฏิเสธ</CardTitle>
                 <XCircle className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>

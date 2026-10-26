@@ -884,7 +884,6 @@ export default function HomePage() {
                        <SelectItem value="waiting">รออนุมัติ</SelectItem>
                        <SelectItem value="approved">อนุมัติแล้ว</SelectItem>
                        <SelectItem value="rejected">ปฏิเสธ</SelectItem>
-                       <SelectItem value="cancel">ยกเลิก</SelectItem>
                      </SelectContent>
                    </Select>
                    <Button size="sm" onClick={() => { setEditingDraftId(null); setIsCreating(true); }}>
