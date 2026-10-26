@@ -306,7 +306,7 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
 
   const tableHtml = rows.map((rowCols) => `<tr>${rowCols.join('')}</tr>`).join('');
 
-  return `<table style="width:100%;border-collapse:collapse;margin-bottom:12px;${typo ? `font-family:${typo.fontFamily};` : ''}">
+  return `<table style="width:100%;border-collapse:collapse;margin-bottom:0;page-break-inside:avoid;break-inside:avoid;${typo ? `font-family:${typo.fontFamily};` : ''}">
     ${tableHtml}
   </table>`;
 }
@@ -422,29 +422,59 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
   }
 
   const stampHtml = isApproved ? `
-    <div style="position:absolute;bottom:40px;right:40px;width:160px;height:160px;border:4px solid #16a34a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
+    <div style="position:absolute;bottom:24px;right:24px;width:150px;height:150px;border:4px solid #16a34a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;pointer-events:none;z-index:10;">
       <div style="font-size:16px;font-weight:800;color:#16a34a;letter-spacing:2px;">APPROVED</div>
       <div style="font-size:14px;color:#16a34a;margin-top:2px;">อนุมัติแล้ว</div>
       <div style="width:80%;height:1px;background:#16a34a;margin:6px 0;"></div>
     </div>
   ` : memo.status === 'rejected' ? `
-    <div style="position:absolute;bottom:40px;right:40px;width:160px;height:160px;border:4px solid #dc2626;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;">
+    <div style="position:absolute;bottom:24px;right:24px;width:150px;height:150px;border:4px solid #dc2626;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-15deg);opacity:0.85;pointer-events:none;z-index:10;">
       <div style="font-size:16px;font-weight:800;color:#dc2626;letter-spacing:2px;">REJECTED</div>
       <div style="font-size:14px;color:#dc2626;margin-top:2px;">ถูกปฏิเสธ</div>
       <div style="width:80%;height:1px;background:#dc2626;margin:6px 0;"></div>
     </div>
   ` : '';
 
-  const memoFontCss = `.memo-font,.memo-font *{font-family:${typo.fontFamily} !important;}`;
+  const memoFontCss = `.memo-font,.memo-font *{font-family:${typo.fontFamily} !important;}
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    @media print {
+      html, body {
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #memo-print-content {
+        box-sizing: border-box !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        padding: 10mm 12mm 8mm 12mm !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }`;
 
   return `
     <style>${memoFontCss}</style>
-    <div id="memo-print-content" class="memo-font" style="width:210mm;min-height:297mm;padding:15mm;color:#0f172a;position:relative;background:#fff;display:flex;flex-direction:column;">
-      ${headerSectionsHtml}
-      <div style="flex:1;border:1px solid #0f172a;padding:12px;margin-bottom:4px;">
+    <div id="memo-print-content" class="memo-font" style="box-sizing:border-box;width:210mm;height:297mm;max-height:297mm;padding:10mm 12mm 8mm 12mm;color:#0f172a;position:relative;background:#fff;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
+      <div style="flex-shrink:0;">
+        ${headerSectionsHtml}
+      </div>
+      <div style="flex:1;min-height:0;border:1px solid #0f172a;padding:10px 12px;margin-bottom:6px;box-sizing:border-box;overflow:hidden;">
         ${bodyHtml}
       </div>
-      ${approvalGridHtml}
+      <div style="flex-shrink:0;margin-top:auto;page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;break-after:avoid;">
+        ${approvalGridHtml}
+      </div>
       ${stampHtml}
     </div>
   `;
@@ -473,8 +503,8 @@ export async function downloadMemoPdf(memo: Memo, template?: MemoTemplate | null
     scale: 2,
     useCORS: true,
     backgroundColor: '#ffffff',
-    width: element.scrollWidth,
-    height: 297, // Force A4 height in CSS pixels (297mm ≈ 1122px at 96dpi)
+    width: element.offsetWidth || element.scrollWidth,
+    height: element.offsetHeight || 1122,
   });
 
   const imgData = canvas.toDataURL('image/png');
@@ -496,11 +526,48 @@ export function printMemo(memo: Memo, template?: MemoTemplate | null, globalMemo
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Memo ${memo.id}</title>
+      <meta charset="utf-8">
+      <title>Memo ${memo.memoNumber || memo.id || ''}</title>
       <style>
+        * {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        html, body {
+          width: 210mm;
+          height: 297mm;
+          max-height: 297mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff;
+          overflow: hidden !important;
+        }
         @media print {
-          body { margin: 0; }
-          @page { margin: 15mm; }
+          html, body {
+            width: 210mm !important;
+            height: 297mm !important;
+            max-height: 297mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+          #memo-print-content {
+            box-sizing: border-box !important;
+            width: 210mm !important;
+            height: 297mm !important;
+            max-height: 297mm !important;
+            padding: 10mm 12mm 8mm 12mm !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            overflow: hidden !important;
+          }
         }
       </style>
     </head>
