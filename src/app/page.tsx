@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, CheckCircle, Settings } from 'lucide-react';
+import { FileText, CheckCircle2, Clock } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -39,11 +39,11 @@ export default function HomePage() {
           <h1 className="mb-4 text-4xl font-bold text-slate-900">
             MemoHub
           </h1>
-          <p className="mb-2 text-xl text-slate-600">
-            ระบบจัดการบันทึกและอนุมัติ Memo สำหรับองค์กร
+          <p className="mb-2 text-xl font-medium text-slate-700">
+            ระบบจัดการ Memo และการอนุมัติเอกสาร
           </p>
-          <p className="mb-8 text-slate-500">
-            ศูนย์กลางการจัดการ Memo ทั้งหมดขององค์กร ใช้งานง่าย ปลอดภัย มีประสิทธิภาพ
+          <p className="mb-8 text-slate-500 max-w-2xl mx-auto">
+            สร้าง ส่ง และอนุมัติ Memo ได้ง่ายในที่เดียว ช่วยให้การจัดการเอกสารสะดวกและเป็นระเบียบมากขึ้น
           </p>
           <div className="flex justify-center space-x-4">
             <Link href="/auth/login">
@@ -64,31 +64,31 @@ export default function HomePage() {
           <h2 className="mb-12 text-center text-3xl font-bold text-slate-900">
             ฟีเจอร์หลัก
           </h2>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+          <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
+            <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <FileText className="mb-2 h-10 w-10 text-slate-900" />
-                <CardTitle>สร้าง Memo ง่ายๆ</CardTitle>
+                <FileText className="mb-2 h-10 w-10 text-blue-600" />
+                <CardTitle>สร้าง Memo ได้ง่ายๆ</CardTitle>
                 <CardDescription>
-                  สร้าง Memo ผ่านเทมเพลตที่กำหนดไว้ พร้อมระบบเส้นทางอนุมัติอัตโนมัติ
+                  สร้าง Memo จากเทมเพลตที่เตรียมไว้ ไม่ต้องเริ่มต้นเอกสารใหม่ทุกครั้ง
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <CheckCircle className="mb-2 h-10 w-10 text-green-600" />
-                <CardTitle>อนุมัติรวดเร็ว</CardTitle>
+                <CheckCircle2 className="mb-2 h-10 w-10 text-green-600" />
+                <CardTitle>อนุมัติได้รวดเร็ว</CardTitle>
                 <CardDescription>
-                  ผู้อนุมัติสามารถตรวจสอบและอนุมัติ Memo ได้ทันที พร้อมความเห็นประกอบ
+                  ตรวจสอบรายละเอียด Memo พร้อมอนุมัติหรือแสดงความคิดเห็นได้สะดวก
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <Settings className="mb-2 h-10 w-10 text-slate-600" />
-                <CardTitle>จัดการง่าย</CardTitle>
+                <Clock className="mb-2 h-10 w-10 text-amber-500" />
+                <CardTitle>ติดตามสถานะได้</CardTitle>
                 <CardDescription>
-                  ตั้งค่าเทมเพลต ผู้ใช้ และการอนุมัติผ่านหน้า Admin ได้อย่างยืดหยุ่น
+                  ตรวจสอบสถานะ Memo ได้ง่าย รู้ว่าเอกสารอยู่ในขั้นตอนไหนและรอการอนุมัติจากใคร
                 </CardDescription>
               </CardHeader>
             </Card>
