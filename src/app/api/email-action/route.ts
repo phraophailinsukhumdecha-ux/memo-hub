@@ -15,7 +15,18 @@ export async function GET(request: NextRequest) {
   const token = searchParams.get('token');
   const action = searchParams.get('action');
 
-  // Info endpoint for cancel page
+  // Redirect approve/reject GET requests to dedicated confirmation pages
+  if (token && action === 'approve') {
+    const baseUrl = getBaseUrl(request);
+    return NextResponse.redirect(`${baseUrl}/email-approve?token=${token}`);
+  }
+
+  if (token && action === 'reject') {
+    const baseUrl = getBaseUrl(request);
+    return NextResponse.redirect(`${baseUrl}/email-cancel?token=${token}`);
+  }
+
+  // Info endpoint for approve and cancel pages
   if (token && action === 'info') {
     try {
       const tokenQuery = query(collection(db, 'emailTokens'), where('token', '==', token));

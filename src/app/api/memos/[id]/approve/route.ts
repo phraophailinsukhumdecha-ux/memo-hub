@@ -153,6 +153,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       actorId: approverId,
       actorName: approverName,
       action: 'approve',
+      remark: comment?.trim() || undefined,
       baseUrl,
     });
 
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       actorId: approverId,
       actorName: approverName,
       action: 'approve',
+      remark: comment?.trim() || undefined,
       baseUrl,
     });
 

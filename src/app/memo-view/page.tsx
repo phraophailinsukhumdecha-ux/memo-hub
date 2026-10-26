@@ -109,6 +109,16 @@ function MemoViewContent() {
           className="bg-white relative"
           dangerouslySetInnerHTML={{ __html: html }}
         />
+        {memo.approvals?.some((a) => a.action === 'approve' && a.comment) && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm font-semibold text-green-800 mb-1">หมายเหตุการอนุมัติ</p>
+            {memo.approvals.filter((a) => a.action === 'approve' && a.comment).map((a, i) => (
+              <div key={i} className="text-sm text-green-700 mt-1">
+                <p>อนุมัติโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
+              </div>
+            ))}
+          </div>
+        )}
         {memo.status === 'rejected' && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>

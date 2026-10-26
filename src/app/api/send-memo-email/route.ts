@@ -485,7 +485,7 @@ Deadline: {deadline}`;
           createdAt: now,
         });
 
-        const approveUrl = `${baseUrl}/api/email-action?token=${token}&action=approve`;
+        const approveUrl = `${baseUrl}/email-approve?token=${token}`;
         const cancelUrl = `${baseUrl}/email-cancel?token=${token}`;
 
         const vars = { ...baseVars, approver_name: approverName };

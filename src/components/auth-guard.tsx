@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
-const publicPaths = ['/auth/login', '/memo-view', '/email-cancel'];
+const publicPaths = ['/memo-view', '/email-cancel', '/email-approve'];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -14,11 +14,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (loading) return;
 
-    const isPublicPath = publicPaths.some((p) => pathname === p || pathname.startsWith('/auth'));
+    const isAuthRoute = pathname.startsWith('/auth');
+    const isPublicPath = isAuthRoute || publicPaths.some((p) => pathname === p || pathname.startsWith(p));
 
     if (!user && !isPublicPath) {
       router.push('/auth/login');
-    } else if (user && isPublicPath) {
+    } else if (user && isAuthRoute) {
       router.push(user.role === 'admin' ? '/dashboard' : '/home');
     }
   }, [user, loading, pathname, router]);

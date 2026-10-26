@@ -46,6 +46,9 @@ export default function HomePage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [approveComment, setApproveComment] = useState('');
+  const [approving, setApproving] = useState(false);
 
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MemoTemplate | null>(null);
@@ -153,7 +156,7 @@ export default function HomePage() {
           .then((text) => setDetailHtml(text))
           .catch(() => setDetailHtml(''));
         if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id)) {
-          setTimeout(() => handleApprove(memo.id), 500);
+          setTimeout(() => handleApprove(memo), 500);
         }
         window.history.replaceState({}, '', '/home');
       }
@@ -319,15 +322,26 @@ export default function HomePage() {
     return <Badge className="bg-blue-100 text-blue-700 border-blue-200">รออนุมัติ</Badge>;
   };
 
-  const handleApprove = async (memoId: string) => {
-    if (!user) return;
-    setApprovingId(memoId);
+  const handleApprove = (memo: Memo) => {
+    setSelectedMemo(memo);
+    setApproveComment('');
+    setIsApproveDialogOpen(true);
+  };
+
+  const confirmApprove = async () => {
+    if (!selectedMemo || !user) return;
+    setApproving(true);
     try {
-      await approveMemo(memoId, user.id, user.displayName);
+      await approveMemo(selectedMemo.id, user.id, user.displayName, approveComment.trim() || undefined);
+      setIsApproveDialogOpen(false);
+      setApproveComment('');
+      setIsDetailOpen(false);
+      setSelectedMemo(null);
     } catch (e) {
       console.error(e);
+      alert('อนุมัติไม่สำเร็จ');
     } finally {
-      setApprovingId(null);
+      setApproving(false);
     }
   };
 
@@ -762,7 +776,7 @@ export default function HomePage() {
               <>
             {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
               <>
-                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo.id)} disabled={approvingId === memo.id}>
+                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
                   <CheckCircle className="h-4 w-4 mr-1" />
                   อนุมัติ
                 </Button>
@@ -983,7 +997,7 @@ export default function HomePage() {
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
             {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(selectedMemo.id); setIsDetailOpen(false); }}>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />
                   อนุมัติ
                 </Button>
@@ -995,6 +1009,32 @@ export default function HomePage() {
             )}
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Dialog */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>อนุมัติ Memo {selectedMemo?.memoNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">หมายเหตุประกอบการอนุมัติ (ไม่บังคับ)</p>
+            <Textarea
+              rows={4}
+              value={approveComment}
+              onChange={(e) => setApproveComment(e.target.value)}
+              placeholder="กรอกหมายเหตุ หรือข้อความเพิ่มเติม (หากมี)..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)} disabled={approving}>
+              ยกเลิก
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={confirmApprove} disabled={approving}>
+              {approving ? 'กำลังดำเนินการ...' : 'ยืนยันอนุมัติ'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
