@@ -241,36 +241,63 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
       return ai - bi;
     });
 
-  const totalColumns = Math.max(colKeys.length, configColumns.length);
+  const hasDynamicUsers = Boolean(
+    (auditorUserIds && auditorUserIds.length > 0) || (attnToUserIds && attnToUserIds.length > 0)
+  );
+
+  let effectiveColKeys = colKeys;
+  if (effectiveColKeys.length === 0 && hasDynamicUsers) {
+    const totalNeeded = (ownerUser ? 1 : 0) + (auditorUserIds?.length || 0) + (attnToUserIds?.length || 0);
+    effectiveColKeys = Array.from({ length: totalNeeded }, (_, idx) => `col_${idx}`);
+  }
+
+  const totalColumns = hasDynamicUsers
+    ? effectiveColKeys.length
+    : Math.max(effectiveColKeys.length, configColumns.length);
   const maxPerRow = totalColumns === 4 ? 2 : 3;
 
   function renderCol(colKey: string, i: number): string {
     const colData = data[colKey] || {};
     const isFirst = i === 0;
-    const isLast = i === totalColumns - 1;
 
-    // Same titles as ApprovalGrid preview: first = ผู้ขออนุมัติ, rest = อนุมัติ
-    const colTitle = colData.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : 'อนุมัติ');
+    // Resolve non-first columns from Auditor / ATTN TO, mirroring readonly ApprovalGrid preview
+    let resolvedName = colData.name || '';
+    let resolvedTitle = colData.signerTitle || '';
+    let assignedRole: 'auditor' | 'approver' | undefined = undefined;
 
-  // Resolve non-first columns from Auditor / ATTN TO, mirroring readonly ApprovalGrid preview
-  let resolvedName = colData.name || '';
-  let resolvedTitle = colData.signerTitle || '';
-  if (!isFirst && users) {
-    const seq: { displayName: string; position?: string }[] = [];
-    for (const audId of auditorUserIds || []) {
-      const u = users.find((x) => x.id === audId);
-      if (u) seq.push(u);
+    if (!isFirst && users) {
+      const seq: { displayName: string; position?: string; roleType: 'auditor' | 'approver' }[] = [];
+      for (const audId of auditorUserIds || []) {
+        const u = users.find((x) => x.id === audId);
+        if (u) seq.push({ ...u, roleType: 'auditor' });
+      }
+      for (const attnId of attnToUserIds || []) {
+        const u = users.find((x) => x.id === attnId);
+        if (u) seq.push({ ...u, roleType: 'approver' });
+      }
+      const assigned = seq[i - 1];
+      if (assigned) {
+        resolvedName = assigned.displayName;
+        resolvedTitle = assigned.position || '';
+        assignedRole = assigned.roleType;
+      }
     }
-    for (const attnId of attnToUserIds || []) {
-      const u = users.find((x) => x.id === attnId);
-      if (u) seq.push(u);
+
+    let colTitle = colData.colTitle;
+    if (colTitle === 'Checked by') colTitle = 'ผู้ตรวจสอบ';
+    if (colTitle === 'อนุมัติ') colTitle = 'ผู้อนุมัติ';
+    if (!colTitle) {
+      if (isFirst) {
+        colTitle = 'ผู้ขออนุมัติ';
+      } else if (assignedRole === 'auditor') {
+        colTitle = 'ผู้ตรวจสอบ';
+      } else if (assignedRole === 'approver') {
+        colTitle = 'ผู้อนุมัติ';
+      } else {
+        const cfgTitle = configColumns[i]?.title;
+        colTitle = cfgTitle === 'Checked by' ? 'ผู้ตรวจสอบ' : cfgTitle === 'อนุมัติ' ? 'ผู้อนุมัติ' : cfgTitle || 'ผู้อนุมัติ';
+      }
     }
-    const assigned = seq[i - 1];
-    if (assigned) {
-      resolvedName = assigned.displayName;
-      resolvedTitle = assigned.position || '';
-    }
-  }
 
   const displayName = isFirst
     ? (ownerUser?.displayName || colData.name || '')
@@ -299,8 +326,8 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   }
 
   const rows: string[][] = [];
-  for (let i = 0; i < colKeys.length; i += maxPerRow) {
-    const rowKeys = colKeys.slice(i, i + maxPerRow);
+  for (let i = 0; i < effectiveColKeys.length; i += maxPerRow) {
+    const rowKeys = effectiveColKeys.slice(i, i + maxPerRow);
     rows.push(rowKeys.map((key, j) => renderCol(key, i + j)));
   }
 

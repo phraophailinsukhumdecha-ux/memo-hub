@@ -613,29 +613,30 @@ export default function HomePage() {
           const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
           const today = { date: todayStr, time: timeStr };
           let idx = 0;
-          // col_0: owner
+          const newGrid: typeof grid = {};
+          // col_0: owner (ผู้ขออนุมัติ)
           if (user) {
-            grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: colTitles[idx] || 'ผู้ขออนุมัติ' };
+            newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: 'ผู้ขออนุมัติ' };
             idx++;
           }
-          // col_1+: Checked by (each auditor user gets own column)
+          // col_1+: Checked by (ผู้ตรวจสอบ)
           for (const audId of auditorUserIds) {
             const audUser = allUsers.find((u) => u.id === audId);
             if (audUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: colTitles[idx] || 'Checked by' };
+              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: 'ผู้ตรวจสอบ' };
               idx++;
             }
           }
-          // col_n+: ATTN TO (each approver user gets own column)
+          // col_n+: ATTN TO (ผู้อนุมัติ)
           for (const attnId of attnToUserIds) {
             const attnUser = allUsers.find((u) => u.id === attnId);
             if (attnUser) {
-              grid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: colTitles[idx] || 'อนุมัติ' };
+              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: 'ผู้อนุมัติ' };
               idx++;
             }
           }
           // CC users get email only — no grid columns
-          formData[gridField.id] = grid;
+          formData[gridField.id] = newGrid;
         }
       }
 

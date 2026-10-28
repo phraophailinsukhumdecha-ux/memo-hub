@@ -521,8 +521,8 @@ export default function SettingsPage() {
       newField.fieldConfig = {
         columns: [
           { title: 'ผู้ขออนุมัติ', subtitle: '' },
-          { title: 'Checked by', subtitle: '' },
-          { title: 'อนุมัติ', subtitle: '' },
+          { title: 'ผู้ตรวจสอบ', subtitle: '' },
+          { title: 'ผู้อนุมัติ', subtitle: '' },
         ],
         showTime: true,
       };

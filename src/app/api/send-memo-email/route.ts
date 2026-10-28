@@ -322,7 +322,12 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
           const col = gridData[colKey] || {};
           const isFirst = i === 0;
           const isLast = i === colKeys.length - 1;
-          const colTitle = col.colTitle || (isFirst ? 'ผู้ขออนุมัติ' : isLast ? 'อนุมัติ' : 'ตรวจสอบ');
+          let colTitle = col.colTitle;
+          if (colTitle === 'Checked by' || colTitle === 'ตรวจสอบ') colTitle = 'ผู้ตรวจสอบ';
+          if (colTitle === 'อนุมัติ') colTitle = 'ผู้อนุมัติ';
+          if (!colTitle) {
+            colTitle = isFirst ? 'ผู้ขออนุมัติ' : isLast ? 'ผู้อนุมัติ' : 'ผู้ตรวจสอบ';
+          }
           const displayName = col.name || '';
           const displayTitle = col.signerTitle || '';
           const signed = col.signed;

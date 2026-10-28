@@ -202,7 +202,7 @@ export function MemoDocumentForm({
                           const selected: string[] = Array.isArray(raw) ? raw as string[] : [];
                           return users.filter((u) => !selected.includes(u.id)).map((u) => ({ value: u.id, label: u.displayName }));
                         })()}
-                        placeholder={f.name === 'auditor' ? 'เลือกผู้ Checked by' : f.name === 'attnTo' ? 'เลือกผู้อนุมัติ' : 'เลือกผู้รับสำเนา'}
+                        placeholder={f.name === 'auditor' ? 'เลือกผู้ตรวจสอบ' : f.name === 'attnTo' ? 'เลือกผู้อนุมัติ' : 'เลือกผู้รับสำเนา'}
                       />
                     </div>
                   ) : (
