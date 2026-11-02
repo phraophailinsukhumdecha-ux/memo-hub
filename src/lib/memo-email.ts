@@ -14,7 +14,14 @@ import { MemoTypography, MemoAttachment, Approval } from '@/types';
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { formatThaiDateTime } from '@/lib/datetime';
-import { getMemoSubject } from '@/lib/memo-subject';
+import {
+  buildEmailVariables,
+  replaceEmailVariables,
+  DEFAULT_APPROVER_SUBJECT,
+  DEFAULT_APPROVER_BODY,
+  DEFAULT_OWNER_SUBJECT,
+  DEFAULT_OWNER_BODY,
+} from '@/lib/email-variables';
 
 export interface SmtpConfig {
   host: string;
@@ -34,13 +41,8 @@ export interface OwnerMailFormat {
   approverBody?: string;
 }
 
-export const DEFAULT_OWNER_SUBJECT =
-  '[MemoHub] {memo_number} - {subject} ({action_label}โดย {actor_name})';
-export const DEFAULT_OWNER_BODY = `สวัสดีค่ะ/ครับ
-
-Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
-เลขที่: {memo_number}
-เรื่อง: {title}`;
+/** Kept for backwards compatibility — templates live in email-variables.ts. */
+export { DEFAULT_OWNER_SUBJECT, DEFAULT_OWNER_BODY };
 
 export function escapeHtml(str: string): string {
   return str
@@ -50,16 +52,8 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export function replaceVariables(
-  template: string,
-  vars: Record<string, string>
-): string {
-  let result = template;
-  for (const [key, value] of Object.entries(vars)) {
-    result = result.replaceAll(`{${key}}`, value);
-  }
-  return result;
-}
+/** Kept for backwards compatibility. */
+export const replaceVariables = replaceEmailVariables;
 
 export function createTransporter(smtp: SmtpConfig) {
   const port = Number(smtp.port) || 587;
@@ -408,37 +402,26 @@ export async function sendOwnerNotification(
 
     const viewToken = await createViewToken(memoId);
     const memoLink = buildViewUrl(baseUrl, viewToken);
-    const memoSubject = getMemoSubject(
-      memo.formData as Record<string, unknown>,
+
+    const vars = buildEmailVariables({
+      memo: memo as Record<string, unknown>,
       templateFields,
-      memo.title as string
-    );
-
-    const vars: Record<string, string> = {
-      memo_number: (memo.memoNumber as string) || memoId,
-      title: memoSubject,
-      subject: memoSubject,
-      owner_name: (memo.ownerName as string) || '',
-      department: (memo.department as string) || '',
-      status:
-        (memo.status as string) === 'approved'
-          ? 'อนุมัติแล้ว'
-          : (memo.status as string) === 'rejected'
-            ? 'ถูกปฏิเสธ'
-            : 'รออนุมัติ',
-      actor_name: actorName,
-      action_label: actionLabel,
+      baseUrl,
+      memoId,
+      recipientName: (memo.ownerName as string) || '',
+      actorName,
+      actionLabel,
       remark: remark || '-',
-      memo_link: memoLink,
-      acted_at: actedAt,
-    };
+      actedAt,
+      memoLink,
+    });
 
-    const subject = replaceVariables(
+    const subject = replaceEmailVariables(
       emailFormat.ownerSubject || DEFAULT_OWNER_SUBJECT,
       vars
     );
     const bodyTemplate = emailFormat.ownerBody || DEFAULT_OWNER_BODY;
-    const bodyHtml = replaceVariables(bodyTemplate, vars)
+    const bodyHtml = replaceEmailVariables(bodyTemplate, vars)
       .split('\n')
       .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
       .join('');
@@ -594,11 +577,6 @@ export async function sendApproverNotifications(
 
     const viewToken = await createViewToken(memoId);
     const memoLink = buildViewUrl(baseUrl, viewToken);
-    const memoSubject = getMemoSubject(
-      memo.formData as Record<string, unknown>,
-      templateFields,
-      memo.title as string
-    );
 
     const transporter = createTransporter(smtp);
     const sender = buildSender(smtp);
@@ -623,35 +601,25 @@ export async function sendApproverNotifications(
       const approveUrl = `${baseUrl}/email-approve?token=${actionToken}`;
       const cancelUrl = `${baseUrl}/email-cancel?token=${actionToken}`;
 
-      const vars: Record<string, string> = {
-        memo_number: (memo.memoNumber as string) || memoId,
-        title: memoSubject,
-        subject: memoSubject,
-        owner_name: (memo.ownerName as string) || '',
-        department: (memo.department as string) || '',
-        status:
-          (memo.status as string) === 'approved'
-            ? 'อนุมัติแล้ว'
-            : (memo.status as string) === 'rejected'
-              ? 'ถูกปฏิเสธ'
-              : 'รออนุมัติ',
-        actor_name: actorName,
-        action_label: actionLabel,
+      const vars = buildEmailVariables({
+        memo: memo as Record<string, unknown>,
+        templateFields,
+        baseUrl,
+        memoId,
+        approverName: approver.name,
+        recipientName: approver.name,
+        actorName,
+        actionLabel,
         remark: remark || '-',
-        memo_link: memoLink,
-        acted_at: actedAt,
-        approver_name: approver.name,
-      };
+        actedAt,
+        memoLink,
+      });
 
-      const subjectTemplate = emailFormat.approverSubject || '[MemoHub] {memo_number} - {subject} — มีผู้ดำเนินการแล้ว';
-      const bodyTemplate = emailFormat.approverBody || `สวัสดีค่ะ/ครับ คุณ{approver_name}
+      const subjectTemplate = emailFormat.approverSubject || DEFAULT_APPROVER_SUBJECT;
+      const bodyTemplate = emailFormat.approverBody || DEFAULT_APPROVER_BODY;
+      const subject = replaceEmailVariables(subjectTemplate, vars);
 
-มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
-เลขที่: {memo_number}
-ดำเนินการโดย: {actor_name} → {action_label}`;
-      const subject = replaceVariables(subjectTemplate, vars);
-
-      const bodyText = replaceVariables(bodyTemplate, vars);
+      const bodyText = replaceEmailVariables(bodyTemplate, vars);
       const bodyHtml = bodyText
         .split('\n')
         .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)

@@ -48,6 +48,7 @@ import { DEFAULT_APPROVER_MANUAL, DEFAULT_CREATOR_MANUAL } from '@/lib/default-m
 import { ManualContentRenderer } from '@/components/user-manual-dialog';
 import { isUserOnline } from '@/lib/presence';
 import { formatRelativeTime } from '@/utils/cn';
+import { EMAIL_VARIABLES, DEFAULT_CC_SUBJECT, DEFAULT_CC_BODY } from '@/lib/email-variables';
 
 const MEMO_LIST_BUTTONS: Array<{ key: keyof MemoListButtonSettings; label: string; description: string }> = [
   { key: 'edit', label: 'แก้ไข (ฉบับร่าง)', description: 'ปุ่มแก้ไข Memo ที่ยังเป็นแบบร่าง' },
@@ -59,6 +60,23 @@ const MEMO_LIST_BUTTONS: Array<{ key: keyof MemoListButtonSettings; label: strin
   { key: 'approve', label: 'อนุมัติ (หน้าผู้อนุมัติ)', description: 'ปุ่มอนุมัติในรายการ "รออนุมัติ"' },
   { key: 'reject', label: 'ปฏิเสธ (หน้าผู้อนุมัติ)', description: 'ปุ่มปฏิเสธในรายการ "รออนุมัติ"' },
 ];
+
+/** Shared variable list — every email card can use every variable. */
+function EmailVariableHint() {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {EMAIL_VARIABLES.map((variable) => (
+        <code
+          key={variable.key}
+          title={variable.label}
+          className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700"
+        >
+          {`{${variable.key}}`}
+        </code>
+      ))}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -1145,7 +1163,7 @@ export default function SettingsPage() {
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: e.target.value, body: settings?.emailFormat?.body || '' } })}
                     placeholder="[MemoHub] {memo_number} - {subject}"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
+                  <EmailVariableHint />
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
@@ -1162,7 +1180,7 @@ export default function SettingsPage() {
 ผู้สร้าง: {owner_name}
 Deadline: {deadline}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+                  <EmailVariableHint />
                 </div>
               </div>
 
@@ -1179,7 +1197,7 @@ Deadline: {deadline}`}
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerSubject: e.target.value } })}
                     placeholder="[MemoHub] {memo_number} {action_label}โดย {actor_name}"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
+                  <EmailVariableHint />
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
@@ -1193,7 +1211,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
 เลขที่: {memo_number}
 เรื่อง: {title}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{acted_at}`'}</p>
+                  <EmailVariableHint />
                 </div>
               </div>
 
@@ -1210,7 +1228,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, approverSubject: e.target.value } })}
                     placeholder="[MemoHub] {memo_number} - {subject} — มีผู้ดำเนินการแล้ว"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{acted_at}`'}</p>
+                  <EmailVariableHint />
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
@@ -1224,11 +1242,39 @@ Memo ของท่านมีการดำเนินการ: {action_la
 เลขที่: {memo_number}
 ดำเนินการโดย: {actor_name} → {action_label}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{acted_at}`'}</p>
+                  <EmailVariableHint />
                 </div>
               </div>
 
-              {/* Section 4: Preview Template */}
+              {/* Section 4: CC recipients (view-only) */}
+              <div className="space-y-4 p-4 rounded-lg border border-purple-200 bg-purple-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                  <h3 className="text-sm font-semibold text-purple-900">อีเมลแจ้งผู้รับ CC (view-only)</h3>
+                </div>
+                <div className="space-y-2">
+                  <Label>หัวข้ออีเมล (Subject)</Label>
+                  <Input
+                    value={settings?.emailFormat?.ccSubject || ''}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', ccSubject: e.target.value } })}
+                    placeholder={DEFAULT_CC_SUBJECT}
+                  />
+                  <EmailVariableHint />
+                </div>
+                <div className="space-y-2">
+                  <Label>เนื้อหาอีเมล (Body)</Label>
+                  <Textarea
+                    rows={5}
+                    value={settings?.emailFormat?.ccBody || ''}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', ccBody: e.target.value } })}
+                    placeholder={DEFAULT_CC_BODY}
+                  />
+                  <EmailVariableHint />
+                  <p className="text-xs text-slate-500">ถ้าเว้นว่าง ระบบจะใช้ Subject/Body หลักของอีเมลผู้อนุมัติ</p>
+                </div>
+              </div>
+
+              {/* Section 5: Preview Template */}
               <div className="space-y-2 pt-2 border-t">
                 <Label>ตัวอย่าง Memo ในอีเมล (Preview Template)</Label>
                 <Textarea
@@ -1246,7 +1292,7 @@ Deadline: {deadline}
 
 {approval_grid}`}
                 />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
+                <EmailVariableHint />
               </div>
 
               <div className="flex items-center gap-2">

@@ -292,6 +292,8 @@ export interface GlobalSettings {
     ownerBody?: string;
     approverSubject?: string;
     approverBody?: string;
+    ccSubject?: string;
+    ccBody?: string;
   };
   deadlineDays: number;
   positionOptions: string[];

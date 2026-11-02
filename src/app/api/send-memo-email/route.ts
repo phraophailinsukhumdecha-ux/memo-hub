@@ -4,8 +4,14 @@ import { doc, getDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoSrc } from '@/lib/logo';
-import { APP_TIME_ZONE, formatActionTime, formatThaiDate } from '@/lib/datetime';
-import { getMemoSubject } from '@/lib/memo-subject';
+import {
+  buildEmailVariables,
+  replaceEmailVariables,
+  DEFAULT_APPROVER_SUBJECT,
+  DEFAULT_APPROVER_BODY,
+  DEFAULT_CC_SUBJECT,
+  DEFAULT_CC_BODY,
+} from '@/lib/email-variables';
 import {
   buildCompactMemoHtml,
   createViewToken,
@@ -32,6 +38,8 @@ interface EmailFormat {
   ownerBody?: string;
   approverSubject?: string;
   approverBody?: string;
+  ccSubject?: string;
+  ccBody?: string;
 }
 
 const ERR = {
@@ -101,14 +109,6 @@ function buildSender(smtp: SmtpConfig) {
   if (name && user) return `"${name}" <${user}>`;
   if (name) return name;
   return 'MemoHub';
-}
-
-function replaceVariables(template: string, vars: Record<string, string>): string {
-  let result = template;
-  for (const [key, value] of Object.entries(vars)) {
-    result = result.replaceAll(`{${key}}`, value);
-  }
-  return result;
 }
 
 function generateToken(): string {
@@ -474,40 +474,16 @@ export async function POST(request: NextRequest) {
     const usersSnapshot = await getDocs(collection(db, 'users'));
     const allUsersData: Array<{ id: string; email?: string; displayName?: string }> = usersSnapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as { id: string; email?: string; displayName?: string }));
 
-    const deadlineDate = memo.deadlineAt?.toDate?.() || new Date(memo.deadlineAt);
-    const deadlineStr = formatThaiDate(deadlineDate);
-
     const now = new Date();
-    const sendDate = now.toLocaleDateString('th-TH', { timeZone: APP_TIME_ZONE });
-    const time = formatActionTime(now);
-
-    const memoSubject = getMemoSubject(
-      memo.formData as Record<string, unknown>,
+    const baseVars = buildEmailVariables({
+      memo: memo as Record<string, unknown>,
       templateFields,
-      memo.title
-    );
+      baseUrl,
+      memoId,
+    });
 
-    const baseVars: Record<string, string> = {
-      memo_number: memo.memoNumber || memoId,
-      title: memoSubject,
-      subject: memoSubject,
-      owner_name: memo.ownerName || '',
-      status: memo.status === 'approved' ? 'อนุมัติแล้ว' : memo.status === 'rejected' ? 'ถูกปฏิเสธ' : 'รออนุมัติ',
-      deadline: deadlineStr,
-      sendDate,
-      time,
-      memo_url: `${baseUrl}/home`,
-    };
-
-    const subjectTemplate = emailFormat?.subject || '[MemoHub] {memo_number} - {subject}';
-    const bodyTemplate = emailFormat?.body || `สวัสดีค่ะ/ครับ
-
-มี Memo ใหม่รอการอนุมัติของท่าน
-
-เลขที่: {memo_number}
-เรื่อง: {title}
-ผู้สร้าง: {owner_name}
-Deadline: {deadline}`;
+    const subjectTemplate = emailFormat?.subject || DEFAULT_APPROVER_SUBJECT;
+    const bodyTemplate = emailFormat?.body || DEFAULT_APPROVER_BODY;
 
     const transporter = createTransporter(smtp!);
     const sender = buildSender(smtp!);
@@ -533,9 +509,17 @@ Deadline: {deadline}`;
         const approveUrl = `${baseUrl}/email-approve?token=${token}`;
         const cancelUrl = `${baseUrl}/email-cancel?token=${token}`;
 
-        const vars = { ...baseVars, approver_name: approverName };
-        const subject = replaceVariables(subjectTemplate, vars);
-        const bodyText = replaceVariables(bodyTemplate, vars);
+        const viewToken = await createViewToken(memoId);
+        const viewUrl = buildViewUrl(baseUrl, viewToken);
+
+        const vars = {
+          ...baseVars,
+          approver_name: approverName,
+          recipient_name: approverName,
+          memo_link: viewUrl,
+        };
+        const subject = replaceEmailVariables(subjectTemplate, vars);
+        const bodyText = replaceEmailVariables(bodyTemplate, vars);
 
         const bodyHtml = bodyText
           .split('\n')
@@ -557,9 +541,7 @@ Deadline: {deadline}`;
           templateTypo as import('@/types').MemoTypography | undefined
         );
 
-        // Public full-memo view link (no login required)
-        const viewToken = await createViewToken(memoId);
-        const viewUrl = buildViewUrl(baseUrl, viewToken);
+        // Public full-memo view link was created above so {memo_link} works.
 
         const htmlEmail = `<!DOCTYPE html>
 <html>
@@ -609,9 +591,18 @@ Deadline: {deadline}`;
         const viewToken = await createViewToken(memoId);
         const viewUrl = buildViewUrl(baseUrl, viewToken);
 
-        const vars = { ...baseVars, approver_name: to, memo_link: viewUrl };
-        const subject = replaceVariables(subjectTemplate, vars);
-        const bodyText = replaceVariables(bodyTemplate, vars);
+        const ccSubjectTemplate = emailFormat?.ccSubject || emailFormat?.subject || DEFAULT_CC_SUBJECT;
+        const ccBodyTemplate = emailFormat?.ccBody || emailFormat?.body || DEFAULT_CC_BODY;
+
+        const vars = {
+          ...baseVars,
+          approver_name: to,
+          cc_name: to,
+          recipient_name: to,
+          memo_link: viewUrl,
+        };
+        const subject = replaceEmailVariables(ccSubjectTemplate, vars);
+        const bodyText = replaceEmailVariables(ccBodyTemplate, vars);
         const bodyHtml = bodyText
           .split('\n')
           .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
