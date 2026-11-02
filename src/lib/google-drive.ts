@@ -225,8 +225,8 @@ export async function getRootFolderId(): Promise<string> {
     driveConfig && driveConfig.enabled !== false ? (driveConfig.rootFolderId || '').trim() : '';
   const id =
     fromSettings ||
-    process.env.GOOGLE_DRIVE_FOLDER_ID ||
-    process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID;
+    (process.env.GOOGLE_DRIVE_FOLDER_ID || '').trim() ||
+    (process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID || '').trim();
   if (!id) {
     throw new DriveConfigError(
       'ยังไม่ได้ตั้งค่า Google Drive Folder ID — กรอกได้ที่หน้า ตั้งค่า → ไฟล์แนบ / Drive'
@@ -239,7 +239,8 @@ export async function getSharedDriveId(): Promise<string | undefined> {
   const driveConfig = await loadDriveConfig();
   const fromSettings =
     driveConfig && driveConfig.enabled !== false ? (driveConfig.sharedDriveId || '').trim() : '';
-  return fromSettings || process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID || undefined;
+  const fromEnv = (process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID || '').trim();
+  return fromSettings || fromEnv || undefined;
 }
 
 export interface DriveFileInfo {
