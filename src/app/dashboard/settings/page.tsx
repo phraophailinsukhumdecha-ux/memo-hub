@@ -39,7 +39,7 @@ import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, d
 import { subscribeToUsers, createUser, updateUser, deleteUser } from '@/lib/users';
 import { subscribeToSyslogs } from '@/lib/syslogs';
 import { logSettingUpdated } from '@/lib/event-logs';
-import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig } from '@/types';
+import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig, DriveConnectionSettings } from '@/types';
 import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
 import { ImportSheetDialog, ImportUserRow } from '@/components/import-sheet-dialog';
 import { SectionRenderer } from '@/components/memo-sections';
@@ -294,6 +294,7 @@ export default function SettingsPage() {
     clientEmail?: string;
     projectId?: string;
     folderCount?: number;
+    configSource?: 'settings' | 'env';
     error?: string;
   } | null>(null);
   const [driveChecking, setDriveChecking] = useState(false);
@@ -302,6 +303,17 @@ export default function SettingsPage() {
   const [driveFolderSaving, setDriveFolderSaving] = useState(false);
   const [driveFolderError, setDriveFolderError] = useState('');
   const driveFolders = settings?.driveFolders || [];
+
+  // Google Drive connection form (saved in Firestore, no code/.env edits needed)
+  const [driveSaving, setDriveSaving] = useState(false);
+  const [driveSaveMessage, setDriveSaveMessage] = useState('');
+
+  const updateDriveConfig = (patch: Partial<DriveConnectionSettings>) => {
+    setSettings((prev) => ({
+      ...prev,
+      driveConfig: { ...(prev.driveConfig || {}), ...patch },
+    }));
+  };
 
   const handleCheckDrive = async () => {
     setDriveChecking(true);
@@ -313,6 +325,41 @@ export default function SettingsPage() {
       setDriveStatus({ ok: false, error: 'เชื่อมต่อ Google Drive ไม่สำเร็จ' });
     } finally {
       setDriveChecking(false);
+    }
+  };
+
+  const handleSaveDriveConfig = async () => {
+    if (!user) return;
+    setDriveSaving(true);
+    setDriveSaveMessage('');
+    try {
+      const driveConfig = settings.driveConfig || {};
+      const enabled = driveConfig.enabled !== false;
+      if (enabled) {
+        const privateKey = (driveConfig.privateKey || '').trim();
+        const email = (driveConfig.serviceAccountEmail || '').trim();
+        const isJson = privateKey.startsWith('{');
+        if (!privateKey) {
+          setDriveSaveMessage('กรุณาวาง Service Account JSON หรือ Private Key');
+          return;
+        }
+        if (!isJson && !email) {
+          setDriveSaveMessage('กรุณากรอก Service Account Email (หรือวาง JSON ทั้งไฟล์)');
+          return;
+        }
+        if (!(driveConfig.rootFolderId || '').trim()) {
+          setDriveSaveMessage('กรุณากรอก Root Folder ID / Shared Drive ID');
+          return;
+        }
+      }
+      await saveSettings({ driveConfig }, user.id);
+      await logSettingUpdated(user.id, user.displayName, 'DriveConfig', 'updated', 'updated');
+      setDriveSaveMessage('บันทึกการตั้งค่าสำเร็จ');
+      await handleCheckDrive();
+    } catch {
+      setDriveSaveMessage('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      setDriveSaving(false);
     }
   };
 
@@ -1388,6 +1435,93 @@ Deadline: {deadline}
           <div className="space-y-4">
             <Card>
               <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Settings2 className="h-4 w-4" />ข้อมูลเชื่อมต่อ (Service Account)</CardTitle>
+                <CardDescription>ตั้งค่าผ่านระบบ — บันทึกแล้วมีผลทันที ไม่ต้องแก้ไฟล์ .env หรือ deploy ใหม่</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    checked={settings.driveConfig?.enabled !== false}
+                    onChange={(e) => updateDriveConfig({ enabled: e.target.checked })}
+                  />
+                  ใช้การตั้งค่าจากระบบ (แทน Environment Variable)
+                </label>
+
+                <div>
+                  <Label className="text-xs">Service Account JSON หรือ Private Key</Label>
+                  <Textarea
+                    rows={6}
+                    spellCheck={false}
+                    className="font-mono text-xs"
+                    value={settings.driveConfig?.privateKey || ''}
+                    onChange={(e) => updateDriveConfig({ privateKey: e.target.value })}
+                    placeholder="วาง JSON ทั้งไฟล์จาก Google Cloud Console หรือเฉพาะค่า private_key"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    แนะนำให้วาง JSON ทั้งไฟล์ ระบบจะอ่านอีเมลและ private key ให้อัตโนมัติ
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Service Account Email</Label>
+                    <Input
+                      value={settings.driveConfig?.serviceAccountEmail || ''}
+                      onChange={(e) => updateDriveConfig({ serviceAccountEmail: e.target.value })}
+                      placeholder="name@project.iam.gserviceaccount.com"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Project ID (ไม่บังคับ)</Label>
+                    <Input
+                      value={settings.driveConfig?.projectId || ''}
+                      onChange={(e) => updateDriveConfig({ projectId: e.target.value })}
+                      placeholder="intappprojects"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Root Folder ID / Shared Drive ID *</Label>
+                    <Input
+                      value={settings.driveConfig?.rootFolderId || ''}
+                      onChange={(e) => updateDriveConfig({ rootFolderId: e.target.value })}
+                      placeholder="0AA..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Shared Drive ID (ไม่บังคับ)</Label>
+                    <Input
+                      value={settings.driveConfig?.sharedDriveId || ''}
+                      onChange={(e) => updateDriveConfig({ sharedDriveId: e.target.value })}
+                      placeholder="0AA..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button onClick={handleSaveDriveConfig} disabled={driveSaving}>
+                    {driveSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                    บันทึกการเชื่อมต่อ
+                  </Button>
+                  {driveSaveMessage && (
+                    <span className={`text-sm ${driveSaveMessage.includes('สำเร็จ') ? 'text-green-600' : 'text-red-600'}`}>
+                      {driveSaveMessage}
+                    </span>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+                  ต้องแชร์โฟลเดอร์/Shared Drive ให้ Service Account (อีเมลด้านบน) เป็น Editor ก่อน ระบบจึงจะอัปโหลดไฟล์ได้
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Paperclip className="h-4 w-4" />การเชื่อมต่อ Google Drive</CardTitle>
                 <CardDescription>ไฟล์แนบของ Memo จะถูกเก็บใน Shared Drive ขององค์กร แยกโฟลเดอร์ตามแผนกของผู้สร้าง</CardDescription>
               </CardHeader>
@@ -1413,6 +1547,7 @@ Deadline: {deadline}
                         <p><span className="text-slate-500">โฟลเดอร์กลาง:</span> {driveStatus.rootFolderName} <span className="text-xs text-slate-400">({driveStatus.rootFolderId})</span></p>
                         <p><span className="text-slate-500">Service Account:</span> {driveStatus.clientEmail}</p>
                         <p><span className="text-slate-500">โฟลเดอร์ย่อย:</span> {driveStatus.folderCount ?? 0}</p>
+                        <p><span className="text-slate-500">แหล่งที่มาของการตั้งค่า:</span> {driveStatus.configSource === 'settings' ? 'จากระบบ (Firestore)' : 'จาก Environment Variable'}</p>
                       </>
                     ) : (
                       <p className="text-red-600">{driveStatus.error}</p>

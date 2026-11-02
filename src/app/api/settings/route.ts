@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { clearDriveConfigCache } from '@/lib/google-drive';
 
 export async function GET() {
   try {
@@ -36,6 +37,10 @@ export async function PUT(request: NextRequest) {
       updatedAt: now,
       updatedBy,
     }, { merge: true });
+
+    // Drive credentials may have changed — drop cached token/settings so the
+    // next upload/status check uses the new configuration immediately.
+    clearDriveConfigCache();
 
     return NextResponse.json({ success: true });
   } catch (error) {

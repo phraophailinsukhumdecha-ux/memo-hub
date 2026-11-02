@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const rootId = getRootFolderId();
+    const rootId = await getRootFolderId();
     const folders = await listFolders(rootId);
     return NextResponse.json({
       rootFolderId: rootId,
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อโฟลเดอร์' }, { status: 400 });
     }
 
-    const rootId = getRootFolderId();
+    const rootId = await getRootFolderId();
     const existing = await listFolders(rootId);
     const already = existing.find((f) => f.name === rawName);
     const folder = already || (await createFolder(rawName, rootId));

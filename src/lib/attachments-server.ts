@@ -78,7 +78,7 @@ export async function getAttachmentRuntimeSettings(): Promise<AttachmentRuntimeS
 
 /** Department folder -> YYYY-MM subfolder. Falls back to the shared drive root. */
 export async function resolveUploadFolder(department: string | undefined, folders: DriveFolderMapping[]): Promise<string> {
-  const root = getRootFolderId();
+  const root = await getRootFolderId();
   const dept = (department || '').trim();
   const mapping = dept ? folders.find((f) => f.department === dept) : undefined;
   const parent = mapping?.driveFolderId || root;

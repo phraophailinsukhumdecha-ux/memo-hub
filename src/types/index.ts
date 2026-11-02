@@ -171,6 +171,24 @@ export interface DriveAttachmentSettings {
   maxSizeMB?: number;
 }
 
+/**
+ * Google Drive connection details saved from Settings → ไฟล์แนบ / Drive.
+ * When `enabled` is not false these values take priority over environment
+ * variables, so the connection can be changed without editing code or .env.
+ */
+export interface DriveConnectionSettings {
+  enabled?: boolean;
+  /** Service account email (`client_email`). */
+  serviceAccountEmail?: string;
+  /** Private key, or the full service-account JSON pasted as-is. */
+  privateKey?: string;
+  projectId?: string;
+  /** Root folder / Shared Drive id that stores memo attachments. */
+  rootFolderId?: string;
+  /** Shared Drive id (optional, when rootFolderId is a folder inside it). */
+  sharedDriveId?: string;
+}
+
 export interface MemoCondition {
   id: string;
   name: string;
@@ -267,6 +285,7 @@ export interface GlobalSettings {
   userManual?: UserManualSettings;
   driveFolders?: DriveFolderMapping[];
   driveAttachment?: DriveAttachmentSettings;
+  driveConfig?: DriveConnectionSettings;
   updatedAt?: Date;
   updatedBy?: string;
 }

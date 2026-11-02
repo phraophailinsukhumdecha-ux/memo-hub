@@ -1,5 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import crypto from 'node:crypto';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { DriveConnectionSettings } from '@/types';
 
 /**
  * Minimal Google Drive client for the attachment feature.
@@ -8,10 +11,11 @@ import crypto from 'node:crypto';
  * No external SDK is required, which keeps the App Hosting bundle small.
  *
  * Credentials are resolved in this order:
- *   1. GOOGLE_SERVICE_ACCOUNT_JSON  (full JSON string — production secret)
- *   2. GOOGLE_APPLICATION_CREDENTIALS (path to a key file — local development)
- *   3. GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
- *   4. FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (fallback)
+ *   1. Settings saved in Firestore (Settings → ไฟล์แนบ / Drive) — no redeploy needed
+ *   2. GOOGLE_SERVICE_ACCOUNT_JSON  (full JSON string — production secret)
+ *   3. GOOGLE_APPLICATION_CREDENTIALS (path to a key file — local development)
+ *   4. GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+ *   5. FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (fallback)
  *
  * Files must live in a Shared Drive: service accounts have no storage quota,
  * so uploading into a personal My Drive folder fails with 403.
@@ -33,12 +37,84 @@ let cachedCreds: ServiceAccountCredentials | null = null;
 let cachedToken: { token: string; expiresAt: number } | null = null;
 const folderCache = new Map<string, string>();
 
+let cachedSettings: { value: DriveConnectionSettings | null; loadedAt: number } | null = null;
+const DRIVE_SETTINGS_TTL_MS = 10_000;
+
 function normalizePrivateKey(key: string): string {
   return key.includes('\\n') ? key.replace(/\\n/g, '\n') : key;
 }
 
+/**
+ * Connection settings saved from Settings → ไฟล์แนบ / Drive.
+ * Returns null when Firestore has no value (the caller then falls back to env).
+ */
+async function loadDriveConfig(): Promise<DriveConnectionSettings | null> {
+  if (cachedSettings && Date.now() - cachedSettings.loadedAt < DRIVE_SETTINGS_TTL_MS) {
+    return cachedSettings.value;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'global'));
+    const value = snap.exists()
+      ? ((snap.data() as { driveConfig?: DriveConnectionSettings }).driveConfig || null)
+      : null;
+    cachedSettings = { value, loadedAt: Date.now() };
+    return value;
+  } catch {
+    // Firestore unavailable — keep using the environment variables.
+    cachedSettings = { value: null, loadedAt: Date.now() };
+    return null;
+  }
+}
+
+/** Clear cached credentials after the connection settings are saved. */
+export function clearDriveConfigCache(): void {
+  cachedSettings = null;
+  cachedCreds = null;
+  cachedToken = null;
+  folderCache.clear();
+}
+
+/** Accept either a raw private key or a full service-account JSON string. */
+function parseServiceAccountJson(raw: string): ServiceAccountCredentials | null {
+  const value = (raw || '').trim();
+  if (!value.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<ServiceAccountCredentials>;
+    if (parsed.client_email && parsed.private_key) {
+      return {
+        client_email: parsed.client_email,
+        private_key: normalizePrivateKey(parsed.private_key),
+        project_id: parsed.project_id,
+      };
+    }
+  } catch {
+    /* not JSON — treat it as a raw private key below */
+  }
+  return null;
+}
+
 export async function loadCredentials(): Promise<ServiceAccountCredentials> {
   if (cachedCreds) return cachedCreds;
+
+  // 1. Settings saved from the dashboard (no code / .env changes required).
+  const driveConfig = await loadDriveConfig();
+  if (driveConfig && driveConfig.enabled !== false) {
+    const fromJson = parseServiceAccountJson(driveConfig.privateKey || '');
+    if (fromJson) {
+      cachedCreds = fromJson;
+      return cachedCreds;
+    }
+    const email = (driveConfig.serviceAccountEmail || '').trim();
+    const key = normalizePrivateKey((driveConfig.privateKey || '').trim());
+    if (email && key) {
+      cachedCreds = {
+        client_email: email,
+        private_key: key,
+        project_id: driveConfig.projectId,
+      };
+      return cachedCreds;
+    }
+  }
 
   const jsonEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (jsonEnv) {
@@ -68,7 +144,7 @@ export async function loadCredentials(): Promise<ServiceAccountCredentials> {
   }
 
   throw new DriveConfigError(
-    'ยังไม่ได้ตั้งค่า Google Service Account (GOOGLE_SERVICE_ACCOUNT_JSON หรือ GOOGLE_APPLICATION_CREDENTIALS)'
+    'ยังไม่ได้ตั้งค่า Google Service Account — กรอกได้ที่หน้า ตั้งค่า → ไฟล์แนบ / Drive'
   );
 }
 
@@ -143,16 +219,27 @@ async function driveFetch(url: string, init: RequestInit = {}): Promise<Response
   return fetch(url, { ...init, headers, cache: 'no-store' });
 }
 
-export function getRootFolderId(): string {
-  const id = process.env.GOOGLE_DRIVE_FOLDER_ID || process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID;
+export async function getRootFolderId(): Promise<string> {
+  const driveConfig = await loadDriveConfig();
+  const fromSettings =
+    driveConfig && driveConfig.enabled !== false ? (driveConfig.rootFolderId || '').trim() : '';
+  const id =
+    fromSettings ||
+    process.env.GOOGLE_DRIVE_FOLDER_ID ||
+    process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID;
   if (!id) {
-    throw new DriveConfigError('ยังไม่ได้ตั้งค่า GOOGLE_DRIVE_FOLDER_ID');
+    throw new DriveConfigError(
+      'ยังไม่ได้ตั้งค่า Google Drive Folder ID — กรอกได้ที่หน้า ตั้งค่า → ไฟล์แนบ / Drive'
+    );
   }
   return id;
 }
 
-export function getSharedDriveId(): string | undefined {
-  return process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID || undefined;
+export async function getSharedDriveId(): Promise<string | undefined> {
+  const driveConfig = await loadDriveConfig();
+  const fromSettings =
+    driveConfig && driveConfig.enabled !== false ? (driveConfig.sharedDriveId || '').trim() : '';
+  return fromSettings || process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID || undefined;
 }
 
 export interface DriveFileInfo {
@@ -328,6 +415,8 @@ export interface DriveStatus {
   clientEmail?: string;
   projectId?: string;
   folderCount?: number;
+  /** Where the connection details came from. */
+  configSource?: 'settings' | 'env';
   error?: string;
 }
 
@@ -341,12 +430,16 @@ async function getSharedDriveName(driveId: string): Promise<string | undefined> 
 
 export async function getDriveStatus(): Promise<DriveStatus> {
   try {
-    const rootId = getRootFolderId();
+    const driveConfig = await loadDriveConfig();
+    const configSource: 'settings' | 'env' =
+      driveConfig && driveConfig.enabled !== false ? 'settings' : 'env';
+    const rootId = await getRootFolderId();
     const creds = await loadCredentials();
     const info = await getFileInfo(rootId);
     if (!info) {
       return {
         ok: false,
+        configSource,
         rootFolderId: rootId,
         clientEmail: creds.client_email,
         projectId: creds.project_id,
@@ -354,12 +447,13 @@ export async function getDriveStatus(): Promise<DriveStatus> {
       };
     }
     const folders = await listFolders(rootId);
-    const sharedDriveId = getSharedDriveId();
+    const sharedDriveId = await getSharedDriveId();
     const driveName = sharedDriveId && sharedDriveId === rootId
       ? await getSharedDriveName(sharedDriveId)
       : undefined;
     return {
       ok: true,
+      configSource,
       rootFolderId: rootId,
       rootFolderName: driveName || info.name,
       sharedDriveId,
