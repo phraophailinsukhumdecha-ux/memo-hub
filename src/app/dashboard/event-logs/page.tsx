@@ -55,18 +55,34 @@ export default function EventLogsPage() {
                 <TableHead className="w-36">วันที่/เวลา</TableHead>
                 <TableHead className="w-32">ผู้กระทำ</TableHead>
                 <TableHead className="w-28">ประเภท</TableHead>
+                <TableHead className="w-28">ช่องทาง</TableHead>
                 <TableHead>รายละเอียด</TableHead>
+                <TableHead className="w-64">หมายเหตุ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-sm"><DateTimeCell date={log.timestamp} /></TableCell>
-                  <TableCell className="text-sm">{log.userName}</TableCell>
-                  <TableCell>{getActionBadge(log.action)}</TableCell>
-                  <TableCell className="text-sm">{log.details}</TableCell>
-                </TableRow>
-              ))}
+              {logs.map((log) => {
+                const channel = log.metadata?.channel;
+                const comment = typeof log.metadata?.comment === 'string' ? log.metadata.comment : '';
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-sm"><DateTimeCell date={log.timestamp} /></TableCell>
+                    <TableCell className="text-sm">{log.userName}</TableCell>
+                    <TableCell>{getActionBadge(log.action)}</TableCell>
+                    <TableCell>
+                      {channel === 'email' ? (
+                        <Badge className="border-purple-200 bg-purple-100 text-purple-700">อีเมล</Badge>
+                      ) : channel === 'web' ? (
+                        <Badge className="border-blue-200 bg-blue-100 text-blue-700">ระบบ</Badge>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">{log.details}</TableCell>
+                    <TableCell className="text-sm text-slate-600">{comment || '—'}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

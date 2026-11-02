@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 function getDb() {
   if (getApps().length === 0) {
@@ -38,6 +38,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
     }
 
+    const now = new Date();
+    // Presence: record the sign-in so admins can see who is online.
+    try {
+      await doc.ref.update({
+        lastLoginAt: FieldValue.serverTimestamp(),
+        lastSeenAt: FieldValue.serverTimestamp(),
+      });
+    } catch {
+      /* presence is best-effort */
+    }
+
     const { password: _, ...userWithoutPassword } = userData;
     void _;
 
@@ -45,6 +56,8 @@ export async function POST(request: NextRequest) {
       user: {
         id: doc.id,
         ...userWithoutPassword,
+        lastLoginAt: now,
+        lastSeenAt: now,
       },
     });
   } catch (error) {

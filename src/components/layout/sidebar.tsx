@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  UserCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Memo ทั้งหมด', href: '/dashboard/memos', icon: FileText, roles: ['admin'] },
   { name: 'รออนุมัติ', href: '/dashboard/approvals', icon: CheckCircle, roles: ['admin'] },
   { name: 'Event Logs', href: '/dashboard/event-logs', icon: FileText, roles: ['admin'] },
+  { name: 'ผู้ใช้ออนไลน์', href: '/dashboard/online-users', icon: UserCheck, roles: ['admin'] },
   { name: 'การตั้งค่า', href: '/dashboard/settings', icon: Settings, roles: ['admin'] },
 ];
 

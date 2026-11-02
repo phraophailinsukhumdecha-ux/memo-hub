@@ -20,6 +20,10 @@ export interface User {
   department?: string;
   position?: string;
   isApprover?: boolean;
+  /** Last time the account was seen active (heartbeat) — used for online status. */
+  lastSeenAt?: Date | null;
+  /** Last successful sign-in. */
+  lastLoginAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -189,6 +193,18 @@ export interface DriveConnectionSettings {
   sharedDriveId?: string;
 }
 
+/** Which action buttons are visible in the memo list (My Memo / pending). */
+export interface MemoListButtonSettings {
+  edit?: boolean;
+  print?: boolean;
+  duplicate?: boolean;
+  sendEmail?: boolean;
+  delete?: boolean;
+  selectMode?: boolean;
+  approve?: boolean;
+  reject?: boolean;
+}
+
 export interface MemoCondition {
   id: string;
   name: string;
@@ -286,6 +302,7 @@ export interface GlobalSettings {
   driveFolders?: DriveFolderMapping[];
   driveAttachment?: DriveAttachmentSettings;
   driveConfig?: DriveConnectionSettings;
+  memoListButtons?: MemoListButtonSettings;
   updatedAt?: Date;
   updatedBy?: string;
 }

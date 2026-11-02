@@ -41,6 +41,7 @@ import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { SectionRenderer } from '@/components/memo-sections';
+import { MemoRemarks } from '@/components/memo-remarks';
 import { ListPagination } from '@/components/list-pagination';
 
 export default function MemosPage() {
@@ -536,6 +537,7 @@ export default function MemosPage() {
                     ))}
                   </div>
                 </div>
+                <MemoRemarks memo={selectedMemo} className="mt-4" />
               </div>
             );
           })()}

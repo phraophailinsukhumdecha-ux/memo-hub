@@ -1,10 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { User } from '@/types';
 import { login as apiLogin, getStoredUser, storeUser, clearStoredUser } from '@/lib/auth-service';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { HEARTBEAT_INTERVAL_MS } from '@/lib/presence';
 
 interface AuthContextType {
   user: User | null;
@@ -38,9 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    const current = getStoredUser();
+    if (current?.id) {
+      // Mark offline immediately (otherwise the heartbeat timeout does it).
+      updateDoc(doc(db, 'users', current.id), { lastSeenAt: null }).catch(() => {});
+    }
     setUser(null);
     clearStoredUser();
   }, []);
+
+  // Presence heartbeat: keeps `lastSeenAt` fresh while the app is open.
+  useEffect(() => {
+    if (!user?.id) return;
+    const userRef = doc(db, 'users', user.id);
+    const beat = () => {
+      updateDoc(userRef, { lastSeenAt: serverTimestamp() }).catch(() => {});
+    };
+    beat();
+    const timer = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [user?.id]);
 
   const refreshUser = useCallback(async () => {
     const current = getStoredUser();

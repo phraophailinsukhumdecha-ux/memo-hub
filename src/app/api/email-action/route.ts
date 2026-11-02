@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } fro
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
+import { buildApprovalLog } from '@/lib/event-logs';
 
 function getBaseUrl(request: NextRequest): string {
   return (
@@ -326,6 +327,19 @@ export async function GET(request: NextRequest) {
 
     await updateDoc(doc(db, 'memos', tokenData.memoId), updateData);
     await updateDoc(doc(db, 'emailTokens', tokenDoc.id), { used: true, action, usedAt: now });
+    await addDoc(collection(db, 'eventLogs'), {
+      userId: tokenData.approverId,
+      userName: tokenData.approverName,
+      ...buildApprovalLog({
+        memoId: tokenData.memoId,
+        memoNumber: memo.memoNumber as string | undefined,
+        memoTitle: memo.title as string,
+        decision: action as 'approve' | 'reject',
+        channel: 'email',
+        comment: approval.comment,
+      }),
+      timestamp: now,
+    });
 
     // Notify the memo owner by email (fire-and-forget safe: never throws)
     await sendOwnerNotification({
@@ -546,6 +560,19 @@ export async function POST(request: NextRequest) {
 
     await updateDoc(doc(db, 'memos', tokenData.memoId), updateData);
     await updateDoc(doc(db, 'emailTokens', tokenDoc.id), { used: true, action, usedAt: now });
+    await addDoc(collection(db, 'eventLogs'), {
+      userId: tokenData.approverId,
+      userName: matchUserName || tokenData.approverName,
+      ...buildApprovalLog({
+        memoId: tokenData.memoId,
+        memoNumber: memo.memoNumber as string | undefined,
+        memoTitle: memo.title as string,
+        decision: action as 'approve' | 'reject',
+        channel: 'email',
+        comment: remark?.trim() || approval.comment,
+      }),
+      timestamp: now,
+    });
 
     // Notify the memo owner by email (fire-and-forget safe: never throws)
     await sendOwnerNotification({

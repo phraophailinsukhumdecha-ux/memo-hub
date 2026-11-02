@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, addDoc, collection, getDocs } from 'firebase/fi
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
+import { buildApprovalLog } from '@/lib/event-logs';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -151,8 +152,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await addDoc(collection(db, 'eventLogs'), {
       userId: approverId,
       userName: approverName,
-      action: 'MEMO_APPROVED',
-      details: `อนุมัติ Memo: ${memo.title}`,
+      ...buildApprovalLog({
+        memoId: id,
+        memoNumber: memo.memoNumber as string | undefined,
+        memoTitle: memo.title as string,
+        decision: 'approve',
+        channel: 'web',
+        comment,
+      }),
       timestamp: now,
     });
 

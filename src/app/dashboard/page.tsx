@@ -4,12 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle, Clock, XCircle, ArrowRight } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, ArrowRight, Users } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToMemos } from '@/lib/memos';
 import { subscribeToEventLogs } from '@/lib/event-logs';
-import { Memo, EventLog } from '@/types';
+import { subscribeToUsers } from '@/lib/users';
+import { isUserOnline } from '@/lib/presence';
+import { Memo, EventLog, User } from '@/types';
 import { formatDate, formatTime, DateTimeCell } from '@/utils/cn';
 import {
   ResponsiveContainer,
@@ -39,6 +41,7 @@ export default function DashboardPage() {
   const { setTitle } = useDashboardTitle();
   const [memos, setMemos] = useState<Memo[]>([]);
   const [logs, setLogs] = useState<EventLog[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => { setTitle('แดชบอร์ด'); }, [setTitle]);
 
@@ -52,6 +55,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const unsubscribe = subscribeToEventLogs((data) => setLogs(data), 10);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToUsers((data) => setUsers(data));
     return () => unsubscribe();
   }, []);
 
@@ -88,6 +96,7 @@ export default function DashboardPage() {
   }, [memos]);
 
   const recentMemos = memos.slice(0, 5);
+  const onlineCount = users.filter((user) => isUserOnline(user)).length;
 
   const nearDeadline = memos
     .filter((m) => {
@@ -123,7 +132,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Memo ทั้งหมด</CardTitle>
@@ -169,6 +178,19 @@ export default function DashboardPage() {
                 <div className="text-2xl font-bold text-red-600">{stats.rejected + stats.cancel}</div>
               </CardContent>
             </Card>
+            <Link href="/dashboard/online-users">
+              <Card className="cursor-pointer transition-colors hover:bg-slate-50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">ออนไลน์</CardTitle>
+                  <Users className="h-4 w-4 text-emerald-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {onlineCount} <span className="text-sm font-normal text-slate-500">คน</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">

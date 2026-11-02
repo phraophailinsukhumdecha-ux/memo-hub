@@ -18,6 +18,40 @@ export async function logEvent(userId: string, userName: string, action: string,
   });
 }
 
+export interface ApprovalLogInput {
+  memoId: string;
+  memoNumber?: string;
+  memoTitle: string;
+  decision: 'approve' | 'reject';
+  channel: 'web' | 'email';
+  comment?: string;
+}
+
+/**
+ * Builds the audit entry for an approve/reject action so every channel (web or
+ * email) records the same decision, channel and remark.
+ */
+export function buildApprovalLog(input: ApprovalLogInput): {
+  action: 'MEMO_APPROVED' | 'MEMO_REJECTED';
+  details: string;
+  metadata: Record<string, unknown>;
+} {
+  const actionLabel = input.decision === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
+  const channelLabel = input.channel === 'email' ? 'อีเมล' : 'ระบบ';
+  const comment = (input.comment || '').trim();
+  return {
+    action: input.decision === 'approve' ? 'MEMO_APPROVED' : 'MEMO_REJECTED',
+    details: `${actionLabel} Memo: ${input.memoTitle} (ผ่าน${channelLabel})${comment ? ` — หมายเหตุ: ${comment}` : ''}`,
+    metadata: {
+      memoId: input.memoId,
+      memoNumber: input.memoNumber || '',
+      decision: input.decision,
+      channel: input.channel,
+      comment,
+    },
+  };
+}
+
 export async function logMemoCreated(userId: string, userName: string, memoTitle: string) {
   return logEvent(userId, userName, 'MEMO_CREATED', `สร้าง Memo ใหม่: ${memoTitle}`);
 }

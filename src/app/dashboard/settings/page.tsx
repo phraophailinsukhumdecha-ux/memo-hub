@@ -32,20 +32,33 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye, Paperclip, FolderPlus } from 'lucide-react';
+import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye, Paperclip, FolderPlus, ListChecks } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getSettings, saveSettings } from '@/lib/settings';
 import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, duplicateTemplate } from '@/lib/templates';
 import { subscribeToUsers, createUser, updateUser, deleteUser } from '@/lib/users';
 import { subscribeToSyslogs } from '@/lib/syslogs';
 import { logSettingUpdated } from '@/lib/event-logs';
-import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig, DriveConnectionSettings } from '@/types';
+import { GlobalSettings, MemoTemplate, User, MemoField, MemoFieldType, Syslog, SheetImportConfig, DriveConnectionSettings, MemoListButtonSettings } from '@/types';
 import { SectionConfigEditor, SECTION_TYPES, TypographyEditor } from '@/components/section-editors';
 import { ImportSheetDialog, ImportUserRow } from '@/components/import-sheet-dialog';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoTypography } from '@/types';
 import { DEFAULT_APPROVER_MANUAL, DEFAULT_CREATOR_MANUAL } from '@/lib/default-manual';
 import { ManualContentRenderer } from '@/components/user-manual-dialog';
+import { isUserOnline } from '@/lib/presence';
+import { formatRelativeTime } from '@/utils/cn';
+
+const MEMO_LIST_BUTTONS: Array<{ key: keyof MemoListButtonSettings; label: string; description: string }> = [
+  { key: 'edit', label: 'แก้ไข (ฉบับร่าง)', description: 'ปุ่มแก้ไข Memo ที่ยังเป็นแบบร่าง' },
+  { key: 'print', label: 'พิมพ์ / พรีวิว', description: 'ปุ่มเปิดหน้าพิมพ์เอกสาร' },
+  { key: 'duplicate', label: 'Duplicate', description: 'ปุ่มคัดลอก Memo เป็นรายการใหม่' },
+  { key: 'sendEmail', label: 'ส่งอีเมล', description: 'ปุ่มส่งอีเมลแจ้งผู้อนุมัติ' },
+  { key: 'delete', label: 'ลบ', description: 'ปุ่มลบ Memo (ตามสิทธิ์ของผู้ใช้)' },
+  { key: 'selectMode', label: 'โหมดเลือก / ลบหลายรายการ', description: 'ปุ่มเลือกหลายรายการเพื่อลบทีเดียว' },
+  { key: 'approve', label: 'อนุมัติ (หน้าผู้อนุมัติ)', description: 'ปุ่มอนุมัติในรายการ "รออนุมัติ"' },
+  { key: 'reject', label: 'ปฏิเสธ (หน้าผู้อนุมัติ)', description: 'ปุ่มปฏิเสธในรายการ "รออนุมัติ"' },
+];
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -360,6 +373,18 @@ export default function SettingsPage() {
       setDriveSaveMessage('บันทึกไม่สำเร็จ กรุณาลองใหม่');
     } finally {
       setDriveSaving(false);
+    }
+  };
+
+  const handleSaveMemoListButtons = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const oldSettings = await getSettings();
+      await saveSettings({ memoListButtons: settings.memoListButtons || {} }, user.id);
+      await logSettingUpdated(user.id, user.displayName, 'MemoListButtons', oldSettings.memoListButtons, settings.memoListButtons);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -948,6 +973,7 @@ export default function SettingsPage() {
           <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Deadline</span></TabsTrigger>
           <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4" /><span>คู่มือการใช้งาน</span></TabsTrigger>
           <TabsTrigger value="drive" className="flex items-center space-x-2"><Paperclip className="h-4 w-4" /><span>ไฟล์แนบ / Drive</span></TabsTrigger>
+          <TabsTrigger value="memo-list" className="flex items-center space-x-2"><ListChecks className="h-4 w-4" /><span>หน้า My Memo</span></TabsTrigger>
         </TabsList>
 
         {/* Syslog */}
@@ -1639,6 +1665,46 @@ Deadline: {deadline}
           </div>
         </TabsContent>
 
+        {/* My Memo button visibility */}
+        <TabsContent value="memo-list">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ListChecks className="h-4 w-4" />ปุ่มในหน้า My Memo</CardTitle>
+              <CardDescription>เปิด/ปิดปุ่มที่แสดงในรายการ Memo — ปุ่ม &quot;สร้าง Memo ใหม่&quot; แสดงเสมอ</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {MEMO_LIST_BUTTONS.map((item) => {
+                const enabled = settings.memoListButtons?.[item.key] !== false;
+                return (
+                  <div key={item.key} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{item.label}</p>
+                      <p className="text-xs text-slate-500">{item.description}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSettings((prev) => ({
+                        ...prev,
+                        memoListButtons: { ...(prev.memoListButtons || {}), [item.key]: !enabled },
+                      }))}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${enabled ? 'bg-green-600' : 'bg-slate-300'}`}
+                      title={enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                );
+              })}
+              <div className="flex justify-end">
+                <Button onClick={handleSaveMemoListButtons} disabled={saving}>
+                  {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                  บันทึก
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Templates */}
         <TabsContent value="templates">
           {editingSectionsFor ? (
@@ -2125,7 +2191,7 @@ Deadline: {deadline}
                         }}
                       />
                     </TableHead>
-                    <TableHead>รหัสพนักงาน</TableHead><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead>
+                    <TableHead>รหัสพนักงาน</TableHead><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>บทบาท</TableHead><TableHead>ตำแหน่ง</TableHead><TableHead>แผนก</TableHead><TableHead>สถานะ</TableHead><TableHead className="text-center">ผู้อนุมัติ</TableHead><TableHead className="w-24"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2148,6 +2214,16 @@ Deadline: {deadline}
                       <TableCell>{getRoleLabel(u.role)}</TableCell>
                       <TableCell>{u.position || '-'}</TableCell>
                       <TableCell>{u.department || '-'}</TableCell>
+                      <TableCell>
+                        {isUserOnline(u) ? (
+                          <Badge className="border-green-200 bg-green-100 text-green-700">ออนไลน์</Badge>
+                        ) : (
+                          <span className="text-xs text-slate-500">
+                            ออฟไลน์
+                            {u.lastSeenAt ? ` (${formatRelativeTime(new Date(u.lastSeenAt))})` : ''}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">
                         <button
                           type="button"

@@ -10,7 +10,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoForEmail } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
-import { MemoTypography, MemoAttachment } from '@/types';
+import { MemoTypography, MemoAttachment, Approval } from '@/types';
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { formatThaiDateTime } from '@/lib/datetime';
@@ -105,9 +105,13 @@ function resolveDisplayName(
 export function buildApprovalStatusHtml(
   formData: Record<string, unknown>,
   templateFields: Array<{ id: string; type: string; label: string; fieldConfig?: Record<string, unknown> }>,
-  typography?: MemoTypography
+  typography?: MemoTypography,
+  approvals?: Approval[],
+  rejectionComment?: string
 ): string {
   const typo = resolveTypography(typography || null);
+  // Placeholder comments written by the email action flow are not real remarks.
+  const autoComments = new Set(['อนุมัติผ่านอีเมล', 'ปฏิเสธผ่านอีเมล', 'ดำเนินการผ่านอีเมล']);
   let html = '';
   for (const field of templateFields) {
     const val = formData[field.id];
@@ -142,6 +146,21 @@ export function buildApprovalStatusHtml(
       if (col.signerTitle) html += ` (${escapeHtml(col.signerTitle)})`;
       if ((col.signed || col.action) && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
       html += '</p>';
+
+      // Remark / rejection reason, shown directly under the person who wrote it.
+      const approval = approvals?.find(
+        (item) =>
+          item.approvalLevel === colKey ||
+          (item.approverId && col.userId && item.approverId === col.userId) ||
+          (item.approverName && col.name && item.approverName === col.name)
+      );
+      const rawRemark = ((approval?.comment || '') as string).trim() || ((col.comment || '') as string).trim();
+      const isRejected = col.action === 'reject' || approval?.action === 'reject';
+      const fallbackRemark = isRejected ? (rejectionComment || '').trim() : '';
+      const remark = rawRemark || fallbackRemark;
+      if (remark && !autoComments.has(remark)) {
+        html += `<p style="margin:0 0 6px 20px;font-size:${Math.max(11, typo.baseFontSize - 3)}px;color:#475569;">หมายเหตุ: ${escapeHtml(remark)}</p>`;
+      }
     }
   }
   return html;
@@ -266,7 +285,13 @@ export function buildCompactMemoHtml(
 
   // Approval status list
   let approvalHtml = '';
-  approvalHtml = buildApprovalStatusHtml(formData, templateFields, typography);
+  approvalHtml = buildApprovalStatusHtml(
+    formData,
+    templateFields,
+    typography,
+    memo.approvals as Approval[] | undefined,
+    memo.rejectionComment as string | undefined
+  );
 
   return `
     <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:16px 0;font-family:${typo.fontFamily};">

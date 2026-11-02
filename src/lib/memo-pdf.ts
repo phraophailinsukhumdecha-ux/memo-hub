@@ -354,6 +354,48 @@ function escapeAttachmentText(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Remarks left by approvers/rejecters, rendered at the bottom of the memo
+ * document (web view, print and PDF).
+ */
+function renderMemoRemarks(memo: Memo, typo: ResolvedTypography): string {
+  const approvals = Array.isArray(memo.approvals) ? memo.approvals : [];
+  // These are placeholders written by the email action flow, not real remarks.
+  const autoComments = new Set(['อนุมัติผ่านอีเมล', 'ปฏิเสธผ่านอีเมล', 'ดำเนินการผ่านอีเมล']);
+
+  const items: Array<{ action: 'approve' | 'reject'; name: string; comment: string }> = [];
+  for (const approval of approvals) {
+    const comment = (approval.comment || '').trim();
+    if (!comment || autoComments.has(comment)) continue;
+    items.push({
+      action: approval.action,
+      name: approval.approverName || '-',
+      comment,
+    });
+  }
+
+  const rejection = (memo.rejectionComment || '').trim();
+  if (rejection && !autoComments.has(rejection) && !items.some((item) => item.action === 'reject' && item.comment === rejection)) {
+    const rejecter = approvals.find((approval) => approval.action === 'reject');
+    items.push({ action: 'reject', name: rejecter?.approverName || '-', comment: rejection });
+  }
+
+  if (items.length === 0) return '';
+
+  const rows = items
+    .map((item) => {
+      const color = item.action === 'approve' ? '#15803d' : '#b91c1c';
+      const label = item.action === 'approve' ? 'อนุมัติโดย' : 'ปฏิเสธโดย';
+      return `<li style="margin:2px 0;font-size:11px;line-height:1.45;color:#1e293b;"><span style="color:${color};font-weight:600;">${label}:</span> ${escapeAttachmentText(item.name)} — ${escapeAttachmentText(item.comment)}</li>`;
+    })
+    .join('');
+
+  return `<div style="border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;padding:5px 8px;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid;${typo ? `font-family:${typo.fontFamily};` : ''}">
+    <p style="margin:0 0 2px;font-size:11px;font-weight:700;color:#0f172a;">หมายเหตุ</p>
+    <ul style="margin:0;padding-left:16px;">${rows}</ul>
+  </div>`;
+}
+
 function renderAttachmentList(field: MemoField, value: unknown, typo?: MemoTypography): string {
   const config = (field.fieldConfig || {}) as AttachmentSectionConfig;
   if (config.showInDocument === false) return '';
@@ -506,6 +548,8 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
     </div>
   ` : '';
 
+  const remarksHtml = renderMemoRemarks(memo, typo);
+
   const memoFontCss = `.memo-font,.memo-font *{font-family:${typo.fontFamily} !important;}
     @page {
       size: A4 portrait;
@@ -547,6 +591,7 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
       <div style="flex-shrink:0;margin-top:auto;page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;break-after:avoid;">
         ${approvalGridHtml}
       </div>
+      ${remarksHtml ? `<div style="flex-shrink:0;page-break-inside:avoid;break-inside:avoid;">${remarksHtml}</div>` : ''}
       ${stampHtml}
     </div>
   `;

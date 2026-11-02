@@ -35,6 +35,7 @@ import { isUserNextApprover, hasUserActed } from '@/lib/approval-flow';
 import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { SectionRenderer } from '@/components/memo-sections';
+import { MemoRemarks } from '@/components/memo-remarks';
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
@@ -277,19 +278,7 @@ export default function ApprovalsPage() {
                   />
                 ))}
               </div>
-              {selectedMemo.status === 'rejected' && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>
-                  {selectedMemo.rejectionComment && (
-                    <p className="text-sm text-red-600">เนื่องจาก: {selectedMemo.rejectionComment}</p>
-                  )}
-                  {selectedMemo.approvals?.filter((a) => a.action === 'reject').map((a, i) => (
-                    <div key={i} className="text-sm text-red-600 mt-1">
-                      <p>ปฏิเสธโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <MemoRemarks memo={selectedMemo} />
               </>
             );
           })()}

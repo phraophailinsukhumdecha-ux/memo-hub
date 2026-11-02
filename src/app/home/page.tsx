@@ -22,9 +22,10 @@ import { useAuth } from '@/lib/auth-context';
 import { subscribeToMemos, approveMemo, rejectMemo, cancelMemo, createMemo, updateMemoDraft, deleteMemos } from '@/lib/memos';
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
+import { subscribeToSettings } from '@/lib/settings';
 import { printMemo } from '@/lib/memo-pdf';
 import { runScheduledJobs } from '@/lib/scheduled-jobs';
-import { Memo, MemoTemplate, User, AttachmentSectionConfig, MemoAttachment } from '@/types';
+import { Memo, MemoTemplate, User, AttachmentSectionConfig, MemoAttachment, GlobalSettings, MemoListButtonSettings } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { isUserNextApprover, hasUserActed, getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
@@ -37,6 +38,7 @@ export default function HomePage() {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [templates, setTemplates] = useState<MemoTemplate[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [memoListSettings, setMemoListSettings] = useState<GlobalSettings | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailHtml, setDetailHtml] = useState('');
@@ -133,6 +135,11 @@ export default function HomePage() {
 
   useEffect(() => {
     const unsub = subscribeToUsers((data) => setAllUsers(data));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeToSettings((data) => setMemoListSettings(data));
     return () => unsub();
   }, []);
 
@@ -765,6 +772,9 @@ export default function HomePage() {
     }
   };
 
+  const isListButtonEnabled = (key: keyof MemoListButtonSettings) =>
+    memoListSettings?.memoListButtons?.[key] !== false;
+
   const renderMemoList = (items: Memo[], showApprove: boolean) => (
     <div className="space-y-3">
       {items.length === 0 && (
@@ -773,7 +783,7 @@ export default function HomePage() {
           <p className="text-sm">ไม่มีรายการ</p>
         </div>
       )}
-      {isSelectMode && items.length > 0 && (
+      {isSelectMode && isListButtonEnabled('selectMode') && items.length > 0 && (
         <div className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -816,17 +826,23 @@ export default function HomePage() {
           <div className="flex items-center gap-1 ml-3 shrink-0">
             {memo.status === 'draft' ? (
               <>
-                <Button variant="ghost" size="sm" className="text-slate-700 hover:bg-slate-100" onClick={() => openDraft(memo)}>
-                  <Pencil className="h-4 w-4 mr-1" />
-                  แก้ไข
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์ / พรีวิว">
-                  <Printer className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
-                  <Copy className="h-4 w-4" />
-                </Button>
-                {canDeleteMemo(memo) && (
+                {isListButtonEnabled('edit') && (
+                  <Button variant="ghost" size="sm" className="text-slate-700 hover:bg-slate-100" onClick={() => openDraft(memo)}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    แก้ไข
+                  </Button>
+                )}
+                {isListButtonEnabled('print') && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์ / พรีวิว">
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                )}
+                {isListButtonEnabled('duplicate') && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                )}
+                {isListButtonEnabled('delete') && canDeleteMemo(memo) && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -834,28 +850,34 @@ export default function HomePage() {
               </>
             ) : (
               <>
-            {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
-              <>
-                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  อนุมัติ
-                </Button>
-                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleReject(memo)}>
-                  <XCircle className="h-4 w-4 mr-1" />
-                  ปฏิเสธ
-                </Button>
-              </>
+            {showApprove && isListButtonEnabled('approve') && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                อนุมัติ
+              </Button>
             )}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleSendEmail(memo)} title="ส่งอีเมล">
-              <Mail className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)}>
-              <Printer className="h-4 w-4" />
-            </Button>
-            {canDeleteMemo(memo) && (
+            {showApprove && isListButtonEnabled('reject') && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleReject(memo)}>
+                <XCircle className="h-4 w-4 mr-1" />
+                ปฏิเสธ
+              </Button>
+            )}
+            {isListButtonEnabled('duplicate') && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
+            {isListButtonEnabled('sendEmail') && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleSendEmail(memo)} title="ส่งอีเมล">
+                <Mail className="h-4 w-4" />
+              </Button>
+            )}
+            {isListButtonEnabled('print') && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)}>
+                <Printer className="h-4 w-4" />
+              </Button>
+            )}
+            {isListButtonEnabled('delete') && canDeleteMemo(memo) && (
               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(memo.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -879,6 +901,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isListButtonEnabled('selectMode') && (
           <Button
             variant={isSelectMode ? 'default' : 'outline'}
             size="sm"
@@ -887,6 +910,7 @@ export default function HomePage() {
           >
             {isSelectMode ? 'ยกเลิกเลือก' : 'เลือก'}
           </Button>
+          )}
           {isAdmin && (
             <Button variant="outline" size="sm" className="text-slate-700" onClick={() => router.push('/dashboard')}>
               <FileText className="h-4 w-4 mr-1" />
@@ -1039,21 +1063,6 @@ export default function HomePage() {
                 />
               </div>
             )}
-          {selectedMemo?.status === 'rejected' && (
-            <div className="px-6 pb-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm font-semibold text-red-700 mb-1">เอกสารไม่ผ่านอนุมัติ</p>
-                {selectedMemo.rejectionComment && (
-                  <p className="text-sm text-red-600">เนื่องจาก: {selectedMemo.rejectionComment}</p>
-                )}
-                {selectedMemo?.approvals?.filter((a) => a.action === 'reject').map((a, i) => (
-                  <div key={i} className="text-sm text-red-600 mt-1">
-                    <p>ปฏิเสธโดย: <span className="font-medium">{a.approverName}</span>{a.comment ? ` — ${a.comment}` : ''}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
             {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>

@@ -1,6 +1,6 @@
 import { User } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function login(username: string, password: string): Promise<User | null> {
   const usersRef = collection(db, 'users');
@@ -9,17 +9,30 @@ export async function login(username: string, password: string): Promise<User | 
 
   if (snapshot.empty) return null;
 
-  const doc = snapshot.docs[0];
-  const userData = doc.data();
+  const docSnap = snapshot.docs[0];
+  const userData = docSnap.data();
 
   if (userData.password !== password) return null;
+
+  const now = new Date();
+  // Presence: remember this sign-in so admins can see who is online.
+  try {
+    await updateDoc(doc(db, 'users', docSnap.id), {
+      lastLoginAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
+    });
+  } catch {
+    /* presence is best-effort */
+  }
 
   const { password: _, ...userWithoutPassword } = userData;
   void _;
 
   return {
-    id: doc.id,
+    id: docSnap.id,
     ...userWithoutPassword,
+    lastLoginAt: now,
+    lastSeenAt: now,
   } as User;
 }
 
