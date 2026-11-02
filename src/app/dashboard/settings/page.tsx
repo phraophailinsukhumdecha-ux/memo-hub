@@ -969,6 +969,7 @@ export default function SettingsPage() {
           <TabsTrigger value="users" className="flex items-center space-x-2"><Users className="h-4 w-4" /><span>ผู้ใช้</span></TabsTrigger>
           <TabsTrigger value="master-data" className="flex items-center space-x-2"><Settings2 className="h-4 w-4" /><span>ข้อมูลหลัก</span></TabsTrigger>
           <TabsTrigger value="smtp" className="flex items-center space-x-2"><Mail className="h-4 w-4" /><span>ตั้งค่าอีเมล</span></TabsTrigger>
+          <TabsTrigger value="email-format" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เนื้อหาอีเมล</span></TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เทมเพลต</span></TabsTrigger>
           <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Deadline</span></TabsTrigger>
           <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4" /><span>คู่มือการใช้งาน</span></TabsTrigger>
@@ -1124,7 +1125,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Email Format */}
-        <TabsContent value="smtp">
+        <TabsContent value="email-format">
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>ตั้งค่าฟอร์แมทอีเมล</CardTitle>
@@ -1141,7 +1142,7 @@ export default function SettingsPage() {
                   <Label>หัวข้ออีเมล (Subject)</Label>
                   <Input
                     value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}'}
-                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '' } })}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: e.target.value, body: settings?.emailFormat?.body || '' } })}
                     placeholder="[MemoHub] {memo_number} - {subject}"
                   />
                   <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
@@ -1151,7 +1152,7 @@ export default function SettingsPage() {
                   <Textarea
                     rows={5}
                     value={settings?.emailFormat?.body || ''}
-                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: e.target.value } })}
                     placeholder={`สวัสดีค่ะ/ครับ
 
 มี Memo ใหม่รอการอนุมัติของท่าน
@@ -1233,7 +1234,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
                 <Textarea
                   rows={10}
                   value={settings?.emailFormat?.preview || ''}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: settings?.emailFormat?.body || '', preview: e.target.value } })}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { ...settings?.emailFormat, subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: settings?.emailFormat?.body || '', preview: e.target.value } })}
                   placeholder={`เลขที่: {memo_number}
 หัวข้อ: {title}
 ผู้สร้าง: {owner_name} ({department})
