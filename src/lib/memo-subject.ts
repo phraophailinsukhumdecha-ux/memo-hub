@@ -49,3 +49,15 @@ export function getMemoSubject(
   // 3. Last resort: the memo title.
   return readString(fallback);
 }
+
+/**
+ * Subject to show in memo lists/cards. Memos store `title` as the template
+ * name ("Memo"), so the real subject must be read from the form data.
+ */
+export function getMemoDisplaySubject(memo: {
+  formData?: unknown;
+  title?: string | null;
+}): string {
+  const formData = (memo.formData || {}) as Record<string, unknown>;
+  return getMemoSubject(formData, undefined, memo.title || '');
+}

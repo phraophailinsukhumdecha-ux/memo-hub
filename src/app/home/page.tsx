@@ -29,6 +29,7 @@ import { Memo, MemoTemplate, User, AttachmentSectionConfig, MemoAttachment, Glob
 import { resolveTypography } from '@/lib/typography';
 import { isUserNextApprover, hasUserActed, getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
+import { getMemoDisplaySubject } from '@/lib/memo-subject';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { UserManualDialog } from '@/components/user-manual-dialog';
 
@@ -268,6 +269,7 @@ export default function HomePage() {
       m.memoNumber.toLowerCase().includes(needle) ||
       m.id.toLowerCase().includes(needle) ||
       m.title.toLowerCase().includes(needle) ||
+      getMemoDisplaySubject(m).toLowerCase().includes(needle) ||
       m.ownerName.toLowerCase().includes(needle)
     );
   };
@@ -814,7 +816,7 @@ export default function HomePage() {
             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (memo.status === 'draft' && memo.ownerId === user.id ? openDraft(memo) : openDetail(memo))}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{memo.memoNumber}</span>
-                <span className="text-sm text-slate-600 truncate">{memo.title}</span>
+                <span className="text-sm text-slate-600 truncate">{getMemoDisplaySubject(memo)}</span>
                 {getStatusBadge(memo)}
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
@@ -1050,7 +1052,7 @@ export default function HomePage() {
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
           <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-            <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo?.title}</DialogTitle>
+            <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
               <X className="h-5 w-5" />
             </Button>

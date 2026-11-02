@@ -11,6 +11,7 @@ import { subscribeToMemos } from '@/lib/memos';
 import { subscribeToEventLogs } from '@/lib/event-logs';
 import { subscribeToUsers } from '@/lib/users';
 import { isUserOnline } from '@/lib/presence';
+import { getMemoDisplaySubject } from '@/lib/memo-subject';
 import { Memo, EventLog, User } from '@/types';
 import { formatDate, formatTime, DateTimeCell } from '@/utils/cn';
 import {
@@ -266,7 +267,11 @@ export default function DashboardPage() {
                     recentMemos.map((memo) => (
                       <div key={memo.id} className="rounded-lg border p-3">
                         <div className="flex items-start justify-between">
-                          <p className="text-sm font-medium truncate flex-1">{memo.title}</p>
+                          <p className="text-sm font-medium truncate flex-1">
+                            <span className="font-mono text-slate-700">{memo.memoNumber}</span>
+                            <span className="mx-1 text-slate-400">·</span>
+                            {getMemoDisplaySubject(memo)}
+                          </p>
                           <div className="ml-3 shrink-0">{getStatusBadge(memo.status)}</div>
                         </div>
                         <div className="flex items-center justify-between mt-1">
@@ -293,7 +298,7 @@ export default function DashboardPage() {
                     nearDeadline.map((memo) => (
                       <div key={memo.id} className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                         <div className="space-y-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{memo.title}</p>
+                          <p className="text-sm font-medium truncate">{getMemoDisplaySubject(memo)}</p>
                           <p className="text-xs text-slate-600">
                             หมดอายุ: <DateTimeCell date={memo.deadlineAt} />
                           </p>

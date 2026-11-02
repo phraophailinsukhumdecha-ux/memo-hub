@@ -33,6 +33,7 @@ import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { isUserNextApprover, hasUserActed } from '@/lib/approval-flow';
 import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
+import { getMemoDisplaySubject } from '@/lib/memo-subject';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { SectionRenderer } from '@/components/memo-sections';
 import { MemoRemarks } from '@/components/memo-remarks';
@@ -99,6 +100,7 @@ export default function ApprovalsPage() {
       m.memoNumber.toLowerCase().includes(needle) ||
       m.id.toLowerCase().includes(needle) ||
       m.title.toLowerCase().includes(needle) ||
+      getMemoDisplaySubject(m).toLowerCase().includes(needle) ||
       m.ownerName.toLowerCase().includes(needle)
     );
   });
@@ -173,7 +175,6 @@ export default function ApprovalsPage() {
               <TableRow>
                 <TableHead className="w-44 whitespace-nowrap">เลขที่ Memo</TableHead>
                 <TableHead className="whitespace-nowrap">หัวข้อ</TableHead>
-                <TableHead className="w-40 whitespace-nowrap">เทมเพลต</TableHead>
                 <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
                 <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
                 <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
@@ -183,7 +184,7 @@ export default function ApprovalsPage() {
             <TableBody>
               {filteredMemos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-slate-600 py-8">
+                  <TableCell colSpan={6} className="text-center text-slate-600 py-8">
                     ไม่มี Memo ที่มอบหมายให้คุณตรวจสอบหรืออนุมัติ
                   </TableCell>
                 </TableRow>
@@ -193,8 +194,7 @@ export default function ApprovalsPage() {
                   return (
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
-                    <TableCell className="font-medium whitespace-nowrap">{memo.title}</TableCell>
-                    <TableCell className="whitespace-nowrap">{memo.templateName}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{getMemoDisplaySubject(memo)}</TableCell>
                     <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
                     <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
                     <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.deadlineAt} /></TableCell>
@@ -253,7 +253,7 @@ export default function ApprovalsPage() {
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedMemo?.id} - {selectedMemo?.title}</DialogTitle>
+            <DialogTitle>{selectedMemo?.memoNumber || selectedMemo?.id} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
           </DialogHeader>
           {selectedMemo && (() => {
             const detailTemplate = templates.find((t) => t.id === selectedMemo.templateId) || null;
