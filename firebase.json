@@ -1,4 +1,16 @@
 {
+  "apphosting": {
+    "backendId": "memohub",
+    "rootDir": ".",
+    "ignore": [
+      "node_modules",
+      ".git",
+      ".next",
+      "functions",
+      ".firebase"
+    ],
+    "alwaysDeployFromSource": true
+  },
   "hosting": {
     "public": ".next/standalone",
     "ignore": [
