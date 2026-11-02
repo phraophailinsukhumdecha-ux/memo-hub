@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoSrc } from '@/lib/logo';
 import { APP_TIME_ZONE, formatActionTime, formatThaiDate } from '@/lib/datetime';
+import { getMemoSubject } from '@/lib/memo-subject';
 import {
   buildCompactMemoHtml,
   createViewToken,
@@ -480,9 +481,16 @@ export async function POST(request: NextRequest) {
     const sendDate = now.toLocaleDateString('th-TH', { timeZone: APP_TIME_ZONE });
     const time = formatActionTime(now);
 
+    const memoSubject = getMemoSubject(
+      memo.formData as Record<string, unknown>,
+      templateFields,
+      memo.title
+    );
+
     const baseVars: Record<string, string> = {
       memo_number: memo.memoNumber || memoId,
-      title: memo.title || '',
+      title: memoSubject,
+      subject: memoSubject,
       owner_name: memo.ownerName || '',
       status: memo.status === 'approved' ? 'อนุมัติแล้ว' : memo.status === 'rejected' ? 'ถูกปฏิเสธ' : 'รออนุมัติ',
       deadline: deadlineStr,
@@ -491,7 +499,7 @@ export async function POST(request: NextRequest) {
       memo_url: `${baseUrl}/home`,
     };
 
-    const subjectTemplate = emailFormat?.subject || '[MemoHub] {memo_number} - {title}';
+    const subjectTemplate = emailFormat?.subject || '[MemoHub] {memo_number} - {subject}';
     const bodyTemplate = emailFormat?.body || `สวัสดีค่ะ/ครับ
 
 มี Memo ใหม่รอการอนุมัติของท่าน

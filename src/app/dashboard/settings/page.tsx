@@ -1140,18 +1140,18 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>หัวข้ออีเมล (Subject)</Label>
                   <Input
-                    value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}'}
+                    value={settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}'}
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: e.target.value, body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '' } })}
-                    placeholder="[MemoHub] {memo_number} - {title}"
+                    placeholder="[MemoHub] {memo_number} - {subject}"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
                   <Textarea
                     rows={5}
                     value={settings?.emailFormat?.body || ''}
-                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
+                    onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: e.target.value, preview: settings?.emailFormat?.preview || '' } })}
                     placeholder={`สวัสดีค่ะ/ครับ
 
 มี Memo ใหม่รอการอนุมัติของท่าน
@@ -1161,7 +1161,7 @@ export default function SettingsPage() {
 ผู้สร้าง: {owner_name}
 Deadline: {deadline}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{approver_name}`'}, {'`{memo_url}`'}</p>
                 </div>
               </div>
 
@@ -1178,7 +1178,7 @@ Deadline: {deadline}`}
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, ownerSubject: e.target.value } })}
                     placeholder="[MemoHub] {memo_number} {action_label}โดย {actor_name}"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{action_label}`'} (อนุมัติ/ถูกปฏิเสธ), {'`{actor_name}`'}, {'`{acted_at}`'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
@@ -1192,7 +1192,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
 เลขที่: {memo_number}
 เรื่อง: {title}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{acted_at}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{remark}`'} (เหตุผลเมื่อถูกปฏิเสธ), {'`{acted_at}`'}</p>
                 </div>
               </div>
 
@@ -1205,11 +1205,11 @@ Memo ของท่านมีการดำเนินการ: {action_la
                 <div className="space-y-2">
                   <Label>หัวข้ออีเมล (Subject)</Label>
                   <Input
-                    value={settings?.emailFormat?.approverSubject || '[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว'}
+                    value={settings?.emailFormat?.approverSubject || '[MemoHub] {memo_number} - {subject} — มีผู้ดำเนินการแล้ว'}
                     onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '', body: settings?.emailFormat?.body || '', preview: settings?.emailFormat?.preview || '', ...settings?.emailFormat, approverSubject: e.target.value } })}
-                    placeholder="[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว"
+                    placeholder="[MemoHub] {memo_number} - {subject} — มีผู้ดำเนินการแล้ว"
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{acted_at}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{acted_at}`'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>เนื้อหาอีเมล (Body)</Label>
@@ -1223,7 +1223,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
 เลขที่: {memo_number}
 ดำเนินการโดย: {actor_name} → {action_label}`}
                   />
-                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{acted_at}`'}</p>
+                  <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{status}`'}, {'`{action_label}`'}, {'`{actor_name}`'}, {'`{approver_name}`'}, {'`{remark}`'}, {'`{acted_at}`'}</p>
                 </div>
               </div>
 
@@ -1233,7 +1233,7 @@ Memo ของท่านมีการดำเนินการ: {action_la
                 <Textarea
                   rows={10}
                   value={settings?.emailFormat?.preview || ''}
-                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {title}', body: settings?.emailFormat?.body || '', preview: e.target.value } })}
+                  onChange={(e) => setSettings({ ...settings!, emailFormat: { subject: settings?.emailFormat?.subject || '[MemoHub] {memo_number} - {subject}', body: settings?.emailFormat?.body || '', preview: e.target.value } })}
                   placeholder={`เลขที่: {memo_number}
 หัวข้อ: {title}
 ผู้สร้าง: {owner_name} ({department})
@@ -1245,7 +1245,7 @@ Deadline: {deadline}
 
 {approval_grid}`}
                 />
-                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
+                <p className="text-xs text-slate-500">ตัวแปร: {'`{memo_number}`'}, {'`{title}`'}, {'`{subject}`'}, {'`{owner_name}`'}, {'`{department}`'}, {'`{status}`'}, {'`{deadline}`'}, {'`{created_at}`'}, {'`{form_fields}`'} (ข้อมูลฟอร์ม), {'`{body_text}`'} (เนื้อหา), {'`{approval_grid}`'} (ตารางอนุมัติ)</p>
               </div>
 
               <div className="flex items-center gap-2">

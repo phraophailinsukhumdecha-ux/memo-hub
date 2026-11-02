@@ -14,6 +14,7 @@ import { MemoTypography, MemoAttachment, Approval } from '@/types';
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { formatThaiDateTime } from '@/lib/datetime';
+import { getMemoSubject } from '@/lib/memo-subject';
 
 export interface SmtpConfig {
   host: string;
@@ -34,7 +35,7 @@ export interface OwnerMailFormat {
 }
 
 export const DEFAULT_OWNER_SUBJECT =
-  '[MemoHub] {memo_number} {action_label}โดย {actor_name}';
+  '[MemoHub] {memo_number} - {subject} ({action_label}โดย {actor_name})';
 export const DEFAULT_OWNER_BODY = `สวัสดีค่ะ/ครับ
 
 Memo ของท่านมีการดำเนินการ: {action_label}โดย {actor_name}
@@ -407,10 +408,16 @@ export async function sendOwnerNotification(
 
     const viewToken = await createViewToken(memoId);
     const memoLink = buildViewUrl(baseUrl, viewToken);
+    const memoSubject = getMemoSubject(
+      memo.formData as Record<string, unknown>,
+      templateFields,
+      memo.title as string
+    );
 
     const vars: Record<string, string> = {
       memo_number: (memo.memoNumber as string) || memoId,
-      title: (memo.title as string) || '',
+      title: memoSubject,
+      subject: memoSubject,
       owner_name: (memo.ownerName as string) || '',
       department: (memo.department as string) || '',
       status:
@@ -587,6 +594,11 @@ export async function sendApproverNotifications(
 
     const viewToken = await createViewToken(memoId);
     const memoLink = buildViewUrl(baseUrl, viewToken);
+    const memoSubject = getMemoSubject(
+      memo.formData as Record<string, unknown>,
+      templateFields,
+      memo.title as string
+    );
 
     const transporter = createTransporter(smtp);
     const sender = buildSender(smtp);
@@ -613,7 +625,8 @@ export async function sendApproverNotifications(
 
       const vars: Record<string, string> = {
         memo_number: (memo.memoNumber as string) || memoId,
-        title: (memo.title as string) || '',
+        title: memoSubject,
+        subject: memoSubject,
         owner_name: (memo.ownerName as string) || '',
         department: (memo.department as string) || '',
         status:
@@ -630,7 +643,7 @@ export async function sendApproverNotifications(
         approver_name: approver.name,
       };
 
-      const subjectTemplate = emailFormat.approverSubject || '[MemoHub] {memo_number} — มีผู้ดำเนินการแล้ว';
+      const subjectTemplate = emailFormat.approverSubject || '[MemoHub] {memo_number} - {subject} — มีผู้ดำเนินการแล้ว';
       const bodyTemplate = emailFormat.approverBody || `สวัสดีค่ะ/ครับ คุณ{approver_name}
 
 มีผู้ดำเนินการ Memo เรื่อง {title} แล้ว
