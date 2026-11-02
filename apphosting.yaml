@@ -1,17 +1,9 @@
 runConfig:
   maxInstances: 10
 
-env:
-  - variable: GOOGLE_SERVICE_ACCOUNT_JSON
-    secret: GOOGLE_SERVICE_ACCOUNT_JSON
-  - variable: GOOGLE_DRIVE_FOLDER_ID
-    secret: GOOGLE_DRIVE_FOLDER_ID
-  - variable: GOOGLE_DRIVE_SHARED_DRIVE_ID
-    secret: GOOGLE_DRIVE_SHARED_DRIVE_ID
-env:
-  - variable: GOOGLE_SERVICE_ACCOUNT_JSON
-    secret: GOOGLE_SERVICE_ACCOUNT_JSON
-  - variable: GOOGLE_DRIVE_FOLDER_ID
-    secret: GOOGLE_DRIVE_FOLDER_ID
-  - variable: GOOGLE_DRIVE_SHARED_DRIVE_ID
-    secret: GOOGLE_DRIVE_SHARED_DRIVE_ID
+# Google Drive credentials are configured from the app itself:
+#   ตั้งค่า → ไฟล์แนบ / Drive → ข้อมูลเชื่อมต่อ (Service Account)
+# Values saved there live in Firestore (settings/global.driveConfig), so the
+# service account / folder can be changed without touching this file or
+# redeploying. (Environment variables such as GOOGLE_SERVICE_ACCOUNT_JSON are
+# still honoured as a fallback when the system setting is disabled.)
