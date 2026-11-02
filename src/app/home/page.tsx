@@ -24,8 +24,10 @@ import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { printMemo } from '@/lib/memo-pdf';
 import { runScheduledJobs } from '@/lib/scheduled-jobs';
-import { Memo, MemoTemplate, User } from '@/types';
+import { Memo, MemoTemplate, User, AttachmentSectionConfig, MemoAttachment } from '@/types';
 import { resolveTypography } from '@/lib/typography';
+import { isUserNextApprover, hasUserActed, getNextApprovalColumn } from '@/lib/approval-flow';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { UserManualDialog } from '@/components/user-manual-dialog';
 
@@ -66,9 +68,8 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
 
   const initFormData = (t: MemoTemplate) => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const todayStr = formatActionDate();
+    const timeStr = formatActionTime();
     const gridConfig = t.fields.find((f) => f.type === 'approval_grid');
     const gridFieldCfg = (gridConfig?.fieldConfig || {}) as { columns?: { title: string }[] };
     const cols = gridFieldCfg.columns || [];
@@ -101,7 +102,7 @@ export default function HomePage() {
         const rowValue: Record<string, string> = {};
         rowFields.forEach((rf) => { rowValue[rf.name] = ''; });
         formData[field.id] = rowValue;
-      } else if (field.type === 'checkbox_group') {
+      } else if (field.type === 'checkbox_group' || field.type === 'attachment') {
         formData[field.id] = [];
       } else {
         formData[field.id] = '';
@@ -155,7 +156,7 @@ export default function HomePage() {
           .then((res) => res.text())
           .then((text) => setDetailHtml(text))
           .catch(() => setDetailHtml(''));
-        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id)) {
+        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user)) {
           setTimeout(() => handleApprove(memo), 500);
         }
         window.history.replaceState({}, '', '/home');
@@ -220,7 +221,13 @@ export default function HomePage() {
       if (m.ownerId === user.id) return false;
       const grid = m.formData?.approval_grid_1 as Record<string, { name?: string }> | undefined;
       if (!grid) return false;
-      return Object.values(grid).some((col) => col.name === user.displayName);
+      if (!Object.values(grid).some((col) => col.name === user.displayName)) return false;
+      // Sequential gating: while a memo is still open, only the approver whose
+      // turn it is can see it. The rest of the chain sees it after earlier
+      // checkers/approvers have acted (or if they already acted themselves).
+      const isOpen = m.status === 'new' || m.status === 'waiting';
+      if (isOpen && !isUserNextApprover(m, user) && !hasUserActed(m, user)) return false;
+      return true;
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [memos, user]);
 
@@ -463,18 +470,17 @@ export default function HomePage() {
     if (!grid) return alert('ไม่พบข้อมูลผู้อนุมัติ');
 
     const ownerEmail = allUsers.find((u) => u.id === memo.ownerId)?.email || '';
+
+    // Sequential flow: only the next approver in the chain may receive the
+    // action email. Later approvers get theirs after earlier ones act.
+    const next = getNextApprovalColumn(memo.formData);
+    if (!next) return alert('ไม่มีผู้อนุมัติที่รอดำเนินการในลำดับนี้');
+
+    const nextUser = next.userId
+      ? allUsers.find((u) => u.id === next.userId)
+      : allUsers.find((u) => u.displayName === next.name);
     const toEmails: string[] = [];
-    for (const colKey of Object.keys(grid)) {
-      if (colKey.startsWith('col_') && colKey !== 'col_0') {
-        const col = grid[colKey];
-        if (col?.userId) {
-          const approver = allUsers.find((u) => u.id === col.userId);
-          if (approver?.email && approver.email !== ownerEmail) {
-            toEmails.push(approver.email);
-          }
-        }
-      }
-    }
+    if (nextUser?.email && nextUser.email !== ownerEmail) toEmails.push(nextUser.email);
 
     if (toEmails.length === 0) return alert('ไม่พบอีเมลผู้อนุมัติ (อีเมลซ้ำกับผู้สร้าง memo)');
 
@@ -529,7 +535,7 @@ export default function HomePage() {
     setIsCreating(true);
   };
 
-  const handleDuplicate = (memo: Memo) => {
+  const handleDuplicate = async (memo: Memo) => {
     const t = templates.find((tpl) => tpl.id === memo.templateId);
     if (!t) {
       alert('ไม่พบเทมเพลตของ Memo นี้');
@@ -548,6 +554,38 @@ export default function HomePage() {
         if (f.name === 'date' || f.type === 'auto_from' || f.type === 'auto_dept') delete row[f.name];
       }
     }
+
+    // Copy attachments so each memo owns its own Drive files.
+    const attachmentFields = t.fields.filter((f) => f.type === 'attachment');
+    for (const field of attachmentFields) {
+      const source = Array.isArray(data[field.id]) ? (data[field.id] as MemoAttachment[]) : [];
+      if (source.length === 0) {
+        data[field.id] = [];
+        continue;
+      }
+      try {
+        const res = await fetch('/api/attachments/copy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: source,
+            department: user?.department || '',
+            uploadedBy: user?.displayName || '',
+          }),
+        });
+        const result = (await res.json()) as { files?: MemoAttachment[]; error?: string };
+        if (res.ok && Array.isArray(result.files) && result.files.length > 0) {
+          data[field.id] = result.files;
+        } else {
+          data[field.id] = [];
+          if (result.error) alert(`คัดลอกไฟล์แนบไม่สำเร็จ: ${result.error}`);
+        }
+      } catch {
+        data[field.id] = [];
+        alert('คัดลอกไฟล์แนบไม่สำเร็จ กรุณาแนบไฟล์ใหม่');
+      }
+    }
+
     setSelectedTemplate(t);
     setSectionFormData(data);
     setEditingDraftId(null);
@@ -590,6 +628,18 @@ export default function HomePage() {
       }
     }
 
+    // Validate required attachment sections
+    for (const field of selectedTemplate.fields) {
+      if (field.type !== 'attachment') continue;
+      const cfg = (field.fieldConfig || {}) as AttachmentSectionConfig;
+      if (!cfg.required) continue;
+      const list = sectionFormData[field.id];
+      if (!Array.isArray(list) || list.length === 0) {
+        alert(`กรุณาแนบไฟล์ "${field.label}" (จำเป็น)`);
+        return;
+      }
+    }
+
     setCreating(true);
     setCreatingAction(action);
     try {
@@ -608,9 +658,8 @@ export default function HomePage() {
           const grid = (formData[gridField.id] as Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }>) || {};
           const gridCfg = (gridField.fieldConfig || {}) as { columns?: { title: string }[] };
           const colTitles = (gridCfg.columns || []).map((c) => c.title || 'อนุมัติ');
-          const now = new Date();
-          const todayStr = now.toISOString().split('T')[0];
-          const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const todayStr = formatActionDate();
+          const timeStr = formatActionTime();
           const today = { date: todayStr, time: timeStr };
           let idx = 0;
           const newGrid: typeof grid = {};
@@ -660,29 +709,36 @@ export default function HomePage() {
       if (memoId) {
         const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
         if (grid) {
-          const toEmails: string[] = [];
+          const approverEntries: Array<{ email: string; colKey: string }> = [];
           for (const colKey of Object.keys(grid)) {
             if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
               const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
-              if (approver?.email) toEmails.push(approver.email);
+              if (approver?.email) approverEntries.push({ email: approver.email, colKey });
             }
           }
-          // Add CC users to email list (they have no grid columns)
+          approverEntries.sort((a, b) => {
+            const ai = parseInt((a.colKey.split('_')[1] || '0'), 10);
+            const bi = parseInt((b.colKey.split('_')[1] || '0'), 10);
+            return ai - bi;
+          });
+          const approverEmails: string[] = approverEntries.map((e) => e.email);
+          // CC users get a view-only email (no approve/reject) — handled separately
+          const ccEmails: string[] = [];
           const formRowField = selectedTemplate.fields.find((f) => f.type === 'form_row');
           if (formRowField) {
             const formRowData = (formData[formRowField.id] as Record<string, string>) || {};
             const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
             for (const ccId of ccUserIds) {
               const ccUser = allUsers.find((u) => u.id === ccId);
-              if (ccUser?.email && !toEmails.includes(ccUser.email)) toEmails.push(ccUser.email);
+              if (ccUser?.email && !approverEmails.includes(ccUser.email)) ccEmails.push(ccUser.email);
             }
           }
-          if (toEmails.length > 0) {
+          if (approverEmails.length > 0) {
             try {
               const res = await fetch('/api/send-memo-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ memoId, toEmails }),
+                body: JSON.stringify({ memoId, toEmails: approverEmails, ccEmails }),
               });
               const data = await res.json();
               console.log('Email send result:', data);
@@ -764,6 +820,9 @@ export default function HomePage() {
                   <Pencil className="h-4 w-4 mr-1" />
                   แก้ไข
                 </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์ / พรีวิว">
+                  <Printer className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -775,7 +834,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-            {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
               <>
                 <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
                   <CheckCircle className="h-4 w-4 mr-1" />
@@ -996,7 +1055,7 @@ export default function HomePage() {
             </div>
           )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />

@@ -6,4 +6,5 @@ export { MemoType } from './memo-type';
 export { FormRow } from './form-row';
 export { BodyText } from './body-text';
 export { ApprovalGrid } from './approval-grid';
+export { AttachmentSection } from './attachment';
 export { SectionRenderer } from './section-renderer';

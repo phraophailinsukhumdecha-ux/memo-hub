@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MemoField, CompanyHeaderConfig, CheckboxGroupConfig, DropdownSelectConfig, MemoTypeConfig, FormRowConfig, BodyTextConfig, ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
+import { MemoField, CompanyHeaderConfig, CheckboxGroupConfig, DropdownSelectConfig, MemoTypeConfig, FormRowConfig, BodyTextConfig, ApprovalGridConfig, AttachmentSectionConfig, MemoAttachment, User, Group, MemoTypography } from '@/types';
 import { resolveFieldTypography } from '@/lib/typography';
 import { SectionTitle } from './section-title';
 import { CompanyHeader } from './company-header';
@@ -11,6 +11,7 @@ import { MemoType } from './memo-type';
 import { FormRow } from './form-row';
 import { BodyText } from './body-text';
 import { ApprovalGrid } from './approval-grid';
+import { AttachmentSection } from './attachment';
 
 interface SectionRendererProps {
   field: MemoField;
@@ -24,9 +25,13 @@ interface SectionRendererProps {
   users?: User[];
   groups?: Group[];
   typography?: MemoTypography;
+  /** Saved memo id — enables authorized download links for attachments. */
+  memoId?: string;
+  viewerId?: string;
+  viewerRole?: string;
 }
 
-export function SectionRenderer({ field, value, formData, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, groups, typography }: SectionRendererProps) {
+export function SectionRenderer({ field, value, formData, onChange, readonly, memoType, globalMemoTypeColumns, ownerUser, users, groups, typography, memoId, viewerId, viewerRole }: SectionRendererProps) {
   // Effective typography: per-section override wins per-key, else template default
   const effectiveTypo = resolveFieldTypography(typography, field.typography);
   switch (field.type) {
@@ -140,6 +145,20 @@ export function SectionRenderer({ field, value, formData, onChange, readonly, me
         />
       );
     }
+
+    case 'attachment':
+      return (
+        <AttachmentSection
+          config={field.fieldConfig as AttachmentSectionConfig | undefined}
+          value={value as MemoAttachment[] | undefined}
+          onChange={onChange as ((value: MemoAttachment[]) => void) | undefined}
+          readonly={readonly}
+          ownerUser={ownerUser}
+          memoId={memoId}
+          userId={viewerId}
+          userRole={viewerRole}
+        />
+      );
 
     default:
       return (

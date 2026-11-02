@@ -4,6 +4,7 @@ import { doc, getDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoSrc } from '@/lib/logo';
+import { APP_TIME_ZONE, formatActionTime, formatThaiDate } from '@/lib/datetime';
 import {
   buildCompactMemoHtml,
   createViewToken,
@@ -310,6 +311,35 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
         return html;
       }
 
+      case 'attachment': {
+        const attachmentConfig = (config as { showInDocument?: boolean });
+        if (attachmentConfig.showInDocument === false) return '';
+        const files = (Array.isArray(value) ? value : []).filter(
+          (item): item is { fileId: string; name: string; size?: number } =>
+            Boolean(item) && typeof item === 'object' && typeof (item as { fileId?: unknown }).fileId === 'string'
+        );
+        if (files.length === 0) return '';
+
+        const sizeLabel = (bytes?: number) => {
+          if (!bytes || bytes < 0) return '';
+          if (bytes < 1024) return `${bytes} B`;
+          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+          return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+        };
+
+        let html = `<div style="border:1px solid #000;padding:8px;margin-bottom:12px;">
+          <p style="font-size:13px;font-weight:600;margin:0 0 6px;">ไฟล์แนบ (${files.length})</p>`;
+        for (const file of files) {
+          const href = `${baseUrl}/home`;
+          html += `<p style="font-size:12px;margin:2px 0;">
+            <a href="${href}" style="color:#2563eb;text-decoration:underline;">${escapeHtml(file.name)}</a>
+            <span style="color:#94a3b8;">${sizeLabel(file.size)}</span>
+          </p>`;
+        }
+        html += '</div>';
+        return html;
+      }
+
       case 'approval_grid': {
         const gridData = (typeof value === 'object' && value !== null) ? value as Record<string, Record<string, string>> : {};
         const colKeys = Object.keys(gridData).filter((k) => k.startsWith('col_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
@@ -401,9 +431,12 @@ function renderMemoPreviewHtml(memo: Record<string, unknown>, templateFields: Ar
 
 export async function POST(request: NextRequest) {
   try {
-    const { memoId, toEmails } = await request.json() as { memoId: string; toEmails: string[] };
+    const { memoId, toEmails, ccEmails } = await request.json() as { memoId: string; toEmails?: string[]; ccEmails?: string[] };
 
-    if (!memoId || !toEmails || toEmails.length === 0) {
+    const approverEmails = Array.isArray(toEmails) ? toEmails.filter(Boolean) : [];
+    const ccEmailList = Array.isArray(ccEmails) ? ccEmails.filter(Boolean) : [];
+
+    if (!memoId || (approverEmails.length === 0 && ccEmailList.length === 0)) {
       return NextResponse.json({ ok: false, code: ERR.EVALIDATE, message: 'กรุณาระบุ memoId และผู้รับอีเมล' }, { status: 400 });
     }
 
@@ -441,12 +474,11 @@ export async function POST(request: NextRequest) {
     const allUsersData: Array<{ id: string; email?: string; displayName?: string }> = usersSnapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as { id: string; email?: string; displayName?: string }));
 
     const deadlineDate = memo.deadlineAt?.toDate?.() || new Date(memo.deadlineAt);
-    const buddhistYear = deadlineDate.getFullYear() + 543;
-    const deadlineStr = `${deadlineDate.getDate()} ${deadlineDate.toLocaleDateString('th-TH', { month: 'long' })} ${buddhistYear}`;
+    const deadlineStr = formatThaiDate(deadlineDate);
 
     const now = new Date();
-    const sendDate = now.toLocaleDateString('th-TH');
-    const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const sendDate = now.toLocaleDateString('th-TH', { timeZone: APP_TIME_ZONE });
+    const time = formatActionTime(now);
 
     const baseVars: Record<string, string> = {
       memo_number: memo.memoNumber || memoId,
@@ -472,7 +504,7 @@ Deadline: {deadline}`;
     const transporter = createTransporter(smtp!);
     const sender = buildSender(smtp!);
 
-    const sendOne = async (to: string) => {
+    const sendApprovalEmail = async (to: string) => {
       try {
         const approver = allUsersData.find((u) => u.email === to);
         const approverId = (approver?.id as string) || '';
@@ -560,7 +592,81 @@ Deadline: {deadline}`;
       }
     };
 
-    const results = await Promise.all(toEmails.map(sendOne));
+    /**
+     * View-only email for CC recipients: they get the memo summary + a public
+     * view link, but never receive an approval/rejection token or buttons.
+     */
+    const sendViewEmail = async (to: string) => {
+      try {
+        const viewToken = await createViewToken(memoId);
+        const viewUrl = buildViewUrl(baseUrl, viewToken);
+
+        const vars = { ...baseVars, approver_name: to, memo_link: viewUrl };
+        const subject = replaceVariables(subjectTemplate, vars);
+        const bodyText = replaceVariables(bodyTemplate, vars);
+        const bodyHtml = bodyText
+          .split('\n')
+          .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
+          .join('');
+
+        const userMap = new Map(
+          allUsersData.map((u) => [
+            u.id,
+            { displayName: u.displayName, department: (u as Record<string, unknown>).department as string },
+          ])
+        );
+        const summaryHtml = buildCompactMemoHtml(
+          memo as Record<string, unknown>,
+          templateFields,
+          userMap,
+          baseUrl,
+          templateTypo as import('@/types').MemoTypography | undefined
+        );
+
+        const htmlEmail = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:${resolveMailFontFamily(templateTypo as import('@/types').MemoTypography | undefined)};max-width:600px;margin:0 auto;padding:20px;">
+  <h2 style="color:#1e293b;">${subject}</h2>
+  ${bodyHtml}
+  ${summaryHtml}
+  <div style="margin:24px 0;text-align:center;">
+    <a href="${viewUrl}" style="display:inline-block;padding:10px 24px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">ดูเอกสาร</a>
+  </div>
+  <div style="margin:0 0 24px;text-align:center;">
+    <a href="${baseUrl}/home" style="color:#2563eb;text-decoration:underline;font-size:13px;">เข้าสู่ระบบเพื่อดูเอกสาร</a>
+  </div>
+  <hr style="border:1px solid #e2e8f0;margin:20px 0;" />
+  <p style="color:#64748b;font-size:12px;text-align:center;">MemoHub Digital Memo & Approval System</p>
+</body>
+</html>`;
+
+        const content = processContent(bodyText);
+
+        await transporter.sendMail({
+          from: sender,
+          to,
+          subject,
+          replyTo: smtp!.fromEmail || undefined,
+          text: content.text,
+          html: htmlEmail,
+        });
+        return { to, ok: true, message: 'ส่งสำเร็จ' };
+      } catch (e) {
+        const classified = classifyError(e as Error, smtp!.port, smtp!.host);
+        return { to, ok: false, code: classified.code, message: classified.message };
+      }
+    };
+
+    // Initial send: only the first approver in the chain (the Checker / "Checked by")
+    // receives the approval action. Subsequent approvers receive theirs through the
+    // approve flow (sendApproverNotifications) once the previous one acts.
+    const approvalResults: Array<{ to: string; ok: boolean; code?: string; message: string }> =
+      approverEmails.length > 0 ? [await sendApprovalEmail(approverEmails[0])] : [];
+
+    const ccResults = await Promise.all(ccEmailList.map(sendViewEmail));
+
+    const results = [...approvalResults, ...ccResults];
     const failed = results.filter(r => !r.ok);
 
     if (failed.length > 0) {

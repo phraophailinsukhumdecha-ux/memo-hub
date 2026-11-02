@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, deleteDoc, addDoc, collection } from 'firebase/firestore';
+import { trashMemoAttachments } from '@/lib/attachments-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
         });
 
         await deleteDoc(doc(db, 'memos', id));
+        await trashMemoAttachments(memo.formData);
         deleted++;
       } catch {
         failed++;

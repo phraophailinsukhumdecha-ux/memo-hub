@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye } from 'lucide-react';
+import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye, Paperclip, FolderPlus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getSettings, saveSettings } from '@/lib/settings';
 import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, duplicateTemplate } from '@/lib/templates';
@@ -284,6 +284,81 @@ export default function SettingsPage() {
     } else {
       setCreatorManualText(DEFAULT_CREATOR_MANUAL);
     }
+  };
+
+  // Google Drive attachment settings
+  const [driveStatus, setDriveStatus] = useState<{
+    ok: boolean;
+    rootFolderName?: string;
+    rootFolderId?: string;
+    clientEmail?: string;
+    projectId?: string;
+    folderCount?: number;
+    error?: string;
+  } | null>(null);
+  const [driveChecking, setDriveChecking] = useState(false);
+  const [newDriveDepartment, setNewDriveDepartment] = useState('');
+  const [newDriveFolderName, setNewDriveFolderName] = useState('');
+  const [driveFolderSaving, setDriveFolderSaving] = useState(false);
+  const [driveFolderError, setDriveFolderError] = useState('');
+  const driveFolders = settings?.driveFolders || [];
+
+  const handleCheckDrive = async () => {
+    setDriveChecking(true);
+    try {
+      const res = await fetch('/api/drive/status');
+      const data = await res.json();
+      setDriveStatus(data);
+    } catch {
+      setDriveStatus({ ok: false, error: 'เชื่อมต่อ Google Drive ไม่สำเร็จ' });
+    } finally {
+      setDriveChecking(false);
+    }
+  };
+
+  const handleCreateDriveFolder = async () => {
+    if (!user) return;
+    if (!newDriveDepartment) {
+      setDriveFolderError('กรุณาเลือกแผนก');
+      return;
+    }
+    const name = newDriveFolderName.trim() || newDriveDepartment;
+    if (driveFolders.some((f) => f.department === newDriveDepartment)) {
+      setDriveFolderError('แผนกนี้มีโฟลเดอร์อยู่แล้ว');
+      return;
+    }
+    setDriveFolderSaving(true);
+    setDriveFolderError('');
+    try {
+      const res = await fetch('/api/drive/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: newDriveDepartment, name }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.folder) {
+        setDriveFolderError(data.error || 'สร้างโฟลเดอร์ไม่สำเร็จ');
+        return;
+      }
+      const nextFolders = [...driveFolders, data.folder];
+      await saveSettings({ driveFolders: nextFolders }, user.id);
+      setSettings((prev) => (prev ? { ...prev, driveFolders: nextFolders } : prev));
+      setNewDriveFolderName('');
+      setNewDriveDepartment('');
+      handleCheckDrive();
+    } catch {
+      setDriveFolderError('สร้างโฟลเดอร์ไม่สำเร็จ');
+    } finally {
+      setDriveFolderSaving(false);
+    }
+  };
+
+  const handleRemoveDriveFolder = async (id: string) => {
+    if (!user) return;
+    if (!confirm('ลบการผูกโฟลเดอร์นี้? (ไฟล์บน Drive จะไม่ถูกลบ)')) return;
+    const nextFolders = driveFolders.filter((f) => f.id !== id);
+    await saveSettings({ driveFolders: nextFolders }, user.id);
+    setSettings((prev) => (prev ? { ...prev, driveFolders: nextFolders } : prev));
   };
 
   // Form field editing state
@@ -825,6 +900,7 @@ export default function SettingsPage() {
           <TabsTrigger value="templates" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เทมเพลต</span></TabsTrigger>
           <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Deadline</span></TabsTrigger>
           <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4" /><span>คู่มือการใช้งาน</span></TabsTrigger>
+          <TabsTrigger value="drive" className="flex items-center space-x-2"><Paperclip className="h-4 w-4" /><span>ไฟล์แนบ / Drive</span></TabsTrigger>
         </TabsList>
 
         {/* Syslog */}
@@ -1305,6 +1381,127 @@ Deadline: {deadline}
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Google Drive attachments */}
+        <TabsContent value="drive">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Paperclip className="h-4 w-4" />การเชื่อมต่อ Google Drive</CardTitle>
+                <CardDescription>ไฟล์แนบของ Memo จะถูกเก็บใน Shared Drive ขององค์กร แยกโฟลเดอร์ตามแผนกของผู้สร้าง</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button onClick={handleCheckDrive} disabled={driveChecking}>
+                    {driveChecking ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
+                    ทดสอบการเชื่อมต่อ
+                  </Button>
+                  {driveStatus && (
+                    driveStatus.ok ? (
+                      <Badge className="border-green-200 bg-green-100 text-green-700">เชื่อมต่อสำเร็จ</Badge>
+                    ) : (
+                      <Badge className="border-red-200 bg-red-100 text-red-700">เชื่อมต่อไม่สำเร็จ</Badge>
+                    )
+                  )}
+                </div>
+
+                {driveStatus && (
+                  <div className="space-y-1 rounded-lg border bg-slate-50 p-3 text-sm">
+                    {driveStatus.ok ? (
+                      <>
+                        <p><span className="text-slate-500">โฟลเดอร์กลาง:</span> {driveStatus.rootFolderName} <span className="text-xs text-slate-400">({driveStatus.rootFolderId})</span></p>
+                        <p><span className="text-slate-500">Service Account:</span> {driveStatus.clientEmail}</p>
+                        <p><span className="text-slate-500">โฟลเดอร์ย่อย:</span> {driveStatus.folderCount ?? 0}</p>
+                      </>
+                    ) : (
+                      <p className="text-red-600">{driveStatus.error}</p>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500">รองรับ PDF, JPG, JPEG, PNG • สูงสุด 10 MB/ไฟล์ • 5 ไฟล์/Memo</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FolderPlus className="h-4 w-4" />โฟลเดอร์ตามแผนก</CardTitle>
+                <CardDescription>ผู้สร้าง Memo แผนกใด ไฟล์แนบจะถูกเก็บในโฟลเดอร์ของแผนกนั้น (ถ้าไม่มีจะเก็บที่โฟลเดอร์กลาง)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
+                  <div>
+                    <Label className="text-xs">แผนก</Label>
+                    <Select value={newDriveDepartment} onValueChange={setNewDriveDepartment}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="เลือกแผนก" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(settings?.departmentOptions || []).map((dept) => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">ชื่อโฟลเดอร์บน Drive (เว้นว่าง = ใช้ชื่อแผนก)</Label>
+                    <Input
+                      value={newDriveFolderName}
+                      onChange={(e) => setNewDriveFolderName(e.target.value)}
+                      placeholder="เช่น IT"
+                    />
+                  </div>
+                  <Button onClick={handleCreateDriveFolder} disabled={driveFolderSaving}>
+                    {driveFolderSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
+                    สร้างโฟลเดอร์
+                  </Button>
+                </div>
+
+                {driveFolderError && <p className="text-sm text-red-600">{driveFolderError}</p>}
+
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[180px]">แผนก</TableHead>
+                        <TableHead>โฟลเดอร์</TableHead>
+                        <TableHead>Drive Folder ID</TableHead>
+                        <TableHead className="w-[70px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {driveFolders.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="py-6 text-center text-slate-500">
+                            ยังไม่มีโฟลเดอร์ — ไฟล์แนบจะถูกเก็บที่โฟลเดอร์กลาง
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        driveFolders.map((folder) => (
+                          <TableRow key={folder.id}>
+                            <TableCell className="font-medium">{folder.department}</TableCell>
+                            <TableCell>{folder.name}</TableCell>
+                            <TableCell className="font-mono text-xs text-slate-500">{folder.driveFolderId}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                onClick={() => handleRemoveDriveFolder(folder.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Templates */}

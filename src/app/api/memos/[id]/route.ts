@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, deleteDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
 import { getDeadlineDays } from '@/lib/deadline';
+import { trashMemoAttachments } from '@/lib/attachments-server';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -105,6 +106,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     });
 
     await deleteDoc(doc(db, 'memos', id));
+
+    // Move any attachment files to the Drive trash (best effort).
+    await trashMemoAttachments(memo.formData);
 
     return NextResponse.json({ success: true });
   } catch (error) {

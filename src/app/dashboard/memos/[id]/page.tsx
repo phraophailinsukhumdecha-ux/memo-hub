@@ -15,6 +15,7 @@ import { subscribeToUsers } from '@/lib/users';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell, cn } from '@/utils/cn';
+import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { ArrowLeft, XCircle } from 'lucide-react';
 import { SectionRenderer } from '@/components/memo-sections';
 
@@ -122,7 +123,7 @@ export default function MemoDetailPage() {
                   const memoTypeField = template.fields.find((f) => f.type === 'memo_type');
                   const currentMemoType = memoTypeField ? ((memo.formData as Record<string, unknown>)[memoTypeField.id] as string) : undefined;
                   const ownerUserData = allUsers.find((u) => u.id === memo.ownerId) || null;
-                  return template.fields.map((field) => (
+                  return orderFieldsWithAttachmentsLast(template.fields).map((field) => (
                     <div key={field.id}>
                       <SectionRenderer
                         field={field}
@@ -134,6 +135,9 @@ export default function MemoDetailPage() {
                         users={allUsers}
                         groups={[]}
                         typography={template.typography}
+                        memoId={memoId}
+                        viewerId={user?.id}
+                        viewerRole={user?.role}
                       />
                     </div>
                   ));

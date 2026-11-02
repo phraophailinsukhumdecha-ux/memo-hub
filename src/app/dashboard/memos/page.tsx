@@ -34,6 +34,8 @@ import { subscribeToMemos, createMemo, updateMemoDraft, deleteMemo } from '@/lib
 import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { printMemo } from '@/lib/memo-pdf';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
+import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
@@ -101,9 +103,8 @@ export default function MemosPage() {
   const pageMemos = filteredMemos.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const initFormData = (t: MemoTemplate) => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().slice(0, 5);
+    const todayStr = formatActionDate();
+    const timeStr = formatActionTime();
     const initialData: Record<string, unknown> = {};
     t.fields.forEach((field) => {
       if (field.type === 'checkbox_group') {
@@ -233,9 +234,8 @@ export default function MemosPage() {
           const grid = (formData[gridField.id] as Record<string, { name?: string; userId?: string; signerTitle?: string; colTitle?: string; date?: string; time?: string }>) || {};
           const gridCfg = (gridField.fieldConfig || {}) as { columns?: { title: string }[] };
           const colTitles = (gridCfg.columns || []).map((c) => c.title || 'อนุมัติ');
-          const now = new Date();
-          const todayStr = now.toISOString().split('T')[0];
-          const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const todayStr = formatActionDate();
+          const timeStr = formatActionTime();
           const today = { date: todayStr, time: timeStr };
           let idx = 0;
           const newGrid: typeof grid = {};
@@ -283,29 +283,36 @@ export default function MemosPage() {
       if (memoId) {
         const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
         if (grid) {
-          const toEmails: string[] = [];
+          const approverEntries: Array<{ email: string; colKey: string }> = [];
           for (const colKey of Object.keys(grid)) {
             if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
               const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
-              if (approver?.email) toEmails.push(approver.email);
+              if (approver?.email) approverEntries.push({ email: approver.email, colKey });
             }
           }
-          // Add CC users to email list (they have no grid columns)
+          approverEntries.sort((a, b) => {
+            const ai = parseInt((a.colKey.split('_')[1] || '0'), 10);
+            const bi = parseInt((b.colKey.split('_')[1] || '0'), 10);
+            return ai - bi;
+          });
+          const approverEmails: string[] = approverEntries.map((e) => e.email);
+          // CC users get a view-only email (no approve/reject) — handled separately
+          const ccEmails: string[] = [];
           const emailRowField = selectedTemplateObj.fields.find((f) => f.type === 'form_row');
           if (emailRowField) {
             const formRowData = (formData[emailRowField.id] as Record<string, string>) || {};
             const ccUserIds: string[] = Array.isArray(formRowData.cc) ? formRowData.cc : [];
             for (const ccId of ccUserIds) {
               const ccUser = allUsers.find((u) => u.id === ccId);
-              if (ccUser?.email && !toEmails.includes(ccUser.email)) toEmails.push(ccUser.email);
+              if (ccUser?.email && !approverEmails.includes(ccUser.email)) ccEmails.push(ccUser.email);
             }
           }
-          if (toEmails.length > 0) {
+          if (approverEmails.length > 0) {
             try {
               const res = await fetch('/api/send-memo-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ memoId, toEmails }),
+                body: JSON.stringify({ memoId, toEmails: approverEmails, ccEmails }),
               });
               const data = await res.json();
               if (data.ok) {
@@ -512,7 +519,7 @@ export default function MemosPage() {
                     <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
                   </div>
                   <div className="p-6 space-y-0">
-                    {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                    {orderFieldsWithAttachmentsLast(detailTemplate.fields.filter((f) => f.type !== 'memo_type')).map((field) => (
                       <SectionRenderer
                         key={field.id}
                         field={field}
@@ -522,6 +529,9 @@ export default function MemosPage() {
                         ownerUser={detailOwnerUser}
                         users={allUsers}
                         typography={detailTemplate.typography}
+                        memoId={selectedMemo.id}
+                        viewerId={user?.id}
+                        viewerRole={user?.role}
                       />
                     ))}
                   </div>

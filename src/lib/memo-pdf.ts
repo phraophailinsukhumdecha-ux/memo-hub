@@ -1,4 +1,5 @@
-import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography } from '@/types';
+import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography, MemoAttachment, AttachmentSectionConfig } from '@/types';
+import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { resolveLogoSrc } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
 
@@ -338,6 +339,43 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
   </table>`;
 }
 
+function formatAttachmentSize(bytes: number): string {
+  if (!bytes || bytes < 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function escapeAttachmentText(value: string): string {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderAttachmentList(field: MemoField, value: unknown, typo?: MemoTypography): string {
+  const config = (field.fieldConfig || {}) as AttachmentSectionConfig;
+  if (config.showInDocument === false) return '';
+  const files = (Array.isArray(value) ? value : []).filter(
+    (item): item is MemoAttachment =>
+      Boolean(item) && typeof item === 'object' && typeof (item as MemoAttachment).fileId === 'string'
+  );
+  if (files.length === 0) return '';
+
+  const items = files
+    .map((file) => {
+      const size = formatAttachmentSize(file.size);
+      return `<li style="margin:2px 0;"><a href="${escapeAttachmentText(getAttachmentDriveUrl(file))}" target="_blank" rel="noreferrer" style="color:#1d4ed8;text-decoration:underline;">${escapeAttachmentText(file.name)}</a>${size ? ` <span style="color:#64748b;font-size:10px;">(${size})</span>` : ''}</li>`;
+    })
+    .join('');
+
+  return `<div style="margin-bottom:8px;page-break-inside:avoid;break-inside:avoid;${typo ? `font-family:${typo.fontFamily};` : ''}">
+    <p style="font-size:12px;font-weight:600;margin:0 0 3px;">ไฟล์แนบ (${files.length})</p>
+    <ul style="margin:0;padding-left:18px;font-size:11px;">${items}</ul>
+  </div>`;
+}
+
 function renderSection(field: MemoField, value: unknown, memoType?: string, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], attnToUserIds?: string[], header?: MemoHeaderDetails, templateTypo?: MemoTypography, auditorUserIds?: string[]): string {
   // Effective typography: per-section override wins per-key, else template default
   const typo = resolveFieldTypography(templateTypo, field.typography);
@@ -358,6 +396,8 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
       return renderBodyTextInner(field, value as string | undefined, typo);
     case 'approval_grid':
       return renderApprovalGrid(field, (value as Record<string, { name?: string; signed?: boolean; date?: string; time?: string; signerTitle?: string; colTitle?: string; action?: string }>) || {}, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, typo, auditorUserIds);
+    case 'attachment':
+      return renderAttachmentList(field, value, typo);
     default:
       return '';
   }
@@ -371,6 +411,7 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
   let headerSectionsHtml = '';
   let bodyHtml = '';
   let approvalGridHtml = '';
+  let attachmentsHtml = '';
 
   if (template && template.fields && template.fields.length > 0) {
     const memoTypeField = template.fields.find(f => f.type === 'memo_type');
@@ -427,6 +468,9 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
         approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds);
       } else if (field.type === 'body_text') {
         bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
+      } else if (field.type === 'attachment') {
+        // Attachments are rendered as a bullet list below the memo body.
+        attachmentsHtml += renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds);
       } else {
         flushBody();
         headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
@@ -499,6 +543,7 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
       <div style="flex:1;min-height:0;border:1px solid #0f172a;padding:10px 12px;margin-bottom:6px;box-sizing:border-box;overflow:hidden;">
         ${bodyHtml}
       </div>
+      ${attachmentsHtml ? `<div style="flex-shrink:0;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid;">${attachmentsHtml}</div>` : ''}
       <div style="flex-shrink:0;margin-top:auto;page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;break-after:avoid;">
         ${approvalGridHtml}
       </div>

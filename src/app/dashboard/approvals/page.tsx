@@ -31,6 +31,8 @@ import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
+import { isUserNextApprover, hasUserActed } from '@/lib/approval-flow';
+import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { formatDate, DateTimeCell } from '@/utils/cn';
 import { SectionRenderer } from '@/components/memo-sections';
 
@@ -73,7 +75,7 @@ export default function ApprovalsPage() {
   // (appears in an approval-grid column other than col_0, which is the owner's slot)
   const myPendingMemos = memos.filter((m) => {
     if (!user) return false;
-    return Object.values(m.formData || {}).some((v) => {
+    const inGrid = Object.values(m.formData || {}).some((v) => {
       if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
       return Object.entries(v as Record<string, unknown>).some(([colKey, col]) => {
         if (!colKey.startsWith('col_') || colKey === 'col_0') return false;
@@ -82,6 +84,11 @@ export default function ApprovalsPage() {
         return c.userId === user.id || (!!c.name && c.name === user.displayName);
       });
     });
+    if (!inGrid) return false;
+    // Sequential gating: open memos stay hidden until it is this user's turn.
+    const isOpen = m.status === 'new' || m.status === 'waiting';
+    if (isOpen && !isUserNextApprover(m, user) && !hasUserActed(m, user)) return false;
+    return true;
   });
 
   const filteredMemos = myPendingMemos.filter((m) => {
@@ -254,7 +261,7 @@ export default function ApprovalsPage() {
             return (
               <>
               <div className="memo-font space-y-4">
-                {detailTemplate.fields.filter((f) => f.type !== 'memo_type').map((field) => (
+                {orderFieldsWithAttachmentsLast(detailTemplate.fields.filter((f) => f.type !== 'memo_type')).map((field) => (
                   <SectionRenderer
                     key={field.id}
                     field={field}
@@ -264,6 +271,9 @@ export default function ApprovalsPage() {
                     ownerUser={detailOwnerUser}
                     users={allUsers}
                     typography={detailTemplate.typography}
+                    memoId={selectedMemo.id}
+                    viewerId={user?.id}
+                    viewerRole={user?.role}
                   />
                 ))}
               </div>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
+import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -50,16 +52,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
+    if (!approverColKey) {
+      return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ปฏิเสธ memo นี้' }, { status: 403 });
+    }
+
+    // Sequential order guard: a later approver cannot reject before the
+    // earlier checkers/approvers in the chain have acted.
+    const nextColumn = getNextApprovalColumn(formData);
+    if (!nextColumn || nextColumn.key !== approverColKey) {
+      return NextResponse.json(
+        { error: 'ยังไม่ถึงลำดับของคุณ กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการก่อน' },
+        { status: 403 }
+      );
+    }
+
     const updatedFormData = JSON.parse(JSON.stringify(formData));
-    if (approverColKey) {
-      for (const fieldKey of Object.keys(updatedFormData)) {
+    if (approverColKey) {      for (const fieldKey of Object.keys(updatedFormData)) {
         const fieldValue = updatedFormData[fieldKey];
         if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
           if (fieldValue[approverColKey]) {
             fieldValue[approverColKey].signed = false;
             fieldValue[approverColKey].action = 'reject';
-            fieldValue[approverColKey].date = now.toISOString().split('T')[0];
-            fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+            fieldValue[approverColKey].date = formatActionDate(now);
+            fieldValue[approverColKey].time = formatActionTime(now);
           }
         }
       }

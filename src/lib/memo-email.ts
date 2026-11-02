@@ -10,7 +10,10 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { resolveLogoForEmail } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
-import { MemoTypography } from '@/types';
+import { MemoTypography, MemoAttachment } from '@/types';
+import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { getAttachmentDriveUrl } from '@/lib/attachment-links';
+import { formatThaiDateTime } from '@/lib/datetime';
 
 export interface SmtpConfig {
   host: string;
@@ -86,19 +89,6 @@ export function buildSender(smtp: SmtpConfig): string {
   if (name && user) return `"${name}" <${user}>`;
   if (name) return name;
   return 'MemoHub';
-}
-
-function formatThaiDateTime(d: Date): string {
-  const date = d.toLocaleDateString('th-TH', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const time = d.toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return `${date} ${time} น.`;
 }
 
 function resolveDisplayName(
@@ -255,6 +245,25 @@ export function buildCompactMemoHtml(
     }
   }
 
+  // Attachments (shown as Google Drive links)
+  let attachmentsHtml = '';
+  for (const field of sFields) {
+    if (field.type !== 'attachment') continue;
+    const rawFiles = formData[field.id];
+    const files = (Array.isArray(rawFiles) ? rawFiles : []).filter(
+      (item): item is MemoAttachment =>
+        Boolean(item) && typeof item === 'object' && typeof (item as MemoAttachment).fileId === 'string'
+    );
+    if (files.length === 0) continue;
+    const items = files
+      .map(
+        (file) =>
+          `<li style="margin:2px 0;"><a href="${escapeHtml(getAttachmentDriveUrl(file))}" target="_blank" rel="noreferrer" style="color:#1d4ed8;text-decoration:underline;">${escapeHtml(file.name)}</a></li>`
+      )
+      .join('');
+    attachmentsHtml += `<div style="margin-top:10px;"><p style="font-weight:600;font-size:${typo.baseFontSize}px;margin:0 0 4px;">ไฟล์แนบ (${files.length})</p><ul style="margin:0;padding-left:18px;font-size:${typo.baseFontSize}px;">${items}</ul></div>`;
+  }
+
   // Approval status list
   let approvalHtml = '';
   approvalHtml = buildApprovalStatusHtml(formData, templateFields, typography);
@@ -270,7 +279,7 @@ export function buildCompactMemoHtml(
         <span style="margin-left:auto;color:${statusColor};font-size:12px;font-weight:700;">${statusText}</span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:${typo.baseFontSize}px;">${detailRows}</table>
-      <div style="padding:10px 14px;">${bodyHtml}${approvalHtml}</div>
+      <div style="padding:10px 14px;">${bodyHtml}${attachmentsHtml}${approvalHtml}</div>
     </div>`;
 }
 
@@ -467,7 +476,7 @@ export async function sendApproverNotifications(
   input: ApproverNotifyInput
 ): Promise<{ ok: boolean; sent?: number; message?: string }> {
   try {
-    const { memoId, actorId, actorName, action, remark, baseUrl } = input;
+    const { memoId, actorName, action, remark, baseUrl } = input;
 
     const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
     const settings = settingsDoc.data();
@@ -482,7 +491,13 @@ export async function sendApproverNotifications(
 
     const formData = (memo.formData || {}) as Record<string, unknown>;
 
-    // Collect all approvers (col_1+) and find who hasn't acted yet
+    // Sequential flow: only the NEXT approver in the chain receives a follow-up
+    // action email. After a rejection the memo is closed, so nothing is sent.
+    if (action !== 'approve') return { ok: true, sent: 0 };
+
+    const nextColumn = getNextApprovalColumn(formData);
+    if (!nextColumn) return { ok: true, sent: 0 };
+
     interface ApproverInfo {
       email: string;
       name: string;
@@ -490,33 +505,16 @@ export async function sendApproverNotifications(
       colKey: string;
       colTitle: string;
     }
-    const pendingApprovers: ApproverInfo[] = [];
 
-    for (const fieldKey of Object.keys(formData)) {
-      const fieldValue = formData[fieldKey];
-      if (!fieldValue || typeof fieldValue !== 'object' || Array.isArray(fieldValue)) continue;
-      for (const colKey of Object.keys(fieldValue)) {
-        if (!colKey.startsWith('col_') || colKey === 'col_0') continue;
-        const col = (fieldValue as Record<string, Record<string, unknown>>)[colKey];
-        if (!col) continue;
-        const colUserId = col.userId as string | undefined;
-        const colName = col.name as string | undefined;
-        if (!colUserId && !colName) continue;
-        // Skip already rejected
-        if (col.action === 'reject') continue;
-        // Skip other approvers who already acted, but always include the current actor
-        if (col.signed && colUserId !== actorId) continue;
-        pendingApprovers.push({
-          email: '',
-          name: colName || '',
-          userId: colUserId || '',
-          colKey,
-          colTitle: (col.colTitle as string) || 'ผู้อนุมัติ',
-        });
-      }
-    }
-
-    if (pendingApprovers.length === 0) return { ok: true, sent: 0 };
+    const pendingApprovers: ApproverInfo[] = [
+      {
+        email: '',
+        name: nextColumn.name || '',
+        userId: nextColumn.userId || '',
+        colKey: nextColumn.key,
+        colTitle: 'ผู้อนุมัติ',
+      },
+    ];
 
     // Resolve emails from users collection
     const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -568,6 +566,22 @@ export async function sendApproverNotifications(
     for (const approver of pendingApprovers) {
       if (!approver.email) continue;
 
+      // One-time action token so the approver can approve/reject straight from
+      // the email — same flow as the first reviewer (checker) email.
+      const actionToken = crypto.randomBytes(32).toString('hex');
+      await addDoc(collection(db, 'emailTokens'), {
+        token: actionToken,
+        memoId,
+        approverId: approver.userId,
+        approverName: approver.name,
+        toEmail: approver.email,
+        action: null,
+        used: false,
+        createdAt: now,
+      });
+      const approveUrl = `${baseUrl}/email-approve?token=${actionToken}`;
+      const cancelUrl = `${baseUrl}/email-cancel?token=${actionToken}`;
+
       const vars: Record<string, string> = {
         memo_number: (memo.memoNumber as string) || memoId,
         title: (memo.title as string) || '',
@@ -601,9 +615,13 @@ export async function sendApproverNotifications(
         .map((line) => `<p style="margin:4px 0;">${line || '&nbsp;'}</p>`)
         .join('');
 
-      const approvalStatusHtml = buildApprovalStatusHtml(
-        formData as Record<string, unknown>,
+      // buildCompactMemoHtml already includes the approval-status list, so we
+      // must not render buildApprovalStatusHtml again (it would duplicate).
+      const summaryHtml = buildCompactMemoHtml(
+        memo as Record<string, unknown>,
         templateFields,
+        userMap,
+        baseUrl,
         templateTypo
       );
 
@@ -613,11 +631,13 @@ export async function sendApproverNotifications(
 <body style="font-family:${resolveMailFontFamily(templateTypo)};max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#1e293b;">${escapeHtml(subject)}</h2>
   ${bodyHtml}
-  <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin:16px 0;background:#f8fafc;">
-    ${approvalStatusHtml}
-  </div>
+  ${summaryHtml}
   <div style="margin:24px 0;text-align:center;">
-    <a href="${baseUrl}/home" style="display:inline-block;padding:12px 32px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">เข้าสู่ระบบเพื่ออนุมัติ</a>
+    <a href="${approveUrl}" style="display:inline-block;padding:12px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">อนุมัติ</a>
+    <a href="${cancelUrl}" style="display:inline-block;padding:12px 32px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin:0 8px;">ปฏิเสธ</a>
+  </div>
+  <div style="margin:0 0 20px;text-align:center;">
+    <a href="${baseUrl}/home" style="display:inline-block;padding:10px 24px;background:#0f172a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">เข้าสู่ระบบเพื่ออนุมัติ</a>
   </div>
   <div style="text-align:center;margin-bottom:16px;">
     <a href="${memoLink}" style="color:#2563eb;text-decoration:underline;font-size:13px;">ดูเอกสารฉบับเต็ม (ไม่ต้องเข้าสู่ระบบ)</a>

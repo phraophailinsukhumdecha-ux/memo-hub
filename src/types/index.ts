@@ -7,7 +7,8 @@ export type MemoFieldType =
   | 'memo_type'
   | 'form_row'
   | 'body_text'
-  | 'approval_grid';
+  | 'approval_grid'
+  | 'attachment';
 
 export interface User {
   id: string;
@@ -134,6 +135,42 @@ export interface ApprovalGridConfig {
   showTime?: boolean;
 }
 
+export interface MemoAttachment {
+  /** Google Drive file id */
+  fileId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  /** Drive folder the file was stored in */
+  folderId?: string;
+  webViewLink?: string;
+}
+
+export interface AttachmentSectionConfig {
+  maxFiles?: number;
+  maxSizeMB?: number;
+  required?: boolean;
+  /** Show the attachment list in printed/PDF documents */
+  showInDocument?: boolean;
+  helperText?: string;
+}
+
+export interface DriveFolderMapping {
+  id: string;
+  department: string;
+  name: string;
+  driveFolderId: string;
+  createdAt?: Date;
+}
+
+export interface DriveAttachmentSettings {
+  enabled?: boolean;
+  maxFiles?: number;
+  maxSizeMB?: number;
+}
+
 export interface MemoCondition {
   id: string;
   name: string;
@@ -228,6 +265,8 @@ export interface GlobalSettings {
   dfInternalAffairsOptions?: string[];
   sheetImportConfigs?: Partial<Record<MasterListField | 'users', SheetImportConfig>>;
   userManual?: UserManualSettings;
+  driveFolders?: DriveFolderMapping[];
+  driveAttachment?: DriveAttachmentSettings;
   updatedAt?: Date;
   updatedBy?: string;
 }

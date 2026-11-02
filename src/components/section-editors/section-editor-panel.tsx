@@ -12,13 +12,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MemoField, MemoFieldType, CheckboxGroupConfig, DropdownSelectConfig, MemoTypeConfig, FormRowConfig, BodyTextConfig, ApprovalGridConfig } from '@/types';
+import { MemoField, MemoFieldType, CheckboxGroupConfig, DropdownSelectConfig, MemoTypeConfig, FormRowConfig, BodyTextConfig, ApprovalGridConfig, AttachmentSectionConfig } from '@/types';
 import { CheckboxGroupEditor } from './checkbox-group-editor';
 import { DropdownSelectEditor } from './dropdown-select-editor';
 import { MemoTypeEditor } from './memo-type-editor';
 import { FormRowEditor } from './form-row-editor';
 import { BodyTextEditor } from './body-text-editor';
 import { ApprovalGridEditor } from './approval-grid-editor';
+import { AttachmentEditor } from './attachment-editor';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 
 interface SectionEditorPanelProps {
@@ -38,6 +39,7 @@ export const SECTION_TYPES: { value: MemoFieldType; label: string }[] = [
   { value: 'checkbox_group', label: 'Checkboxes (เลือกหลายตัว)' },
   { value: 'body_text', label: 'ข้อความ / บรรทัดว่าง' },
   { value: 'approval_grid', label: 'ลงชื่ออนุมัติ' },
+  { value: 'attachment', label: 'ไฟล์แนบ (Google Drive)' },
 ];
 
 export function SectionEditorPanel({
@@ -90,6 +92,13 @@ export function SectionEditorPanel({
         return (
           <ApprovalGridEditor
             config={(field.fieldConfig as unknown as ApprovalGridConfig) || { columns: [] }}
+            onChange={(config) => onUpdate({ fieldConfig: config })}
+          />
+        );
+      case 'attachment':
+        return (
+          <AttachmentEditor
+            config={(field.fieldConfig as unknown as AttachmentSectionConfig) || { maxFiles: 5, maxSizeMB: 10 }}
             onChange={(config) => onUpdate({ fieldConfig: config })}
           />
         );

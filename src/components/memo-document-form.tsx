@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { ApprovalGrid, SectionRenderer } from '@/components/memo-sections';
-import { MemoTemplate, User, Group, ApprovalGridConfig } from '@/types';
-import { Mail, Save, X } from 'lucide-react';
+import { ApprovalGrid, SectionRenderer, AttachmentSection } from '@/components/memo-sections';
+import { MemoTemplate, User, Group, ApprovalGridConfig, AttachmentSectionConfig, MemoAttachment, Memo } from '@/types';
+import { printMemo } from '@/lib/memo-pdf';
+import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
+import { Mail, Printer, Save, X } from 'lucide-react';
 
 interface MemoDocumentFormProps {
   templates: MemoTemplate[];
@@ -302,6 +304,20 @@ export function MemoDocumentForm({
       case 'memo_type':
         return null;
 
+      case 'attachment': {
+        const attachmentConfig = config as unknown as AttachmentSectionConfig;
+        return (
+          <div key={field.id}>
+            <AttachmentSection
+              config={attachmentConfig}
+              value={formData[field.id] as MemoAttachment[] | undefined}
+              onChange={(val) => onChange(field.id, val)}
+              ownerUser={ownerUser}
+            />
+          </div>
+        );
+      }
+
       default:
         return (
           <div key={field.id} className="space-y-1">
@@ -313,6 +329,30 @@ export function MemoDocumentForm({
           </div>
         );
     }
+  };
+
+  const handlePreviewPrint = () => {
+    if (!selectedTemplate) return;
+    const now = new Date();
+    const previewMemo: Memo = {
+      id: `preview-${Date.now()}`,
+      memoNumber: memoNumber || 'ฉบับร่าง',
+      templateId: selectedTemplate.id,
+      templateName: selectedTemplate.name,
+      status: 'draft',
+      title: (formData.title as string) || selectedTemplate.name,
+      formData,
+      ownerId: ownerUser?.id || '',
+      ownerName: ownerUser?.displayName || '',
+      department: ownerUser?.department || '',
+      approvalRoute: [],
+      currentApprovalIndex: 0,
+      approvals: [],
+      deadlineAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+    printMemo(previewMemo, selectedTemplate, undefined, ownerUser, users);
   };
 
   return (
@@ -341,7 +381,7 @@ export function MemoDocumentForm({
             <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
             <div className="memo-font bg-white border-2 border-slate-900 text-sm">
               <div className="p-4 space-y-0">
-                {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'checkbox_group' && !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์')).map((field) => (
+                {orderFieldsWithAttachmentsLast(selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'checkbox_group' && !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์'))).map((field) => (
                   <SectionRenderer
                     key={field.id}
                     field={field}
@@ -363,6 +403,10 @@ export function MemoDocumentForm({
 
         {/* Footer */}
         <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={handlePreviewPrint} disabled={creating}>
+            <Printer className="h-4 w-4 mr-1" />
+            พิมพ์ / พรีวิว
+          </Button>
           <Button variant="outline" onClick={onCancel} disabled={creating}>
             ยกเลิก
           </Button>

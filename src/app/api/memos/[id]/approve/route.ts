@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, addDoc, collection, getDocs } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
+import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -45,6 +47,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'คุณไม่มีสิทธิ์อนุมัติ memo นี้' }, { status: 403 });
     }
 
+    // Sequential order guard: the memo only moves forward when the first
+    // unsigned column in the chain acts. Later approvers must wait.
+    const nextColumn = getNextApprovalColumn(formData);
+    if (!nextColumn || nextColumn.key !== approverColKey) {
+      return NextResponse.json(
+        { error: 'ยังไม่ถึงลำดับของคุณ กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการก่อน' },
+        { status: 403 }
+      );
+    }
+
     const approval = {
       level: 0,
       approvalLevel: approverColKey,
@@ -62,8 +74,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = true;
           fieldValue[approverColKey].action = 'approve';
-          fieldValue[approverColKey].date = now.toISOString().split('T')[0];
-          fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+          fieldValue[approverColKey].date = formatActionDate(now);
+          fieldValue[approverColKey].time = formatActionTime(now);
         }
       }
     }
@@ -104,35 +116,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
     } else {
       await updateDoc(doc(db, 'memos', id), {
+        status: 'waiting',
         formData: updatedFormData,
         approvals: [...(memo.approvals || []), approval],
         updatedAt: now,
         waitingAt: memo.waitingAt || now,
       });
 
-      const notifiedUserIds = new Set<string>();
-      for (const fieldKey of Object.keys(updatedFormData)) {
-        const fieldValue = updatedFormData[fieldKey];
-        if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
-          for (const colKey of Object.keys(fieldValue)) {
-            if (colKey.startsWith('col_') && colKey !== 'col_0') {
-              const col = fieldValue[colKey];
-              if (col?.userId && !col?.signed && col.userId !== approverId) {
-                if (!notifiedUserIds.has(col.userId)) {
-                  notifiedUserIds.add(col.userId);
-                  await addDoc(collection(db, 'notifications'), {
-                    userId: col.userId,
-                    type: 'new_memo',
-                    memoId: id,
-                    message: `มี Memo รอการอนุมัติของคุณ: ${memo.title}`,
-                    isRead: false,
-                    createdAt: now,
-                  });
-                }
-              }
-            }
-          }
-        }
+      // Sequential flow: only the NEXT approver in the chain gets an in-app
+      // notification. Later approvers must not see the memo before their turn.
+      const nextAfter = getNextApprovalColumn(updatedFormData);
+      let nextUserId: string | undefined;
+      if (nextAfter?.userId) {
+        nextUserId = nextAfter.userId;
+      } else if (nextAfter?.name) {
+        // Legacy rows only store the approver name — resolve it to a user id.
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        nextUserId = usersSnapshot.docs.find(
+          (d) => (d.data() as Record<string, unknown>).displayName === nextAfter.name
+        )?.id;
+      }
+      if (nextUserId && nextUserId !== approverId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: nextUserId,
+          type: 'new_memo',
+          memoId: id,
+          message: `มี Memo รอการอนุมัติของคุณ: ${memo.title}`,
+          isRead: false,
+          createdAt: now,
+        });
       }
     }
 

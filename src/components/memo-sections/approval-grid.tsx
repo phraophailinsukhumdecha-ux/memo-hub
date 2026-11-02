@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
 import { resolveTypography } from '@/lib/typography';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { Plus, X } from 'lucide-react';
 
 interface ApprovalGridProps {
@@ -83,8 +84,8 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     if (readonly || !onChange) return;
     if (!hasDynamicAssignments) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const todayStr = formatActionDate();
+    const timeStr = formatActionTime();
 
     const autoValue: typeof value = {};
     let idx = 0;

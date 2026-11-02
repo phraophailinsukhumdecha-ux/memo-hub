@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
+import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { formatActionDate, formatActionTime } from '@/lib/datetime';
 
 function getBaseUrl(request: NextRequest): string {
   return (
@@ -241,6 +243,22 @@ export async function GET(request: NextRequest) {
       `, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
+    // Sequential order guard: only the first unsigned column in the chain may act.
+    // Checkers ("Checked by") must finish before approvers ("ATTN To.") are allowed.
+    const nextColumn = getNextApprovalColumn(formData);
+    if (!nextColumn || nextColumn.key !== approverColKey) {
+      return new Response(`
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8"><title>MemoHub</title></head>
+        <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
+          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:460px;">
+            <h2 style="color:#f59e0b;">ยังไม่ถึงลำดับของคุณ</h2>
+            <p style="color:#64748b;">กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการให้ครบก่อน</p>
+          </div>
+        </body></html>
+      `, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+
     const updatedFormData = JSON.parse(JSON.stringify(formData));
     for (const fieldKey of Object.keys(updatedFormData)) {
       const fieldValue = updatedFormData[fieldKey];
@@ -248,8 +266,8 @@ export async function GET(request: NextRequest) {
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = action === 'approve';
           fieldValue[approverColKey].action = action;
-          fieldValue[approverColKey].date = now.toISOString().split('T')[0];
-          fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+          fieldValue[approverColKey].date = formatActionDate(now);
+          fieldValue[approverColKey].time = formatActionTime(now);
         }
       }
     }
@@ -300,6 +318,10 @@ export async function GET(request: NextRequest) {
       updateData.status = 'rejected';
       updateData.rejectionComment = 'ปฏิเสธผ่านอีเมล';
       updateData.closedAt = now;
+    } else if (action === 'approve') {
+      // Partially approved (more approvers pending) — move to "waiting".
+      updateData.status = 'waiting';
+      updateData.waitingAt = memo.waitingAt || now;
     }
 
     await updateDoc(doc(db, 'memos', tokenData.memoId), updateData);
@@ -456,6 +478,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: isOwner ? 'คุณเป็นเจ้าของ Memo นี้' : 'คุณไม่ได้เป็นผู้อนุมัติใน Memo นี้' }, { status: 403 });
     }
 
+    // Sequential order guard: only the first unsigned column in the chain may act.
+    const nextColumn = getNextApprovalColumn(formData);
+    if (!nextColumn || nextColumn.key !== approverColKey) {
+      return NextResponse.json({ ok: false, error: 'ยังไม่ถึงลำดับของคุณ กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการก่อน' }, { status: 403 });
+    }
+
     const updatedFormData = JSON.parse(JSON.stringify(formData));
     for (const fieldKey of Object.keys(updatedFormData)) {
       const fieldValue = updatedFormData[fieldKey];
@@ -463,8 +491,8 @@ export async function POST(request: NextRequest) {
         if (fieldValue[approverColKey]) {
           fieldValue[approverColKey].signed = action === 'approve';
           fieldValue[approverColKey].action = action;
-          fieldValue[approverColKey].date = now.toISOString().split('T')[0];
-          fieldValue[approverColKey].time = now.toTimeString().split(' ')[0].substring(0, 5);
+          fieldValue[approverColKey].date = formatActionDate(now);
+          fieldValue[approverColKey].time = formatActionTime(now);
         }
       }
     }
