@@ -20,7 +20,7 @@ interface MemoRemarksProps {
 export function MemoRemarks({ memo, className = '' }: MemoRemarksProps) {
   const approvals = Array.isArray(memo.approvals) ? memo.approvals : [];
 
-  const items: Array<{ action: 'approve' | 'reject'; name: string; comment: string }> = [];
+  const items: Array<{ action: 'approve' | 'reject'; name: string; comment: string; channel?: 'web' | 'email' }> = [];
   for (const approval of approvals) {
     const comment = (approval.comment || '').trim();
     if (!comment || AUTO_COMMENTS.has(comment)) continue;
@@ -28,13 +28,19 @@ export function MemoRemarks({ memo, className = '' }: MemoRemarksProps) {
       action: approval.action,
       name: approval.approverName || '-',
       comment,
+      channel: approval.channel,
     });
   }
 
   const rejection = (memo.rejectionComment || '').trim();
   if (rejection && !AUTO_COMMENTS.has(rejection) && !items.some((item) => item.action === 'reject' && item.comment === rejection)) {
     const rejecter = approvals.find((approval) => approval.action === 'reject');
-    items.push({ action: 'reject', name: rejecter?.approverName || '-', comment: rejection });
+    items.push({
+      action: 'reject',
+      name: rejecter?.approverName || '-',
+      comment: rejection,
+      channel: rejecter?.channel,
+    });
   }
 
   if (items.length === 0) return null;
@@ -48,7 +54,14 @@ export function MemoRemarks({ memo, className = '' }: MemoRemarksProps) {
             <span className={item.action === 'approve' ? 'font-semibold text-green-700' : 'font-semibold text-red-600'}>
               {item.action === 'approve' ? 'อนุมัติโดย' : 'ปฏิเสธโดย'}:
             </span>{' '}
-            {item.name} — {item.comment}
+            {item.name}
+            {item.channel === 'email' ? (
+              <span className="text-slate-500"> (ผ่านอีเมล)</span>
+            ) : item.channel === 'web' ? (
+              <span className="text-slate-500"> (ผ่านระบบ)</span>
+            ) : null}
+            {' — '}
+            {item.comment}
           </li>
         ))}
       </ul>

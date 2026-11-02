@@ -88,6 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       approverName,
       action: 'reject',
       comment,
+      channel: 'web' as const,
       actedAt: now,
     };
 

@@ -142,19 +142,23 @@ export function buildApprovalStatusHtml(
         color = '#f59e0b';
       }
       const title = col.colTitle || (colKey === 'col_0' ? 'ผู้ขออนุมัติ' : 'ผู้อนุมัติ');
-      html += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
-      if (col.signerTitle) html += ` (${escapeHtml(col.signerTitle)})`;
-      if ((col.signed || col.action) && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
-      html += '</p>';
-
-      // Remark / rejection reason, shown directly under the person who wrote it.
       const approval = approvals?.find(
         (item) =>
           item.approvalLevel === colKey ||
           (item.approverId && col.userId && item.approverId === col.userId) ||
           (item.approverName && col.name && item.approverName === col.name)
       );
-      const rawRemark = ((approval?.comment || '') as string).trim() || ((col.comment || '') as string).trim();
+      const approvalComment = ((approval?.comment || '') as string).trim();
+      const channel = approval?.channel || (autoComments.has(approvalComment) ? 'email' : undefined);
+
+      html += `<p style="margin:4px 0;font-size:${typo.baseFontSize}px;"><span style="color:${color};font-weight:600;">${icon}</span> <strong>${escapeHtml(title)}</strong> — ${escapeHtml(col.name || '-')}`;
+      if (col.signerTitle) html += ` (${escapeHtml(col.signerTitle)})`;
+      if (!isRequester && channel) html += ` <span style="color:#64748b;font-size:11px;">(${channel === 'email' ? 'ผ่านอีเมล' : 'ผ่านระบบ'})</span>`;
+      if ((col.signed || col.action) && col.date) html += ` <span style="color:#94a3b8;font-size:11px;">${escapeHtml(col.date)}${col.time ? ` ${escapeHtml(col.time)}` : ''}</span>`;
+      html += '</p>';
+
+      // Remark / rejection reason, shown directly under the person who wrote it.
+      const rawRemark = approvalComment || ((col.comment || '') as string).trim();
       const isRejected = col.action === 'reject' || approval?.action === 'reject';
       const fallbackRemark = isRejected ? (rejectionComment || '').trim() : '';
       const remark = rawRemark || fallbackRemark;

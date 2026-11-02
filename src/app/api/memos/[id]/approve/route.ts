@@ -65,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       approverName,
       action: 'approve' as const,
       comment: comment || '',
+      channel: 'web' as const,
       actedAt: now,
     };
 

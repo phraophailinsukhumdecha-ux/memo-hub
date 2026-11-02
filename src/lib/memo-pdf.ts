@@ -363,7 +363,7 @@ function renderMemoRemarks(memo: Memo, typo: ResolvedTypography): string {
   // These are placeholders written by the email action flow, not real remarks.
   const autoComments = new Set(['อนุมัติผ่านอีเมล', 'ปฏิเสธผ่านอีเมล', 'ดำเนินการผ่านอีเมล']);
 
-  const items: Array<{ action: 'approve' | 'reject'; name: string; comment: string }> = [];
+  const items: Array<{ action: 'approve' | 'reject'; name: string; comment: string; channel?: 'web' | 'email' }> = [];
   for (const approval of approvals) {
     const comment = (approval.comment || '').trim();
     if (!comment || autoComments.has(comment)) continue;
@@ -371,13 +371,19 @@ function renderMemoRemarks(memo: Memo, typo: ResolvedTypography): string {
       action: approval.action,
       name: approval.approverName || '-',
       comment,
+      channel: approval.channel,
     });
   }
 
   const rejection = (memo.rejectionComment || '').trim();
   if (rejection && !autoComments.has(rejection) && !items.some((item) => item.action === 'reject' && item.comment === rejection)) {
     const rejecter = approvals.find((approval) => approval.action === 'reject');
-    items.push({ action: 'reject', name: rejecter?.approverName || '-', comment: rejection });
+    items.push({
+      action: 'reject',
+      name: rejecter?.approverName || '-',
+      comment: rejection,
+      channel: rejecter?.channel,
+    });
   }
 
   if (items.length === 0) return '';
@@ -386,7 +392,8 @@ function renderMemoRemarks(memo: Memo, typo: ResolvedTypography): string {
     .map((item) => {
       const color = item.action === 'approve' ? '#15803d' : '#b91c1c';
       const label = item.action === 'approve' ? 'อนุมัติโดย' : 'ปฏิเสธโดย';
-      return `<li style="margin:2px 0;font-size:11px;line-height:1.45;color:#1e293b;"><span style="color:${color};font-weight:600;">${label}:</span> ${escapeAttachmentText(item.name)} — ${escapeAttachmentText(item.comment)}</li>`;
+      const channel = item.channel === 'email' ? ' (ผ่านอีเมล)' : item.channel === 'web' ? ' (ผ่านระบบ)' : '';
+      return `<li style="margin:2px 0;font-size:11px;line-height:1.45;color:#1e293b;"><span style="color:${color};font-weight:600;">${label}:</span> ${escapeAttachmentText(item.name)}${channel ? `<span style="color:#64748b;">${channel}</span>` : ''} — ${escapeAttachmentText(item.comment)}</li>`;
     })
     .join('');
 

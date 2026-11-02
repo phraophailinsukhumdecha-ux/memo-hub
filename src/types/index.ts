@@ -253,6 +253,8 @@ export interface Approval {
   approverName: string;
   action: 'approve' | 'reject';
   comment?: string;
+  /** How the action was performed (web dashboard or email link). */
+  channel?: 'web' | 'email';
   actedAt: Date;
 }
 

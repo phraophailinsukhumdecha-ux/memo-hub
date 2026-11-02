@@ -280,6 +280,7 @@ export async function GET(request: NextRequest) {
       approverName: tokenData.approverName,
       action: action as 'approve' | 'reject',
       comment: `ดำเนินการผ่านอีเมล`,
+      channel: 'email' as const,
       actedAt: now,
     };
 
@@ -518,6 +519,7 @@ export async function POST(request: NextRequest) {
       approverName: tokenData.approverName,
       action: action as 'approve' | 'reject',
       comment: remark || (action === 'approve' ? 'อนุมัติผ่านอีเมล' : 'ปฏิเสธผ่านอีเมล'),
+      channel: 'email' as const,
       actedAt: now,
     };
 
