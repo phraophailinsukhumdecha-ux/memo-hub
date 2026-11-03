@@ -30,6 +30,7 @@ import { resolveTypography } from '@/lib/typography';
 import { isUserNextApprover, hasUserActed, getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { getMemoDisplaySubject } from '@/lib/memo-subject';
+import { isMemoCcForUser } from '@/lib/memo-cc';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { UserManualDialog } from '@/components/user-manual-dialog';
 
@@ -67,6 +68,8 @@ export default function HomePage() {
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [pendingPage, setPendingPage] = useState(1);
   const [minePage, setMinePage] = useState(1);
+  const [ccPage, setCcPage] = useState(1);
+  const [detailViewOnly, setDetailViewOnly] = useState(false);
   const PAGE_SIZE = 10;
   const [mounted, setMounted] = useState(false);
 
@@ -244,6 +247,17 @@ export default function HomePage() {
     return memos.filter((m) => m.ownerId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [memos, user]);
 
+  const ccMemos = useMemo(() => {
+    if (!user) return [];
+    return memos
+      .filter((m) => {
+        if (m.status === 'draft') return false;
+        if (m.ownerId === user.id) return false;
+        return isMemoCcForUser(m, user.id);
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [memos, user]);
+
   if (!mounted || !user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -286,6 +300,8 @@ export default function HomePage() {
     .filter((m) => mineStatusFilter === 'all' || m.status === mineStatusFilter)
     .filter((m) => matchesSearch(m, searchQuery));
 
+  const ccFilteredList = ccMemos.filter((m) => matchesSearch(m, searchQuery));
+
   const pendingTotalPages = Math.max(1, Math.ceil(pendingBaseList.length / PAGE_SIZE));
   const safePendingPage = Math.min(pendingPage, pendingTotalPages);
   const pendingPageItems = pendingBaseList.slice((safePendingPage - 1) * PAGE_SIZE, safePendingPage * PAGE_SIZE);
@@ -293,6 +309,10 @@ export default function HomePage() {
   const mineTotalPages = Math.max(1, Math.ceil(mineFilteredList.length / PAGE_SIZE));
   const safeMinePage = Math.min(minePage, mineTotalPages);
   const minePageItems = mineFilteredList.slice((safeMinePage - 1) * PAGE_SIZE, safeMinePage * PAGE_SIZE);
+
+  const ccTotalPages = Math.max(1, Math.ceil(ccFilteredList.length / PAGE_SIZE));
+  const safeCcPage = Math.min(ccPage, ccTotalPages);
+  const ccPageItems = ccFilteredList.slice((safeCcPage - 1) * PAGE_SIZE, safeCcPage * PAGE_SIZE);
 
   const getApprovalProgress = (memo: Memo) => {
     const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
@@ -510,7 +530,8 @@ export default function HomePage() {
     }
   };
 
-  const openDetail = async (memo: Memo) => {
+  const openDetail = async (memo: Memo, viewOnly = false) => {
+    setDetailViewOnly(viewOnly);
     setSelectedMemo(memo);
     setIsDetailOpen(true);
     try {
@@ -777,7 +798,7 @@ export default function HomePage() {
   const isListButtonEnabled = (key: keyof MemoListButtonSettings) =>
     memoListSettings?.memoListButtons?.[key] !== false;
 
-  const renderMemoList = (items: Memo[], showApprove: boolean) => (
+  const renderMemoList = (items: Memo[], showApprove: boolean, readOnly = false) => (
     <div className="space-y-3">
       {items.length === 0 && (
         <div className="text-center py-12 text-slate-600">
@@ -785,7 +806,7 @@ export default function HomePage() {
           <p className="text-sm">ไม่มีรายการ</p>
         </div>
       )}
-      {isSelectMode && isListButtonEnabled('selectMode') && items.length > 0 && (
+      {!readOnly && isSelectMode && isListButtonEnabled('selectMode') && items.length > 0 && (
         <div className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -805,7 +826,7 @@ export default function HomePage() {
       {items.map((memo) => (
         <div key={memo.id} className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {isSelectMode && canDeleteMemo(memo) && (
+            {!readOnly && isSelectMode && canDeleteMemo(memo) && (
               <input
                 type="checkbox"
                 checked={selectedMemos.has(memo.id)}
@@ -813,7 +834,7 @@ export default function HomePage() {
                 className="h-4 w-4 rounded shrink-0"
               />
             )}
-            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (memo.status === 'draft' && memo.ownerId === user.id ? openDraft(memo) : openDetail(memo))}>
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (readOnly ? openDetail(memo, true) : memo.status === 'draft' && memo.ownerId === user.id ? openDraft(memo) : openDetail(memo))}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{memo.memoNumber}</span>
                 <span className="text-sm text-slate-600 truncate">{getMemoDisplaySubject(memo)}</span>
@@ -826,7 +847,13 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 shrink-0">
-            {memo.status === 'draft' ? (
+            {readOnly ? (
+              isListButtonEnabled('print') ? (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์">
+                  <Printer className="h-4 w-4" />
+                </Button>
+              ) : null
+            ) : memo.status === 'draft' ? (
               <>
                 {isListButtonEnabled('edit') && (
                   <Button variant="ghost" size="sm" className="text-slate-700 hover:bg-slate-100" onClick={() => openDraft(memo)}>
@@ -927,7 +954,7 @@ export default function HomePage() {
       </div>
 
       <div className="p-6">
-        <Tabs value={isApproveUser ? activeTab : 'mine'} onValueChange={(v) => { setActiveTab(v); setPendingPage(1); setMinePage(1); setSearchQuery(''); }}>
+        <Tabs value={activeTab === 'pending' && !isApproveUser ? 'mine' : activeTab} onValueChange={(v) => { setActiveTab(v); setPendingPage(1); setMinePage(1); setCcPage(1); setSearchQuery(''); }}>
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
             <TabsList>
               {isApproveUser && (
@@ -937,6 +964,11 @@ export default function HomePage() {
                   <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
                 </TabsTrigger>
               )}
+              <TabsTrigger value="cc" className="gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                แจ้งเพื่อทราบ (CC)
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{ccMemos.length}</Badge>
+              </TabsTrigger>
               <TabsTrigger value="mine" className="gap-1.5">
                 <FileText className="h-3.5 w-3.5" />
                 Memo ของฉัน
@@ -1000,6 +1032,32 @@ export default function HomePage() {
               </Card>
             </TabsContent>
           )}
+
+           <TabsContent value="cc">
+             <Card>
+               <CardHeader className="flex flex-row items-center justify-between pb-3 gap-3 flex-wrap">
+                 <CardTitle className="text-base">เอกสารที่ได้รับ CC</CardTitle>
+                 <div className="relative">
+                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                   <Input
+                     placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
+                     className="w-56 pl-8 h-8 text-sm"
+                     value={searchQuery}
+                     onChange={(e) => { setSearchQuery(e.target.value); setCcPage(1); }}
+                   />
+                 </div>
+               </CardHeader>
+               <CardContent>
+                 {renderMemoList(ccPageItems, false, true)}
+                 <ListPagination
+                   page={safeCcPage}
+                   totalPages={ccTotalPages}
+                   totalItems={ccFilteredList.length}
+                   onPageChange={setCcPage}
+                 />
+               </CardContent>
+             </Card>
+           </TabsContent>
 
            <TabsContent value="mine">
              <Card>
@@ -1066,7 +1124,11 @@ export default function HomePage() {
               </div>
             )}
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-            {selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            <Button variant="outline" onClick={() => selectedMemo && handlePrint(selectedMemo)}>
+              <Printer className="h-4 w-4 mr-1" />
+              พิมพ์
+            </Button>
+            {!detailViewOnly && selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />
