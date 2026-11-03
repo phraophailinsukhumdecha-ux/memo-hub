@@ -6,6 +6,7 @@ import { login as apiLogin, getStoredUser, storeUser, clearStoredUser } from '@/
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { HEARTBEAT_INTERVAL_MS } from '@/lib/presence';
+import { logAuthEvent } from '@/lib/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (current?.id) {
       // Mark offline immediately (otherwise the heartbeat timeout does it).
       updateDoc(doc(db, 'users', current.id), { lastSeenAt: null }).catch(() => {});
+      void logAuthEvent('logout', current.username || '', true, { userId: current.id });
     }
     setUser(null);
     clearStoredUser();

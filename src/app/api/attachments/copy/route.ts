@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { MemoAttachment } from '@/types';
 import { copyFile } from '@/lib/google-drive';
 import { getAttachmentRuntimeSettings, resolveUploadFolder } from '@/lib/attachments-server';
+import { logApiError } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ files: copied });
   } catch (error) {
     console.error('Attachment copy failed:', error);
+    await logApiError('/api/attachments/copy', error);
     return NextResponse.json({ error: 'คัดลอกไฟล์แนบไม่สำเร็จ' }, { status: 500 });
   }
 }

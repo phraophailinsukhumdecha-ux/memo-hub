@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { DriveFolderMapping } from '@/types';
 import { createFolder, getRootFolderId, listFolders } from '@/lib/google-drive';
+import { logApiError } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -13,6 +14,7 @@ export async function GET() {
       folders: folders.map((f) => ({ driveFolderId: f.id, name: f.name })),
     });
   } catch (error) {
+    await logApiError('/api/drive/folders GET', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'อ่านโฟลเดอร์ไม่สำเร็จ' },
       { status: 500 }
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ folder: mapping, reused: Boolean(already) });
   } catch (error) {
     console.error('Create drive folder failed:', error);
+    await logApiError('/api/drive/folders POST', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'สร้างโฟลเดอร์ไม่สำเร็จ' },
       { status: 500 }

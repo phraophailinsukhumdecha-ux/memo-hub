@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { logApiError } from '@/lib/logger';
 
 interface SmtpConfig {
   host: string;
@@ -118,6 +119,7 @@ MemoHub Digital Memo & Approval System`;
     return NextResponse.json({ ok: true, message: 'ส่งอีเมลสำเร็จ' });
   } catch (error) {
     const classified = classifyError(error as Error, 0, '');
+    await logApiError('/api/test-email', error);
     return NextResponse.json(
       { ok: false, code: classified.code, message: classified.message },
       { status: 500 }

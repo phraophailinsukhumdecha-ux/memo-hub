@@ -5,6 +5,7 @@ import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-ema
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { buildApprovalLog } from '@/lib/event-logs';
+import { logApiError } from '@/lib/logger';
 
 function getBaseUrl(request: NextRequest): string {
   return (
@@ -381,6 +382,7 @@ export async function GET(request: NextRequest) {
       </body></html>
     `, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   } catch (error) {
+    await logApiError('/api/email-action GET', error);
     return new Response(`
       <!DOCTYPE html>
       <html><head><meta charset="utf-8"><title>MemoHub</title></head>
@@ -597,6 +599,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, message: action === 'approve' ? 'อนุมัติสำเร็จ' : 'ปฏิเสธสำเร็จ' });
   } catch (error) {
+    await logApiError('/api/email-action POST', error);
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'เกิดข้อผิดพลาด' }, { status: 500 });
   }
 }

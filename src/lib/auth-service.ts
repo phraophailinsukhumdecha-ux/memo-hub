@@ -1,18 +1,25 @@
 import { User } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { logAuthEvent } from '@/lib/logger';
 
 export async function login(username: string, password: string): Promise<User | null> {
   const usersRef = collection(db, 'users');
   const q = query(usersRef, where('username', '==', username), limit(1));
   const snapshot = await getDocs(q);
 
-  if (snapshot.empty) return null;
+  if (snapshot.empty) {
+    await logAuthEvent('login', username, false, { reason: 'user-not-found' });
+    return null;
+  }
 
   const docSnap = snapshot.docs[0];
   const userData = docSnap.data();
 
-  if (userData.password !== password) return null;
+  if (userData.password !== password) {
+    await logAuthEvent('login', username, false, { reason: 'wrong-password' });
+    return null;
+  }
 
   const now = new Date();
   // Presence: remember this sign-in so admins can see who is online.
@@ -27,6 +34,8 @@ export async function login(username: string, password: string): Promise<User | 
 
   const { password: _, ...userWithoutPassword } = userData;
   void _;
+
+  await logAuthEvent('login', username, true, { userId: docSnap.id });
 
   return {
     id: docSnap.id,

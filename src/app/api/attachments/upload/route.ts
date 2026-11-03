@@ -8,6 +8,7 @@ import {
   resolveUploadFolder,
   sanitizeFileName,
 } from '@/lib/attachments-server';
+import { logApiError } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ file: attachment });
   } catch (error) {
+    await logApiError('/api/attachments/upload', error);
     if (error instanceof DriveConfigError) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

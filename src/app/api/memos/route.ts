@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { generateMemoId } from '@/lib/memo-id';
 import { getDeadlineDays } from '@/lib/deadline';
 import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
+import { logApiError } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ memoId });
   } catch (error) {
+    await logApiError('/api/memos POST', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
   }
 }

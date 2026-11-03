@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { Memo } from '@/types';
 import { downloadFile, trashFile } from '@/lib/google-drive';
 import { collectAttachments } from '@/lib/attachments-server';
+import { logApiError } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +58,7 @@ export async function GET(
     return new NextResponse(upstream.body, { status: 200, headers });
   } catch (error) {
     console.error('Attachment download failed:', error);
+    await logApiError('/api/attachments/[fileId] GET', error);
     return NextResponse.json({ error: 'ดาวน์โหลดไฟล์ไม่สำเร็จ' }, { status: 500 });
   }
 }
@@ -95,6 +97,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Attachment delete failed:', error);
+    await logApiError('/api/attachments/[fileId] DELETE', error);
     return NextResponse.json({ error: 'ลบไฟล์ไม่สำเร็จ' }, { status: 500 });
   }
 }

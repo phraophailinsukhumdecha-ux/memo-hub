@@ -18,6 +18,7 @@ import {
   buildViewUrl,
   resolveMailFontFamily,
 } from '@/lib/memo-email';
+import { logApiError } from '@/lib/logger';
 
 interface SmtpConfig {
   host: string;
@@ -578,6 +579,7 @@ export async function POST(request: NextRequest) {
         return { to, ok: true, message: 'ส่งสำเร็จ' };
       } catch (e) {
         const classified = classifyError(e as Error, smtp!.port, smtp!.host);
+        await logApiError('/api/send-memo-email', e);
         return { to, ok: false, code: classified.code, message: classified.message };
       }
     };
@@ -653,6 +655,7 @@ export async function POST(request: NextRequest) {
         return { to, ok: true, message: 'ส่งสำเร็จ' };
       } catch (e) {
         const classified = classifyError(e as Error, smtp!.port, smtp!.host);
+        await logApiError('/api/send-memo-email', e);
         return { to, ok: false, code: classified.code, message: classified.message };
       }
     };
@@ -689,6 +692,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
+    await logApiError('/api/send-memo-email', error);
     return NextResponse.json(
       { ok: false, code: ERR.EUNKNOWN, message: error instanceof Error ? error.message : 'เกิดข้อผิดพลาด' },
       { status: 500 }

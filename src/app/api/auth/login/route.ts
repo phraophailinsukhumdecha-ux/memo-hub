@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { logAuthEvent, logApiError } from '@/lib/logger';
 
 function getDb() {
   if (getApps().length === 0) {
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     const snapshot = await usersRef.where('username', '==', username).limit(1).get();
 
     if (snapshot.empty) {
+      await logAuthEvent('login', username, false, { reason: 'user-not-found', source: 'api' });
       return NextResponse.json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
     }
 
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
     const userData = doc.data();
 
     if (userData.password !== password) {
+      await logAuthEvent('login', username, false, { reason: 'wrong-password', source: 'api' });
       return NextResponse.json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
     }
 
@@ -52,6 +55,8 @@ export async function POST(request: NextRequest) {
     const { password: _, ...userWithoutPassword } = userData;
     void _;
 
+    await logAuthEvent('login', username, true, { userId: doc.id, source: 'api' });
+
     return NextResponse.json({
       user: {
         id: doc.id,
@@ -62,6 +67,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
+    await logApiError('/api/auth/login', error);
     return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ' }, { status: 500 });
   }
 }

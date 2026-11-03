@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { clearDriveConfigCache } from '@/lib/google-drive';
+import { logApiError } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -44,6 +45,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    await logApiError('/api/settings PUT', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
   }
 }

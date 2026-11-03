@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye, Paperclip, FolderPlus, ListChecks } from 'lucide-react';
+import { Plus, Save, Trash2, Mail, Clock, FileText, Users, Send, Loader2, CheckCircle, XCircle, Copy, ChevronLeft, ChevronUp, ChevronDown, Settings, Activity, Settings2, Pencil, WifiOff, RefreshCw, FileSpreadsheet, HelpCircle, Eye, Paperclip, FolderPlus, ListChecks, Search } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getSettings, saveSettings } from '@/lib/settings';
 import { subscribeToTemplates, createTemplate, updateTemplate, deleteTemplate, duplicateTemplate } from '@/lib/templates';
@@ -49,6 +49,7 @@ import { ManualContentRenderer } from '@/components/user-manual-dialog';
 import { isUserOnline } from '@/lib/presence';
 import { formatRelativeTime } from '@/utils/cn';
 import { EMAIL_VARIABLES, DEFAULT_CC_SUBJECT, DEFAULT_CC_BODY } from '@/lib/email-variables';
+import { formatThaiDateTime } from '@/lib/datetime';
 
 const MEMO_LIST_BUTTONS: Array<{ key: keyof MemoListButtonSettings; label: string; description: string }> = [
   { key: 'edit', label: 'แก้ไข (ฉบับร่าง)', description: 'ปุ่มแก้ไข Memo ที่ยังเป็นแบบร่าง' },
@@ -139,6 +140,10 @@ export default function SettingsPage() {
 
   // Syslog state
   const [syslogs, setSyslogs] = useState<Syslog[]>([]);
+  const [syslogLevel, setSyslogLevel] = useState('all');
+  const [syslogCategory, setSyslogCategory] = useState('all');
+  const [syslogSearch, setSyslogSearch] = useState('');
+  const [syslogClearing, setSyslogClearing] = useState(false);
 
   // Master data state
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
@@ -163,14 +168,22 @@ export default function SettingsPage() {
 
     const unsubTemplates = subscribeToTemplates(setTemplates);
     const unsubUsers = subscribeToUsers(setUsers);
-    const unsubSyslogs = subscribeToSyslogs(setSyslogs);
 
     return () => {
       unsubTemplates();
       unsubUsers();
-      unsubSyslogs();
     };
   }, []);
+
+  // Syslog: realtime subscription honouring the filters.
+  useEffect(() => {
+    const unsub = subscribeToSyslogs(setSyslogs, {
+      level: syslogLevel,
+      category: syslogCategory,
+      search: syslogSearch,
+    }, 200);
+    return () => unsub();
+  }, [syslogLevel, syslogCategory, syslogSearch]);
 
   const seededRef = React.useRef(false);
   useEffect(() => {
@@ -403,6 +416,24 @@ export default function SettingsPage() {
       await logSettingUpdated(user.id, user.displayName, 'MemoListButtons', oldSettings.memoListButtons, settings.memoListButtons);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleClearOldSyslogs = async () => {
+    if (!confirm('ต้องการลบ Syslog ที่เก่ากว่า 30 วัน ใช่หรือไม่?')) return;
+    setSyslogClearing(true);
+    try {
+      const res = await fetch('/api/syslogs?olderThanDays=30', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'ลบ Syslog ไม่สำเร็จ');
+      } else {
+        alert(`ลบ Syslog เก่าแล้ว ${data.deleted} รายการ`);
+      }
+    } catch {
+      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setSyslogClearing(false);
     }
   };
 
@@ -999,15 +1030,57 @@ export default function SettingsPage() {
         <TabsContent value="syslog">
           <Card>
             <CardHeader>
-              <CardTitle>System Log</CardTitle>
-              <CardDescription>บันทึกการทำงานของระบบ (Server, Client, Middleware)</CardDescription>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <CardTitle>System Log</CardTitle>
+                  <CardDescription>บันทึกการทำงานของระบบ (อัปเดตอัตโนมัติ)</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{syslogs.length} รายการ</Badge>
+                  <Button variant="outline" size="sm" onClick={handleClearOldSyslogs} disabled={syslogClearing}>
+                    {syslogClearing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+                    ล้าง log เก่า 30 วัน
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="ค้นหา log..."
+                    className="w-64 pl-8 h-9"
+                    value={syslogSearch}
+                    onChange={(e) => setSyslogSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={syslogLevel} onValueChange={setSyslogLevel}>
+                  <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Level" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกระดับ</SelectItem>
+                    <SelectItem value="info">info</SelectItem>
+                    <SelectItem value="warning">warning</SelectItem>
+                    <SelectItem value="error">error</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={syslogCategory} onValueChange={setSyslogCategory}>
+                  <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกหมวด</SelectItem>
+                    <SelectItem value="auth">auth</SelectItem>
+                    <SelectItem value="api">api</SelectItem>
+                    <SelectItem value="firebase">firebase</SelectItem>
+                    <SelectItem value="system">system</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[160px]">วันที่/เวลา</TableHead>
+                      <TableHead className="w-[170px]">วันที่/เวลา</TableHead>
                       <TableHead className="w-[80px]">Level</TableHead>
                       <TableHead className="w-[100px]">Category</TableHead>
                       <TableHead>ข้อความ</TableHead>
@@ -1020,7 +1093,9 @@ export default function SettingsPage() {
                     ) : (
                       syslogs.map((log) => (
                         <TableRow key={log.id}>
-                          <TableCell className="text-sm">{log.timestamp instanceof Date ? log.timestamp.toLocaleString('th-TH') : '-'}</TableCell>
+                          <TableCell className="text-sm">
+                            {log.timestamp instanceof Date ? formatThaiDateTime(log.timestamp) : '-'}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={log.level === 'error' ? 'destructive' : log.level === 'warning' ? 'secondary' : 'default'}>
                               {log.level}

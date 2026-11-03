@@ -3,7 +3,6 @@ import {
   subscribeToFirestoreCollection,
   orderBy,
   limit as firestoreLimit,
-  where,
 } from '@/lib/firestore-db';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -21,37 +20,33 @@ export function subscribeToSyslogs(
   filters?: SyslogFilters,
   maxLimit = 100
 ) {
-  const constraints: ReturnType<typeof where | typeof orderBy | typeof firestoreLimit>[] = [];
-
-  if (filters?.level && filters.level !== 'all') {
-    constraints.push(where('level', '==', filters.level));
-  }
-  if (filters?.category && filters.category !== 'all') {
-    constraints.push(where('category', '==', filters.category));
-  }
-  if (filters?.startDate) {
-    constraints.push(where('timestamp', '>=', filters.startDate));
-  }
-  if (filters?.endDate) {
-    const end = new Date(filters.endDate);
-    end.setHours(23, 59, 59, 999);
-    constraints.push(where('timestamp', '<=', end));
-  }
-
-  constraints.push(orderBy('timestamp', 'desc'));
-  constraints.push(firestoreLimit(maxLimit));
-
+  // Filters are applied client-side so the query needs no composite indexes.
   return subscribeToFirestoreCollection<Syslog>(
     'syslogs',
     (data) => {
-      if (filters?.search) {
-        const searchLower = filters.search.toLowerCase();
-        callback(data.filter((log) => log.message.toLowerCase().includes(searchLower)));
-      } else {
-        callback(data);
+      let rows = data;
+      if (filters?.level && filters.level !== 'all') {
+        rows = rows.filter((log) => log.level === filters.level);
       }
+      if (filters?.category && filters.category !== 'all') {
+        rows = rows.filter((log) => log.category === filters.category);
+      }
+      if (filters?.startDate) {
+        rows = rows.filter((log) => new Date(log.timestamp).getTime() >= filters.startDate!.getTime());
+      }
+      if (filters?.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        rows = rows.filter((log) => new Date(log.timestamp).getTime() <= end.getTime());
+      }
+      if (filters?.search) {
+        const needle = filters.search.toLowerCase();
+        rows = rows.filter((log) => log.message.toLowerCase().includes(needle));
+      }
+      callback(rows);
     },
-    ...constraints
+    orderBy('timestamp', 'desc'),
+    firestoreLimit(maxLimit)
   );
 }
 

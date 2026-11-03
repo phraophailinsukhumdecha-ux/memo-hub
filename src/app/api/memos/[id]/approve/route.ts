@@ -5,6 +5,7 @@ import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-ema
 import { getNextApprovalColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { buildApprovalLog } from '@/lib/event-logs';
+import { logApiError } from '@/lib/logger';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -188,6 +189,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({ success: true, allApproved });
   } catch (error) {
+    await logApiError('/api/memos/[id]/approve', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed' }, { status: 500 });
   }
 }
