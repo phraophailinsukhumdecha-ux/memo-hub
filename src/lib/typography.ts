@@ -37,6 +37,12 @@ export const DEFAULT_TYPOGRAPHY: Required<MemoTypography> = {
   boldBody: false,
 };
 
+/**
+ * Tighter line spacing used only by the printed memo / PDF export, so more
+ * content fits on one A4 page. Web views and emails keep the template value.
+ */
+export const PRINT_LINE_HEIGHT = 1.4;
+
 /** Merge template typography over defaults (old templates without it still work). */
 export function resolveTypography(
   t?: MemoTypography | null

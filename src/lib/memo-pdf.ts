@@ -1,7 +1,7 @@
 import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography, MemoAttachment, AttachmentSectionConfig } from '@/types';
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { resolveLogoSrc } from '@/lib/logo';
-import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
+import { resolveTypography, resolveFieldTypography, PRINT_LINE_HEIGHT } from '@/lib/typography';
 
 type ResolvedTypography = Required<MemoTypography>;
 
@@ -43,7 +43,7 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
   const t = typo || resolveTypography(null);
 
   return `<div style="margin-bottom:4px;${typo ? `font-family:${typo.fontFamily};` : ''}">
-    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+    <table class="memo-logo-table" style="width:100%;border-collapse:collapse;margin-bottom:16px;">
       <tr>
         <td style="vertical-align:middle;">
           <img src="${logoUrl}" style="height:56px;width:auto;" />
@@ -53,20 +53,20 @@ function renderCompanyHeader(field: MemoField, header?: MemoHeaderDetails, typo?
         </td>
       </tr>
     </table>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
+    <table class="memo-header-box" style="width:100%;border-collapse:collapse;border:1px solid #0f172a;">
       <tr>
-        <td style="width:50%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;text-align:left;">
+        <td class="memo-header-cell" style="width:50%;vertical-align:middle;border-right:1px solid #0f172a;padding:16px 12px;text-align:left;">
           ${memorandumTitle ? `<p style="margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:1px;color:#0f172a;">${memorandumTitle}</p>` : ''}
           <p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;font-weight:600;">${companyNameTh}</p>
           ${addressLines.map(line => `<p style="margin:0;font-size:14px;line-height:${t.lineHeight};color:#0f172a;">${line}</p>`).join('')}
         </td>
-        <td style="vertical-align:middle;padding:16px;text-align:left;">
+        <td class="memo-header-cell" style="vertical-align:middle;padding:16px;text-align:left;">
            <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:${t.lineHeight};">
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${memoNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.memoNumber || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${refNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.refNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${quotationLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.quotationNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${jobNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.jobNo || '-'}</td></tr>
-            <tr><td style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${dateLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.date || '-'}</td></tr>
+            <tr><td class="memo-field-label" style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${memoNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.memoNumber || '-'}</td></tr>
+            <tr><td class="memo-field-label" style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${refNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.refNo || '-'}</td></tr>
+            <tr><td class="memo-field-label" style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${quotationLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.quotationNo || '-'}</td></tr>
+            <tr><td class="memo-field-label" style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${jobNoLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.jobNo || '-'}</td></tr>
+            <tr><td class="memo-field-label" style="font-weight:700;color:#0f172a;padding:0 8px 0 0;white-space:nowrap;">${dateLabel} :</td><td style="font-weight:400;color:#0f172a;padding:0;">${h.date || '-'}</td></tr>
           </table>
         </td>
       </tr>
@@ -195,7 +195,7 @@ function renderFormRow(field: MemoField, value: Record<string, string>, users?: 
   const labelSize = Math.round(t.baseFontSize * 0.88);
   const renderCell = (f: RowField) => {
     const displayVal = resolveValue(f, data[f.name]);
-    return `<span style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};font-size:${t.baseFontSize}px;"> : ${displayVal}</span>`;
+    return `<span class="memo-field-label" style="font-weight:${t.boldLabels ? 600 : 400};font-size:${labelSize}px;">${f.label}</span><span style="font-weight:${t.boldBody ? 700 : 400};font-size:${t.baseFontSize}px;"> : ${displayVal}</span>`;
   };
 
   const bodyHtml = rows.map((row) => {
@@ -397,7 +397,7 @@ function renderMemoRemarks(memo: Memo, typo: ResolvedTypography): string {
     })
     .join('');
 
-  return `<div style="border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;padding:5px 8px;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid;${typo ? `font-family:${typo.fontFamily};` : ''}">
+  return `<div class="memo-remarks" style="border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;padding:5px 8px;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid;${typo ? `font-family:${typo.fontFamily};` : ''}">
     <p style="margin:0 0 2px;font-size:11px;font-weight:700;color:#0f172a;">หมายเหตุ</p>
     <ul style="margin:0;padding-left:16px;">${rows}</ul>
   </div>`;
@@ -452,10 +452,13 @@ function renderSection(field: MemoField, value: unknown, memoType?: string, glob
   }
 }
 
-export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[]): string {
+export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, globalMemoTypeColumns?: { memoType: string; columns: { title: string; subtitle?: string }[] }[], ownerUser?: User | null, users?: User[], groups?: Group[], options?: { lineHeight?: number; fontSize?: number; hideAttachments?: boolean }): string {
   const isApproved = memo.status === 'approved';
   const templateTypo = template?.typography;
-  const typo = resolveTypography(templateTypo);
+  const effectiveTemplateTypo: MemoTypography | undefined = options?.lineHeight
+    ? { ...(templateTypo || {}), lineHeight: options.lineHeight }
+    : templateTypo;
+  const typo = resolveTypography(effectiveTemplateTypo);
 
   let headerSectionsHtml = '';
   let bodyHtml = '';
@@ -514,15 +517,18 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
     for (const field of visibleFields) {
       const value = (memo.formData as Record<string, unknown>)?.[field.id];
       if (field.type === 'approval_grid') {
-        approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds);
+        approvalGridHtml = renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, effectiveTemplateTypo, auditorUserIds);
       } else if (field.type === 'body_text') {
-        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
+        bodyBuffer.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, effectiveTemplateTypo, auditorUserIds));
       } else if (field.type === 'attachment') {
         // Attachments are rendered as a bullet list below the memo body.
-        attachmentsHtml += renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds);
+        // The printed document can omit them (they stay visible in the app/email).
+        if (!options?.hideAttachments) {
+          attachmentsHtml += renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, effectiveTemplateTypo, auditorUserIds);
+        }
       } else {
         flushBody();
-        headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, templateTypo, auditorUserIds));
+        headerParts.push(renderSection(field, value, memoType, globalMemoTypeColumns, ownerUser, users, groups, attnToUserIds, header, effectiveTemplateTypo, auditorUserIds));
       }
     }
     flushBody();
@@ -557,7 +563,18 @@ export function buildMemoHtml(memo: Memo, template?: MemoTemplate | null, global
 
   const remarksHtml = renderMemoRemarks(memo, typo);
 
+  const printFontCss = options?.fontSize
+    ? `#memo-print-content, #memo-print-content * { font-size: ${options.fontSize}px !important; }
+    #memo-print-content .memo-field-label { font-size: 10px !important; }
+    #memo-print-content .memo-logo-table { margin-bottom: 6px !important; }
+    #memo-print-content .memo-header-box,
+    #memo-print-content .memo-header-box * { line-height: 1.25 !important; }
+    #memo-print-content .memo-header-cell { padding: 6px 10px !important; }
+    #memo-print-content .memo-remarks, #memo-print-content .memo-remarks * { font-size: 11px !important; }`
+    : '';
+
   const memoFontCss = `.memo-font,.memo-font *{font-family:${typo.fontFamily} !important;}
+    ${printFontCss}
     @page {
       size: A4 portrait;
       margin: 0;
@@ -618,7 +635,7 @@ export async function downloadMemoPdf(memo: Memo, template?: MemoTemplate | null
   container.style.height = '297mm';
   container.style.overflow = 'hidden';
   container.style.background = '#fff';
-  container.innerHTML = buildMemoHtml(memo, template, globalMemoTypeColumns, ownerUser, users, groups);
+  container.innerHTML = buildMemoHtml(memo, template, globalMemoTypeColumns, ownerUser, users, groups, { lineHeight: PRINT_LINE_HEIGHT, fontSize: 12, hideAttachments: true });
   document.body.appendChild(container);
 
   const element = container.querySelector('#memo-print-content') as HTMLElement;
@@ -696,7 +713,7 @@ export function printMemo(memo: Memo, template?: MemoTemplate | null, globalMemo
       </style>
     </head>
     <body>
-      ${buildMemoHtml(memo, template, globalMemoTypeColumns, ownerUser, users, groups)}
+      ${buildMemoHtml(memo, template, globalMemoTypeColumns, ownerUser, users, groups, { lineHeight: PRINT_LINE_HEIGHT, fontSize: 12, hideAttachments: true })}
     </body>
     </html>
   `);
