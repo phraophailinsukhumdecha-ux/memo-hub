@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
-import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { getNextApprovalColumn, isOwnerSelfApprovalBlocked } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { buildApprovalLog } from '@/lib/event-logs';
 import { logApiError } from '@/lib/logger';
@@ -261,6 +261,20 @@ export async function GET(request: NextRequest) {
       `, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
+    // The creator may check their own memo but must never approve it.
+    if (isOwnerSelfApprovalBlocked(memo, matchUserId, approverColKey)) {
+      return new Response(`
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8"><title>MemoHub</title></head>
+        <body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;">
+          <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:460px;">
+            <h2 style="color:#dc2626;">ไม่สามารถอนุมัติ Memo ของตนเองได้</h2>
+            <p style="color:#64748b;">ผู้สร้าง Memo ทำได้เฉพาะขั้นผู้ตรวจสอบเท่านั้น กรุณาให้ผู้อนุมัติคนอื่นดำเนินการแทน</p>
+          </div>
+        </body></html>
+      `, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+
     const updatedFormData = JSON.parse(JSON.stringify(formData));
     for (const fieldKey of Object.keys(updatedFormData)) {
       const fieldValue = updatedFormData[fieldKey];
@@ -349,6 +363,7 @@ export async function GET(request: NextRequest) {
       actorId: tokenData.approverId,
       actorName: tokenData.approverName,
       action: action as 'approve' | 'reject',
+      stepKey: approverColKey || undefined,
       baseUrl: getBaseUrl(request),
     });
 
@@ -501,6 +516,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'ยังไม่ถึงลำดับของคุณ กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการก่อน' }, { status: 403 });
     }
 
+    // The creator may check their own memo but must never approve/reject it.
+    if (isOwnerSelfApprovalBlocked(memo, matchUserId, approverColKey)) {
+      return NextResponse.json(
+        { ok: false, error: 'ผู้สร้าง Memo ไม่สามารถอนุมัติ/ปฏิเสธ Memo ของตนเองได้ (ทำได้เฉพาะขั้นผู้ตรวจสอบ)' },
+        { status: 403 }
+      );
+    }
+
     const updatedFormData = JSON.parse(JSON.stringify(formData));
     for (const fieldKey of Object.keys(updatedFormData)) {
       const fieldValue = updatedFormData[fieldKey];
@@ -585,6 +608,7 @@ export async function POST(request: NextRequest) {
       actorName: matchUserName || tokenData.approverName,
       action: action as 'approve' | 'reject',
       remark: remark?.trim() || undefined,
+      stepKey: approverColKey || undefined,
       baseUrl: getBaseUrl(request),
     });
 

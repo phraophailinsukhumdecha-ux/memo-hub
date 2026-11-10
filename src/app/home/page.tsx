@@ -27,10 +27,11 @@ import { printMemo } from '@/lib/memo-pdf';
 import { runScheduledJobs } from '@/lib/scheduled-jobs';
 import { Memo, MemoTemplate, User, AttachmentSectionConfig, MemoAttachment, GlobalSettings, MemoListButtonSettings } from '@/types';
 import { resolveTypography } from '@/lib/typography';
-import { isUserNextApprover, hasUserActed, getNextApprovalColumn } from '@/lib/approval-flow';
+import { isUserNextApprover, hasUserActed, getNextApprovalColumn, canUserActOnMemo, isCheckerColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { getMemoDisplaySubject } from '@/lib/memo-subject';
 import { isMemoCcForUser } from '@/lib/memo-cc';
+import { orderApprovalAssignees } from '@/lib/approval-order';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { UserManualDialog } from '@/components/user-manual-dialog';
 
@@ -505,6 +506,12 @@ export default function HomePage() {
     const next = getNextApprovalColumn(memo.formData);
     if (!next) return alert('ไม่มีผู้อนุมัติที่รอดำเนินการในลำดับนี้');
 
+    // The creator may act as a checker, but never receives an approval link
+    // for an approver step of their own memo.
+    if (next.userId === memo.ownerId && !isCheckerColumn(next)) {
+      return alert('ขั้นนี้เป็นขั้นผู้อนุมัติของผู้สร้าง Memo — ไม่สามารถส่งอีเมลอนุมัติให้ตนเองได้');
+    }
+
     const nextUser = next.userId
       ? allUsers.find((u) => u.id === next.userId)
       : allUsers.find((u) => u.displayName === next.name);
@@ -698,21 +705,24 @@ export default function HomePage() {
             newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: 'ผู้ขออนุมัติ' };
             idx++;
           }
-          // col_1+: Checked by (ผู้ตรวจสอบ)
-          for (const audId of auditorUserIds) {
-            const audUser = allUsers.find((u) => u.id === audId);
-            if (audUser) {
-              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: 'ผู้ตรวจสอบ' };
-              idx++;
-            }
+          // col_1+: Checked by (ผู้ตรวจสอบ) — pinned names last
+          const orderedAssignees = orderApprovalAssignees(
+            auditorUserIds.map((id) => allUsers.find((u) => u.id === id)).filter((u): u is User => Boolean(u)),
+            attnToUserIds.map((id) => allUsers.find((u) => u.id === id)).filter((u): u is User => Boolean(u))
+          );
+          if (user && orderedAssignees.approvers.some((u) => u.id === user.id)) {
+            throw new Error(
+              'ผู้สร้าง Memo ไม่สามารถเป็นผู้อนุมัติ (ATTN TO) ของ Memo ตนเองได้ — เลือกได้เฉพาะผู้ตรวจสอบ'
+            );
           }
-          // col_n+: ATTN TO (ผู้อนุมัติ)
-          for (const attnId of attnToUserIds) {
-            const attnUser = allUsers.find((u) => u.id === attnId);
-            if (attnUser) {
-              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: 'ผู้อนุมัติ' };
-              idx++;
-            }
+          for (const audUser of orderedAssignees.checkers) {
+            newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: 'ผู้ตรวจสอบ' };
+            idx++;
+          }
+          // col_n+: ATTN TO (ผู้อนุมัติ) — pinned names last
+          for (const attnUser of orderedAssignees.approvers) {
+            newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: 'ผู้อนุมัติ' };
+            idx++;
           }
           // CC users get email only — no grid columns
           formData[gridField.id] = newGrid;
@@ -737,14 +747,20 @@ export default function HomePage() {
       }
 
       if (memoId) {
-        const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
+        const grid = formData.approval_grid_1 as
+          | Record<string, { userId?: string; colTitle?: string }>
+          | undefined;
         if (grid) {
           const approverEntries: Array<{ email: string; colKey: string }> = [];
           for (const colKey of Object.keys(grid)) {
-            if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
-              const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
-              if (approver?.email) approverEntries.push({ email: approver.email, colKey });
-            }
+            if (!colKey.startsWith('col_') || colKey === 'col_0') continue;
+            const col = grid[colKey];
+            if (!col?.userId) continue;
+            // The creator may check their own memo, but never approve it —
+            // so no approval email for their approver columns.
+            if (col.userId === user.id && !isCheckerColumn(col)) continue;
+            const approver = allUsers.find((u) => u.id === col.userId);
+            if (approver?.email) approverEntries.push({ email: approver.email, colKey });
           }
           approverEntries.sort((a, b) => {
             const ai = parseInt((a.colKey.split('_')[1] || '0'), 10);
@@ -879,13 +895,13 @@ export default function HomePage() {
               </>
             ) : (
               <>
-            {showApprove && isListButtonEnabled('approve') && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && isListButtonEnabled('approve') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ
               </Button>
             )}
-            {showApprove && isListButtonEnabled('reject') && memo.ownerId !== user.id && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && isListButtonEnabled('reject') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleReject(memo)}>
                 <XCircle className="h-4 w-4 mr-1" />
                 ปฏิเสธ
@@ -1128,7 +1144,7 @@ export default function HomePage() {
               <Printer className="h-4 w-4 mr-1" />
               พิมพ์
             </Button>
-            {!detailViewOnly && selectedMemo && selectedMemo.ownerId !== user?.id && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {!detailViewOnly && selectedMemo && canUserActOnMemo(selectedMemo, user) && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />

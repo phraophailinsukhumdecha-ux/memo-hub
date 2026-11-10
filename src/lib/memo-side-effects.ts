@@ -1,6 +1,6 @@
 import { db } from '@/lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
-import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { getNextApprovalColumn, isCheckerColumn } from '@/lib/approval-flow';
 
 export async function logMemoCreated(userId: string, userName: string, title: string, timestamp: Date): Promise<void> {
   await addDoc(collection(db, 'eventLogs'), {
@@ -24,7 +24,9 @@ export async function notifyApprovers(
   // earlier steps are completed.
   const next = getNextApprovalColumn(formData);
   const userId = next?.userId;
-  if (!userId || userId === ownerId) return;
+  if (!userId) return;
+  // The owner may act as a checker; skip only their approver steps.
+  if (userId === ownerId && !isCheckerColumn(next)) return;
 
   await addDoc(collection(db, 'notifications'), {
     userId,

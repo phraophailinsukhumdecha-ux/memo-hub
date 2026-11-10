@@ -4,6 +4,7 @@ import { doc, getDoc, deleteDoc, addDoc, collection, updateDoc } from 'firebase/
 import { logMemoCreated, notifyApprovers } from '@/lib/memo-side-effects';
 import { getDeadlineDays } from '@/lib/deadline';
 import { trashMemoAttachments } from '@/lib/attachments-server';
+import { isCheckerColumn } from '@/lib/approval-flow';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,6 +24,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const now = new Date();
+
+    if (publish) {
+      const templateDoc = await getDoc(doc(db, 'memoTemplates', (memo.templateId as string) || ''));
+      const templateFields = templateDoc.exists()
+        ? ((templateDoc.data()!.fields || []) as Array<{ id?: string; type?: string }>)
+        : [];
+      const gridField = templateFields.find((field) => field.type === 'approval_grid');
+      if (gridField?.id && formData && typeof formData === 'object') {
+        const grid = ((formData as Record<string, unknown>)[gridField.id] || {}) as Record<
+          string,
+          { userId?: string; colTitle?: string }
+        >;
+        const isSelfApprover = Object.entries(grid).some(
+          ([colKey, col]) => colKey !== 'col_0' && col?.userId === memo.ownerId && !isCheckerColumn(col)
+        );
+        if (isSelfApprover) {
+          return NextResponse.json(
+            {
+              error:
+                'ผู้สร้าง Memo ไม่สามารถเป็นผู้อนุมัติ (ATTN TO) ของ Memo ตนเองได้ — อนุญาตเฉพาะขั้นผู้ตรวจสอบ',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     if (publish) {
       const deadlineDays = await getDeadlineDays();

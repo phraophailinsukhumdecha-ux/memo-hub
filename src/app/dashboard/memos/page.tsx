@@ -23,11 +23,12 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Printer, X, Pencil, Trash2, Copy } from 'lucide-react';
+import { Plus, Search, Printer, X, Pencil, Trash2, Copy, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useDashboardTitle } from '@/app/dashboard/layout';
 import { subscribeToMemos, createMemo, updateMemoDraft, deleteMemo } from '@/lib/memos';
@@ -37,6 +38,8 @@ import { printMemo } from '@/lib/memo-pdf';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { getMemoDisplaySubject } from '@/lib/memo-subject';
+import { orderApprovalAssignees } from '@/lib/approval-order';
+import { getApprovalRecipients, isCheckerColumn } from '@/lib/approval-flow';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatDate, DateTimeCell } from '@/utils/cn';
@@ -63,6 +66,9 @@ export default function MemosPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [resendMemo, setResendMemo] = useState<Memo | null>(null);
+  const [resendSelected, setResendSelected] = useState<Set<string>>(new Set());
+  const [resendSending, setResendSending] = useState(false);
 
   useEffect(() => { setTitle('Memo ทั้งหมด'); }, [setTitle]);
 
@@ -245,21 +251,24 @@ export default function MemosPage() {
           // col_0: owner (ผู้ขออนุมัติ)
           newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: user.displayName, userId: user.id, signerTitle: user.position || '', colTitle: 'ผู้ขออนุมัติ' };
           idx++;
-          // col_1+: Checked by (ผู้ตรวจสอบ)
-          for (const audId of auditorUserIds) {
-            const audUser = allUsers.find((u) => u.id === audId);
-            if (audUser) {
-              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: 'ผู้ตรวจสอบ' };
-              idx++;
-            }
+          // col_1+: Checked by (ผู้ตรวจสอบ) — pinned names last
+          const orderedAssignees = orderApprovalAssignees(
+            auditorUserIds.map((id) => allUsers.find((u) => u.id === id)).filter((u): u is User => Boolean(u)),
+            attnToUserIds.map((id) => allUsers.find((u) => u.id === id)).filter((u): u is User => Boolean(u))
+          );
+          if (orderedAssignees.approvers.some((u) => u.id === user.id)) {
+            throw new Error(
+              'ผู้สร้าง Memo ไม่สามารถเป็นผู้อนุมัติ (ATTN TO) ของ Memo ตนเองได้ — เลือกได้เฉพาะผู้ตรวจสอบ'
+            );
           }
-          // col_n+: ATTN TO (ผู้อนุมัติ)
-          for (const attnId of attnToUserIds) {
-            const attnUser = allUsers.find((u) => u.id === attnId);
-            if (attnUser) {
-              newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: 'ผู้อนุมัติ' };
-              idx++;
-            }
+          for (const audUser of orderedAssignees.checkers) {
+            newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: audUser.displayName, userId: audUser.id, signerTitle: audUser.position || '', colTitle: 'ผู้ตรวจสอบ' };
+            idx++;
+          }
+          // col_n+: ATTN TO (ผู้อนุมัติ) — pinned names last
+          for (const attnUser of orderedAssignees.approvers) {
+            newGrid[`col_${idx}`] = { ...grid[`col_${idx}`], ...today, name: attnUser.displayName, userId: attnUser.id, signerTitle: attnUser.position || '', colTitle: 'ผู้อนุมัติ' };
+            idx++;
           }
           formData[gridField.id] = newGrid;
         }
@@ -284,14 +293,20 @@ export default function MemosPage() {
 
       // Publish: send email automatically
       if (memoId) {
-        const grid = formData.approval_grid_1 as Record<string, { userId?: string }> | undefined;
+        const grid = formData.approval_grid_1 as
+          | Record<string, { userId?: string; colTitle?: string }>
+          | undefined;
         if (grid) {
           const approverEntries: Array<{ email: string; colKey: string }> = [];
           for (const colKey of Object.keys(grid)) {
-            if (colKey.startsWith('col_') && colKey !== 'col_0' && grid[colKey]?.userId) {
-              const approver = allUsers.find((u) => u.id === grid[colKey]!.userId);
-              if (approver?.email) approverEntries.push({ email: approver.email, colKey });
-            }
+            if (!colKey.startsWith('col_') || colKey === 'col_0') continue;
+            const col = grid[colKey];
+            if (!col?.userId) continue;
+            // The creator may check their own memo, but never approve it —
+            // so no approval email for their approver columns.
+            if (col.userId === user.id && !isCheckerColumn(col)) continue;
+            const approver = allUsers.find((u) => u.id === col.userId);
+            if (approver?.email) approverEntries.push({ email: approver.email, colKey });
           }
           approverEntries.sort((a, b) => {
             const ai = parseInt((a.colKey.split('_')[1] || '0'), 10);
@@ -359,6 +374,44 @@ export default function MemosPage() {
     const tpl = templates.find((t) => t.id === memo.templateId);
     const ownerUserData = allUsers.find((u) => u.id === memo.ownerId) || null;
     printMemo(memo, tpl, undefined, ownerUserData, allUsers, []);
+  };
+
+  const openResendDialog = (memo: Memo) => {
+    setResendMemo(memo);
+    setResendSelected(new Set());
+  };
+
+  const toggleResendRecipient = (email: string) => {
+    setResendSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      return next;
+    });
+  };
+
+  const handleResendEmail = async () => {
+    if (!resendMemo || resendSelected.size === 0) return;
+    setResendSending(true);
+    try {
+      const res = await fetch(`/api/memos/${resendMemo.id}/resend-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: [...resendSelected] }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert(data.message || 'ส่งอีเมลซ้ำสำเร็จ');
+        setResendMemo(null);
+        setResendSelected(new Set());
+      } else {
+        alert(data.message || data.error || 'ส่งอีเมลซ้ำไม่สำเร็จ');
+      }
+    } catch {
+      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setResendSending(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -475,6 +528,16 @@ export default function MemosPage() {
                         >
                           <Printer className="h-4 w-4" />
                         </Button>
+                        {memo.status !== 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openResendDialog(memo)}
+                            title="ส่งเมลซ้ำ"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -544,6 +607,77 @@ export default function MemosPage() {
           <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end">
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resend Memo Email Dialog */}
+      <Dialog
+        open={Boolean(resendMemo)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResendMemo(null);
+            setResendSelected(new Set());
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>ส่งเมลซ้ำ — {resendMemo?.memoNumber}</DialogTitle>
+          </DialogHeader>
+          {resendMemo && (() => {
+            const recipients = getApprovalRecipients(resendMemo.formData, allUsers);
+            const allSelected = recipients.length > 0 && recipients.every((r) => resendSelected.has(r.email));
+            return (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">เลือกผู้ตรวจสอบ/ผู้อนุมัติที่ต้องการส่งเมลซ้ำ</p>
+                {recipients.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-slate-500">ไม่พบรายชื่อผู้ตรวจสอบ/ผู้อนุมัติที่มีอีเมล</p>
+                ) : (
+                  <>
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded"
+                        checked={allSelected}
+                        onChange={() => {
+                          if (allSelected) setResendSelected(new Set());
+                          else setResendSelected(new Set(recipients.map((r) => r.email)));
+                        }}
+                      />
+                      เลือกทั้งหมด ({recipients.length})
+                    </label>
+                    <div className="max-h-72 space-y-2 overflow-y-auto">
+                      {recipients.map((r) => (
+                        <label key={r.email} className="flex items-center gap-2 rounded-lg border p-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded"
+                            checked={resendSelected.has(r.email)}
+                            onChange={() => toggleResendRecipient(r.email)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-slate-800">{r.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {r.role === 'checker' ? 'ผู้ตรวจสอบ' : 'ผู้อนุมัติ'} · {r.email}
+                            </p>
+                          </div>
+                          {r.signed && <span className="text-xs text-green-600">ดำเนินการแล้ว</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResendMemo(null)} disabled={resendSending}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleResendEmail} disabled={resendSending || resendSelected.size === 0}>
+              {resendSending ? 'กำลังส่ง...' : `ส่งเมลซ้ำ (${resendSelected.size})`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

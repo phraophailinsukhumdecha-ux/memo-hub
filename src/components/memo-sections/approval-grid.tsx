@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
+import { orderApprovalAssignees } from '@/lib/approval-order';
 import { Plus, X } from 'lucide-react';
 
 interface ApprovalGridProps {
@@ -58,21 +59,23 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
   );
 
   // Ordered user assignment for col_1+:
-  // 1. All Checked by users (ผู้ตรวจสอบ)
-  // 2. All ATTN TO users (ผู้อนุมัติ)
-  const assignedUsers = (() => {
-    if (!users) return [];
-    const list: { id: string; displayName: string; position?: string; roleType: 'auditor' | 'approver' }[] = [];
-    for (const audId of auditorUserIds || []) {
-      const u = users.find((x) => x.id === audId);
-      if (u) list.push({ ...u, roleType: 'auditor' });
-    }
-    for (const attnId of attnToUserIds || []) {
-      const u = users.find((x) => x.id === attnId);
-      if (u) list.push({ ...u, roleType: 'approver' });
-    }
-    return list;
+  // 1. All Checked by users (ผู้ตรวจสอบ) — pinned names last
+  // 2. All ATTN TO users (ผู้อนุมัติ) — pinned names last
+  const orderedAssignees = (() => {
+    if (!users) return { checkers: [] as User[], approvers: [] as User[] };
+    const checkers = (auditorUserIds || [])
+      .map((id) => users.find((u) => u.id === id))
+      .filter((u): u is User => Boolean(u));
+    const approvers = (attnToUserIds || [])
+      .map((id) => users.find((u) => u.id === id))
+      .filter((u): u is User => Boolean(u));
+    return orderApprovalAssignees(checkers, approvers);
   })();
+
+  const assignedUsers = [
+    ...orderedAssignees.checkers.map((u) => ({ ...u, roleType: 'auditor' as const })),
+    ...orderedAssignees.approvers.map((u) => ({ ...u, roleType: 'approver' as const })),
+  ];
 
   const resolveAssigned = (colIndex: number) => {
     if (colIndex <= 0) return null;
@@ -102,37 +105,31 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
       };
       idx++;
     }
-    // col_1+: Checked by (ผู้ตรวจสอบ)
-    for (const audId of auditorUserIds || []) {
-      const audUser = users?.find((u) => u.id === audId);
-      if (audUser) {
-        autoValue[`col_${idx}`] = {
-          ...value[`col_${idx}`],
-          name: audUser.displayName,
-          userId: audUser.id,
-          signerTitle: audUser.position || '',
-          colTitle: 'ผู้ตรวจสอบ',
-          date: value[`col_${idx}`]?.date || todayStr,
-          time: value[`col_${idx}`]?.time || timeStr,
-        };
-        idx++;
-      }
+    // col_1+: Checked by (ผู้ตรวจสอบ) — pinned names last
+    for (const audUser of orderedAssignees.checkers) {
+      autoValue[`col_${idx}`] = {
+        ...value[`col_${idx}`],
+        name: audUser.displayName,
+        userId: audUser.id,
+        signerTitle: audUser.position || '',
+        colTitle: 'ผู้ตรวจสอบ',
+        date: value[`col_${idx}`]?.date || todayStr,
+        time: value[`col_${idx}`]?.time || timeStr,
+      };
+      idx++;
     }
-    // col_n+: ATTN TO (ผู้อนุมัติ)
-    for (const attnId of attnToUserIds || []) {
-      const attnUser = users?.find((u) => u.id === attnId);
-      if (attnUser) {
-        autoValue[`col_${idx}`] = {
-          ...value[`col_${idx}`],
-          name: attnUser.displayName,
-          userId: attnUser.id,
-          signerTitle: attnUser.position || '',
-          colTitle: 'ผู้อนุมัติ',
-          date: value[`col_${idx}`]?.date || todayStr,
-          time: value[`col_${idx}`]?.time || timeStr,
-        };
-        idx++;
-      }
+    // col_n+: ATTN TO (ผู้อนุมัติ) — pinned names last
+    for (const attnUser of orderedAssignees.approvers) {
+      autoValue[`col_${idx}`] = {
+        ...value[`col_${idx}`],
+        name: attnUser.displayName,
+        userId: attnUser.id,
+        signerTitle: attnUser.position || '',
+        colTitle: 'ผู้อนุมัติ',
+        date: value[`col_${idx}`]?.date || todayStr,
+        time: value[`col_${idx}`]?.time || timeStr,
+      };
+      idx++;
     }
 
     // Compare with current value before updating to avoid unnecessary re-renders

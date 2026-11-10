@@ -8,12 +8,13 @@ import {
 } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import { resolveLogoForEmail } from '@/lib/logo';
+import { resolveLogoAbsolute } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography } from '@/lib/typography';
 import { MemoTypography, MemoAttachment, Approval } from '@/types';
-import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { getNextApprovalColumn, getPreviousApprovalColumn, isCheckerColumn } from '@/lib/approval-flow';
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { formatThaiDateTime } from '@/lib/datetime';
+import { logSys } from '@/lib/syslogs';
 import {
   buildEmailVariables,
   replaceEmailVariables,
@@ -22,6 +23,7 @@ import {
   DEFAULT_OWNER_SUBJECT,
   DEFAULT_OWNER_BODY,
 } from '@/lib/email-variables';
+import { getMemoCcUserIds } from '@/lib/memo-cc';
 
 export interface SmtpConfig {
   host: string;
@@ -201,8 +203,9 @@ export function buildCompactMemoHtml(
   // Company logo + number header
   const headerField = templateFields.find((f) => f.type === 'company_header');
   const headerConfig = (headerField?.fieldConfig || {}) as Record<string, unknown>;
-  const logoUrl = resolveLogoForEmail(
-    headerField ? ((headerConfig.logoUrl as string) || '') : ''
+  const logoUrl = resolveLogoAbsolute(
+    headerField ? ((headerConfig.logoUrl as string) || '') : '',
+    baseUrl
   );
   const companyName = (headerConfig.companyName as string) || '';
 
@@ -330,7 +333,47 @@ interface OwnerNotifyInput {
   actorName: string;
   action: 'approve' | 'reject';
   remark?: string;
+  /** Approval-grid column (col_N) that just acted, used to find the previous actor. */
+  stepKey?: string;
   baseUrl: string;
+}
+
+type UsersSnapshotLike = {
+  docs: Array<{ id: string; data: () => Record<string, unknown> }>;
+};
+
+/** Resolve a user's email by id first, then by normalized display name. */
+function resolveUserEmail(
+  userId: string | undefined,
+  name: string | undefined,
+  usersSnapshot: UsersSnapshotLike
+): string {
+  if (userId) {
+    const byId = usersSnapshot.docs.find((d) => d.id === userId);
+    const email = ((byId?.data().email as string) || '').trim();
+    if (email) return email;
+  }
+  if (name) {
+    const normalized = name.trim().replace(/\s+/g, ' ');
+    const byName = usersSnapshot.docs.find(
+      (d) => (((d.data().displayName as string) || '').trim().replace(/\s+/g, ' ')) === normalized
+    );
+    const email = ((byName?.data().email as string) || '').trim();
+    if (email) return email;
+  }
+  return '';
+}
+
+/** Compare Firestore timestamps, Dates and date strings. */
+function toMillis(value: unknown): number {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date instanceof Date ? date.getTime() : 0;
+  }
+  const parsed = new Date(value as string).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /**
@@ -341,8 +384,9 @@ interface OwnerNotifyInput {
 export async function sendOwnerNotification(
   input: OwnerNotifyInput
 ): Promise<{ ok: boolean; message?: string }> {
+  let sentTo: string[] = [];
   try {
-    const { memoId, actorName, action, remark, baseUrl } = input;
+    const { memoId, actorId, actorName, action, remark, stepKey, baseUrl } = input;
 
     const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
     const settings = settingsDoc.data();
@@ -362,7 +406,6 @@ export async function sendOwnerNotification(
     const ownerEmail = ownerDoc.exists()
       ? ((ownerDoc.data().email as string) || '')
       : '';
-    if (!ownerEmail) return { ok: false, message: 'Owner has no email' };
 
     // Template fields for the summary
     let templateFields: Array<{
@@ -390,6 +433,55 @@ export async function sendOwnerNotification(
         department: u.department as string,
       });
     }
+
+    // One email for everyone: owner + CC + the person who acted in the
+    // previous step (chain order). Deduped case-insensitively.
+    const ccUserIds = getMemoCcUserIds({ formData: memo.formData });
+    const ccEmails = ccUserIds
+      .map((id) => usersSnapshot.docs.find((d) => d.id === id)?.data()?.email as string | undefined)
+      .filter((email): email is string => Boolean(email));
+
+    const actorEmail = actorId
+      ? (((usersSnapshot.docs.find((d) => d.id === actorId)?.data()?.email as string) || '').trim())
+      : '';
+
+    // Previous-step actor: the nearest signed column before the current one.
+    // Only fall back to recorded approvals when the step is unknown (legacy
+    // callers) — never for the first step of the chain.
+    let previousActorEmail = '';
+    const previousColumn = getPreviousApprovalColumn(memo.formData, stepKey);
+    if (stepKey) {
+      if (previousColumn) {
+        previousActorEmail = resolveUserEmail(previousColumn.userId, previousColumn.name, usersSnapshot);
+      }
+    } else if (Array.isArray(memo.approvals)) {
+      const previousApproval = [...(memo.approvals as Approval[])]
+        .filter((approval) => approval?.approverId && approval.approverId !== actorId)
+        .sort((a, b) => toMillis(b.actedAt) - toMillis(a.actedAt))[0];
+      if (previousApproval) {
+        previousActorEmail = resolveUserEmail(
+          previousApproval.approverId,
+          previousApproval.approverName,
+          usersSnapshot
+        );
+      }
+    }
+    if (previousActorEmail.toLowerCase() === actorEmail.toLowerCase()) {
+      previousActorEmail = '';
+    }
+
+    // When the creator acts as a checker, don't email them about their own action.
+    const ownerIsActor = Boolean(actorId) && actorId === ownerId;
+
+    const recipientMap = new Map<string, string>();
+    for (const email of [ownerIsActor ? '' : ownerEmail, ...ccEmails, previousActorEmail]) {
+      const trimmed = (email || '').trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      if (!recipientMap.has(key)) recipientMap.set(key, trimmed);
+    }
+    const recipients = [...recipientMap.values()];
+    if (recipients.length === 0) return { ok: true };
 
     const emailFormat = (settings?.emailFormat || {}) as OwnerMailFormat & {
       subject?: string;
@@ -462,17 +554,36 @@ export async function sendOwnerNotification(
 </html>`;
 
     const transporter = createTransporter(smtp);
+    sentTo = recipients;
     await transporter.sendMail({
       from: buildSender(smtp),
-      to: ownerEmail,
+      to: recipients.join(', '),
       subject,
       replyTo: smtp.fromEmail || undefined,
       text: `${subject}\n\n${replaceVariables(bodyTemplate, vars)}`,
       html,
     });
+    try {
+      await logSys('info', 'system', `ส่งอีเมลแจ้งเจ้าของ ${memoId} (${action})`, {
+        memoId,
+        action,
+        recipients,
+        previousActor: previousActorEmail || null,
+      });
+    } catch {
+      /* logging must never break the email flow */
+    }
     return { ok: true };
   } catch (e) {
     console.error('sendOwnerNotification failed:', e);
+    try {
+      await logSys('error', 'system', 'ส่งอีเมลแจ้งเจ้าของไม่สำเร็จ', {
+        recipients: sentTo,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    } catch {
+      /* ignore logging failures */
+    }
     return { ok: false, message: e instanceof Error ? e.message : 'Unknown' };
   }
 }
@@ -516,6 +627,16 @@ export async function sendApproverNotifications(
 
     const nextColumn = getNextApprovalColumn(formData);
     if (!nextColumn) return { ok: true, sent: 0 };
+
+    // The creator may check their own memo, but never receives an approval
+    // link for an approver step of their own memo.
+    if (
+      nextColumn.userId &&
+      nextColumn.userId === (memo.ownerId as string) &&
+      !isCheckerColumn(nextColumn)
+    ) {
+      return { ok: true, sent: 0 };
+    }
 
     interface ApproverInfo {
       email: string;

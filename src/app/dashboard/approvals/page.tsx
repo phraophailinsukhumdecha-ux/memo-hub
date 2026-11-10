@@ -31,7 +31,7 @@ import { subscribeToTemplates } from '@/lib/templates';
 import { subscribeToUsers } from '@/lib/users';
 import { Memo, MemoTemplate, User } from '@/types';
 import { resolveTypography } from '@/lib/typography';
-import { isUserNextApprover, hasUserActed } from '@/lib/approval-flow';
+import { isUserNextApprover, hasUserActed, canUserActOnMemo } from '@/lib/approval-flow';
 import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
 import { getMemoDisplaySubject } from '@/lib/memo-subject';
 import { formatDate, DateTimeCell } from '@/utils/cn';
@@ -191,6 +191,7 @@ export default function ApprovalsPage() {
               ) : (
                 pageMemos.map((memo) => {
                   const isOverdue = Boolean(memo.deadlineAt) && new Date(memo.deadlineAt) < new Date();
+                  const canAct = canUserActOnMemo(memo, user);
                   return (
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
@@ -210,6 +211,15 @@ export default function ApprovalsPage() {
                         </Button>
                         {isOverdue ? (
                           <Badge className="bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>
+                        ) : !canAct ? (
+                          memo.status === 'new' || memo.status === 'waiting' ? (
+                            <Badge
+                              className="bg-slate-100 text-slate-600 border-slate-200"
+                              title="ผู้สร้าง Memo ไม่สามารถอนุมัติ Memo ของตนเองได้"
+                            >
+                              รอผู้อื่นดำเนินการ
+                            </Badge>
+                          ) : null
                         ) : (
                           <>
                         <Button

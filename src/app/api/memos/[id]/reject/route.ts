@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
-import { getNextApprovalColumn } from '@/lib/approval-flow';
+import { getNextApprovalColumn, isOwnerSelfApprovalBlocked } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { buildApprovalLog } from '@/lib/event-logs';
 import { logApiError } from '@/lib/logger';
@@ -64,6 +64,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!nextColumn || nextColumn.key !== approverColKey) {
       return NextResponse.json(
         { error: 'ยังไม่ถึงลำดับของคุณ กรุณารอผู้ตรวจสอบ/ผู้อนุมัติลำดับก่อนหน้าดำเนินการก่อน' },
+        { status: 403 }
+      );
+    }
+
+    // The creator may check their own memo but must never reject it.
+    if (isOwnerSelfApprovalBlocked(memo, approverId, approverColKey)) {
+      return NextResponse.json(
+        { error: 'ผู้สร้าง Memo ไม่สามารถปฏิเสธ Memo ของตนเองได้ (ทำได้เฉพาะขั้นผู้ตรวจสอบ)' },
         { status: 403 }
       );
     }
@@ -137,6 +145,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       actorName: approverName,
       action: 'reject',
       remark: comment.trim(),
+      stepKey: approverColKey || undefined,
       baseUrl,
     });
 

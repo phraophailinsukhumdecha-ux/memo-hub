@@ -588,7 +588,7 @@ export async function POST(request: NextRequest) {
      * View-only email for CC recipients: they get the memo summary + a public
      * view link, but never receive an approval/rejection token or buttons.
      */
-    const sendViewEmail = async (to: string) => {
+    const sendViewEmail = async (toEmails: string[]) => {
       try {
         const viewToken = await createViewToken(memoId);
         const viewUrl = buildViewUrl(baseUrl, viewToken);
@@ -596,11 +596,12 @@ export async function POST(request: NextRequest) {
         const ccSubjectTemplate = emailFormat?.ccSubject || emailFormat?.subject || DEFAULT_CC_SUBJECT;
         const ccBodyTemplate = emailFormat?.ccBody || emailFormat?.body || DEFAULT_CC_BODY;
 
+        const recipientLabel = toEmails.join(', ');
         const vars = {
           ...baseVars,
-          approver_name: to,
-          cc_name: to,
-          recipient_name: to,
+          approver_name: recipientLabel,
+          cc_name: recipientLabel,
+          recipient_name: recipientLabel,
           memo_link: viewUrl,
         };
         const subject = replaceEmailVariables(ccSubjectTemplate, vars);
@@ -646,17 +647,17 @@ export async function POST(request: NextRequest) {
 
         await transporter.sendMail({
           from: sender,
-          to,
+          to: toEmails.join(', '),
           subject,
           replyTo: smtp!.fromEmail || undefined,
           text: content.text,
           html: htmlEmail,
         });
-        return { to, ok: true, message: 'ส่งสำเร็จ' };
+        return { to: toEmails.join(', '), ok: true, message: 'ส่งสำเร็จ' };
       } catch (e) {
         const classified = classifyError(e as Error, smtp!.port, smtp!.host);
         await logApiError('/api/send-memo-email', e);
-        return { to, ok: false, code: classified.code, message: classified.message };
+        return { to: toEmails.join(', '), ok: false, code: classified.code, message: classified.message };
       }
     };
 
@@ -666,7 +667,7 @@ export async function POST(request: NextRequest) {
     const approvalResults: Array<{ to: string; ok: boolean; code?: string; message: string }> =
       approverEmails.length > 0 ? [await sendApprovalEmail(approverEmails[0])] : [];
 
-    const ccResults = await Promise.all(ccEmailList.map(sendViewEmail));
+    const ccResults = ccEmailList.length > 0 ? [await sendViewEmail(ccEmailList)] : [];
 
     const results = [...approvalResults, ...ccResults];
     const failed = results.filter(r => !r.ok);
