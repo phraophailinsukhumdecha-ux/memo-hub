@@ -60,7 +60,8 @@ export default function ApprovalsPage() {
     if (!user) return;
 
     const unsubscribe = subscribeToPendingMemos((data) => {
-      setMemos(data);
+      // One row per memo, regardless of how many columns the user occupies.
+      setMemos(Array.from(new Map(data.map((memo) => [memo.id, memo])).values()));
     });
 
     const unsubTemplates = subscribeToTemplates(setTemplates);

@@ -76,7 +76,8 @@ export default function MemosPage() {
     if (!user) return;
 
     const unsubscribeMemos = subscribeToMemos((data) => {
-      setMemos(data);
+      // One row per memo, regardless of how many columns a user occupies.
+      setMemos(Array.from(new Map(data.map((memo) => [memo.id, memo])).values()));
     });
 
     const unsubscribeTemplates = subscribeToTemplates((data) => {

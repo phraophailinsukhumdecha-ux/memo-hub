@@ -85,6 +85,24 @@ export function getPreviousApprovalColumn(
 }
 
 /**
+ * The unsigned column belonging to a specific user. A person may appear more
+ * than once in the chain (e.g. checker and approver), so columns they already
+ * signed must be skipped.
+ */
+export function findActionColumn(
+  formData: unknown,
+  userId?: string,
+  userName?: string
+): ApprovalColumn | null {
+  return (
+    extractApprovalColumns(formData)
+      .filter((col) => !col.signed)
+      .find((col) => (!!userId && col.userId === userId) || (!!userName && col.name === userName)) ||
+    null
+  );
+}
+
+/**
  * Checkers ("Checked by") are identified by their column title, the same
  * convention used when classifying approval recipients.
  */
@@ -126,6 +144,91 @@ export function canUserActOnMemo(
   if (!isNext) return false;
   if (memo.ownerId !== user.id) return true;
   return isCheckerColumn(next);
+}
+
+export interface GridColumnValue {
+  name?: string;
+  userId?: string;
+  signed?: boolean;
+  action?: string;
+  date?: string;
+  time?: string;
+  signerTitle?: string;
+  colTitle?: string;
+}
+
+interface DisplayPerson {
+  id?: string;
+  displayName?: string;
+  name?: string;
+}
+
+/**
+ * Build the approval grid in display order (owner, then checkers, then
+ * approvers, with pinned people last) while keeping each column's own
+ * signature data (action/date/time) attached to it.
+ *
+ * Without this, re-ordering only the names made the "อนุมัติ" stamp and date
+ * stay on the old column, so they appeared under the wrong person.
+ */
+export function buildDisplayGrid(
+  grid: Record<string, GridColumnValue> | undefined,
+  checkers: DisplayPerson[],
+  approvers: DisplayPerson[],
+  options?: { includeOwnerSlot?: boolean }
+): Array<{ key: string; data: GridColumnValue }> {
+  const data = grid || {};
+  const keys = Object.keys(data)
+    .filter((key) => key.startsWith('col_'))
+    .sort((a, b) => parseInt(a.split('_')[1] || '0', 10) - parseInt(b.split('_')[1] || '0', 10));
+
+  const columns: Array<{ key: string; data: GridColumnValue }> = [];
+  const ownerKey = keys.find((key) => key === 'col_0');
+  if (ownerKey) {
+    columns.push({ key: ownerKey, data: data[ownerKey] || {} });
+  } else if (options?.includeOwnerSlot) {
+    columns.push({ key: 'col_0', data: {} });
+  }
+
+  const available = keys.filter((key) => key !== 'col_0');
+  const used = new Set<string>();
+
+  const takeKeyFor = (person: DisplayPerson): string | null => {
+    for (const key of available) {
+      if (used.has(key)) continue;
+      const col = data[key] || {};
+      const name = person.displayName || person.name;
+      if ((!!person.id && col.userId === person.id) || (!col.userId && !!name && col.name === name)) {
+        used.add(key);
+        return key;
+      }
+    }
+    return null;
+  };
+
+  for (const person of [...checkers, ...approvers]) {
+    const key = takeKeyFor(person);
+    if (key) {
+      columns.push({ key, data: data[key] || {} });
+    } else {
+      // No stored column for this assignee (legacy/preview): keep a slot so the
+      // column count stays the same.
+      columns.push({
+        key: `display_${columns.length}`,
+        data: { name: person.displayName || person.name || '' },
+      });
+    }
+  }
+
+  // Keep any leftover columns (assignee lists changed) instead of dropping them.
+  for (const key of available) {
+    if (!used.has(key)) {
+      used.add(key);
+      columns.push({ key, data: data[key] || {} });
+    }
+  }
+
+  return columns;
 }
 
 export function isUserNextApprover(memo: Pick<Memo, 'formData'>, user: { id: string; displayName?: string } | null | undefined): boolean {

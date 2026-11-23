@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { sendOwnerNotification, sendApproverNotifications } from '@/lib/memo-email';
-import { getNextApprovalColumn, isOwnerSelfApprovalBlocked } from '@/lib/approval-flow';
+import { getNextApprovalColumn, isOwnerSelfApprovalBlocked, findActionColumn } from '@/lib/approval-flow';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { buildApprovalLog } from '@/lib/event-logs';
 import { logApiError } from '@/lib/logger';
@@ -36,23 +36,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const currentLevel = memo.approvalRoute[memo.currentApprovalIndex];
     const formData = memo.formData || {};
 
-    // Find the approver's column in the approval grid and mark as signed
-    let approverColKey: string | null = null;
-    for (const fieldKey of Object.keys(formData)) {
-      const fieldValue = formData[fieldKey];
-      if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
-        for (const colKey of Object.keys(fieldValue)) {
-          if (colKey.startsWith('col_') && colKey !== 'col_0') {
-            const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
-            if (col?.userId === approverId || col?.name === approverName) {
-              approverColKey = colKey;
-              break;
-            }
-          }
-        }
-        if (approverColKey) break;
-      }
-    }
+    // A person may appear more than once in the chain (checker + approver);
+    // findActionColumn skips columns they already signed.
+    const approverColKey = findActionColumn(formData, approverId, approverName)?.key ?? null;
 
     if (!approverColKey) {
       return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ปฏิเสธ memo นี้' }, { status: 403 });

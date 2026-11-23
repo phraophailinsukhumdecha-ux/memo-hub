@@ -6,6 +6,7 @@ import { ApprovalGridConfig, User, Group, MemoTypography } from '@/types';
 import { resolveTypography } from '@/lib/typography';
 import { formatActionDate, formatActionTime } from '@/lib/datetime';
 import { orderApprovalAssignees } from '@/lib/approval-order';
+import { buildDisplayGrid } from '@/lib/approval-flow';
 import { Plus, X } from 'lucide-react';
 
 interface ApprovalGridProps {
@@ -163,6 +164,14 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
     .map((k) => parseInt(k.split('_')[1]))
     .sort((a, b) => a - b);
 
+  // Read-only: display names and signature stamps must stay on the same person
+  // even when pinned people are shown last. Editing keeps the stored indexes.
+  const displayColumns = readonly
+    ? buildDisplayGrid(value, orderedAssignees.checkers, orderedAssignees.approvers, {
+        includeOwnerSlot: Boolean(ownerUser),
+      })
+    : null;
+
   const requiredColumns = (ownerUser ? 1 : 0) + assignedUsers.length;
   const totalColumns = hasDynamicAssignments
     ? Math.max(colIndices.length, requiredColumns)
@@ -171,7 +180,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
   const canRemove = !hasDynamicAssignments && totalColumns > 3;
 
   const getColTitle = (colIndex: number) => {
-    const colData = value[`col_${colIndex}`] || {};
+    const colData = displayColumns?.[colIndex]?.data || value[`col_${colIndex}`] || {};
     if (colData.colTitle) {
       if (colData.colTitle === 'Checked by') return 'ผู้ตรวจสอบ';
       if (colData.colTitle === 'อนุมัติ') return 'ผู้อนุมัติ';
@@ -265,7 +274,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
 
   const renderColumn = (colIndex: number) => {
     const colKey = `col_${colIndex}`;
-    const colData = value[colKey] || {};
+    const colData = displayColumns?.[colIndex]?.data || value[colKey] || {};
     const isFirst = colIndex === 0;
 
     const colTitle = getColTitle(colIndex);

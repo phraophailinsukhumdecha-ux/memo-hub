@@ -35,6 +35,16 @@ import { orderApprovalAssignees } from '@/lib/approval-order';
 import { MemoDocumentForm } from '@/components/memo-document-form';
 import { UserManualDialog } from '@/components/user-manual-dialog';
 
+/** Keep one row per memo even if a data source ever returns duplicates. */
+function dedupeMemos(list: Memo[]): Memo[] {
+  const seen = new Set<string>();
+  return list.filter((memo) => {
+    if (seen.has(memo.id)) return false;
+    seen.add(memo.id);
+    return true;
+  });
+}
+
 export default function HomePage() {
   const { user, logout, isApproveUser, refreshUser } = useAuth();
   const router = useRouter();
@@ -129,7 +139,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return;
-    const unsub = subscribeToMemos((data) => setMemos(data));
+    const unsub = subscribeToMemos((data) => setMemos(dedupeMemos(data)));
     return () => unsub();
   }, [user]);
 
@@ -168,7 +178,7 @@ export default function HomePage() {
           .then((res) => res.text())
           .then((text) => setDetailHtml(text))
           .catch(() => setDetailHtml(''));
-        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user)) {
+        if (action === 'approve' && (memo.status === 'waiting' || memo.status === 'new') && canUserActOnMemo(memo, user)) {
           setTimeout(() => handleApprove(memo), 500);
         }
         window.history.replaceState({}, '', '/home');
@@ -181,35 +191,36 @@ export default function HomePage() {
     return templates.find((t) => t.id === selectedMemo.templateId) || null;
   }, [selectedMemo, templates]);
 
-  const hasUserSigned = (memo: Memo, userId: string) => {
-    const grid = memo.formData?.approval_grid_1 as Record<string, { name?: string; userId?: string; signed?: boolean }> | undefined;
-    if (!grid) return false;
-    for (const colKey of Object.keys(grid)) {
-      if (colKey.startsWith('col_') && colKey !== 'col_0') {
-        if ((grid[colKey]?.userId === userId || grid[colKey]?.name === user?.displayName) && grid[colKey]?.signed) return true;
-      }
-    }
-    return false;
-  };
-
   const getUserAction = (memo: Memo): 'approve' | 'reject' | null => {
     if (!user) return null;
+    // If it is this user's turn right now (they may already have acted in an
+    // earlier column), the memo is still pending for them.
+    const next = getNextApprovalColumn(memo.formData);
+    if (next) {
+      const isMyTurn =
+        (next.userId && next.userId === user.id) ||
+        (!next.userId && !!next.name && next.name === user.displayName);
+      if (isMyTurn) return null;
+    }
     const formData = memo.formData as Record<string, unknown> | undefined;
     if (!formData) return null;
+    let latest: { index: number; action: 'approve' | 'reject' } | null = null;
     for (const fieldKey of Object.keys(formData)) {
       const fieldValue = formData[fieldKey];
       if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         for (const colKey of Object.keys(fieldValue as Record<string, unknown>)) {
-          if (colKey.startsWith('col_') && colKey !== 'col_0') {
-            const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
-            if ((col?.userId === user.id || col?.name === user.displayName) && col?.action) {
-              return col.action as 'approve' | 'reject';
+          if (!colKey.startsWith('col_') || colKey === 'col_0') continue;
+          const col = (fieldValue as Record<string, Record<string, string>>)[colKey];
+          if ((col?.userId === user.id || col?.name === user.displayName) && col?.action) {
+            const index = parseInt(colKey.split('_')[1] || '0', 10);
+            if (!latest || index > latest.index) {
+              latest = { index, action: col.action as 'approve' | 'reject' };
             }
           }
         }
       }
     }
-    return null;
+    return latest?.action ?? null;
   };
 
   const isAdmin = user?.role === 'admin';
@@ -895,13 +906,13 @@ export default function HomePage() {
               </>
             ) : (
               <>
-            {showApprove && isListButtonEnabled('approve') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && isListButtonEnabled('approve') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(memo)} disabled={approving}>
                 <CheckCircle className="h-4 w-4 mr-1" />
                 อนุมัติ
               </Button>
             )}
-            {showApprove && isListButtonEnabled('reject') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && !hasUserSigned(memo, user.id) && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
+            {showApprove && isListButtonEnabled('reject') && canUserActOnMemo(memo, user) && (memo.status === 'waiting' || memo.status === 'new') && isUserNextApprover(memo, user) && new Date(memo.deadlineAt) >= new Date() && (
               <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleReject(memo)}>
                 <XCircle className="h-4 w-4 mr-1" />
                 ปฏิเสธ
@@ -1144,7 +1155,7 @@ export default function HomePage() {
               <Printer className="h-4 w-4 mr-1" />
               พิมพ์
             </Button>
-            {!detailViewOnly && selectedMemo && canUserActOnMemo(selectedMemo, user) && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && !hasUserSigned(selectedMemo, user.id) && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
+            {!detailViewOnly && selectedMemo && canUserActOnMemo(selectedMemo, user) && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />

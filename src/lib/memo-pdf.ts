@@ -2,6 +2,8 @@ import { Memo, MemoField, MemoTemplate, User, Group, MemoTypography, MemoAttachm
 import { getAttachmentDriveUrl } from '@/lib/attachment-links';
 import { resolveLogoSrc } from '@/lib/logo';
 import { resolveTypography, resolveFieldTypography, PRINT_LINE_HEIGHT } from '@/lib/typography';
+import { orderApprovalAssignees } from '@/lib/approval-order';
+import { buildDisplayGrid } from '@/lib/approval-flow';
 
 type ResolvedTypography = Required<MemoTypography>;
 
@@ -257,30 +259,43 @@ function renderApprovalGrid(field: MemoField, value: Record<string, { name?: str
     : Math.max(effectiveColKeys.length, configColumns.length);
   const maxPerRow = totalColumns === 4 ? 2 : 3;
 
+  // Same ordered assignment as the on-screen approval grid: checkers first,
+  // then approvers, with the pinned people moved to the end of their group.
+  // Each slot also carries the stored signature data (action/date/time) of the
+  // column that belongs to that person, so the "อนุมัติ" stamp stays with them.
+  const orderedCheckers = users
+    ? (auditorUserIds || [])
+        .map((id) => users.find((u) => u.id === id))
+        .filter((u): u is User => Boolean(u))
+    : [];
+  const orderedApprovers = users
+    ? (attnToUserIds || [])
+        .map((id) => users.find((u) => u.id === id))
+        .filter((u): u is User => Boolean(u))
+    : [];
+  const ordered = orderApprovalAssignees(orderedCheckers, orderedApprovers);
+  const displayColumns = buildDisplayGrid(data, ordered.checkers, ordered.approvers, {
+    includeOwnerSlot: Boolean(ownerUser),
+  });
+  const checkerCount = ordered.checkers.length;
+
   function renderCol(colKey: string, i: number): string {
-    const colData = data[colKey] || {};
+    const colData = displayColumns[i]?.data || data[colKey] || {};
     const isFirst = i === 0;
+    const assignedRole: 'auditor' | 'approver' | undefined = isFirst
+      ? undefined
+      : i <= checkerCount
+        ? 'auditor'
+        : 'approver';
 
     // Resolve non-first columns from Auditor / ATTN TO, mirroring readonly ApprovalGrid preview
     let resolvedName = colData.name || '';
     let resolvedTitle = colData.signerTitle || '';
-    let assignedRole: 'auditor' | 'approver' | undefined = undefined;
-
-    if (!isFirst && users) {
-      const seq: { displayName: string; position?: string; roleType: 'auditor' | 'approver' }[] = [];
-      for (const audId of auditorUserIds || []) {
-        const u = users.find((x) => x.id === audId);
-        if (u) seq.push({ ...u, roleType: 'auditor' });
-      }
-      for (const attnId of attnToUserIds || []) {
-        const u = users.find((x) => x.id === attnId);
-        if (u) seq.push({ ...u, roleType: 'approver' });
-      }
-      const assigned = seq[i - 1];
+    if (!isFirst && !resolvedName) {
+      const assigned = [...ordered.checkers, ...ordered.approvers][i - 1];
       if (assigned) {
-        resolvedName = assigned.displayName;
-        resolvedTitle = assigned.position || '';
-        assignedRole = assigned.roleType;
+        resolvedName = assigned.displayName || '';
+        resolvedTitle = resolvedTitle || assigned.position || '';
       }
     }
 
