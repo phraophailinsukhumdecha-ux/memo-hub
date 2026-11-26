@@ -851,8 +851,8 @@ export default function HomePage() {
         </div>
       )}
       {items.map((memo) => (
-        <div key={memo.id} className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div key={memo.id} className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:px-3 max-sm:py-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0 max-sm:flex-none">
             {!readOnly && isSelectMode && canDeleteMemo(memo) && (
               <input
                 type="checkbox"
@@ -863,9 +863,9 @@ export default function HomePage() {
             )}
             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (readOnly ? openDetail(memo, true) : memo.status === 'draft' && memo.ownerId === user.id ? openDraft(memo) : openDetail(memo))}>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm">{memo.memoNumber}</span>
-                <span className="text-sm text-slate-600 truncate">{getMemoDisplaySubject(memo)}</span>
-                {getStatusBadge(memo)}
+                <span className="font-medium text-sm max-sm:order-1 max-sm:shrink-0">{memo.memoNumber}</span>
+                <span className="text-sm text-slate-600 truncate max-sm:order-3 max-sm:w-full max-sm:whitespace-normal max-sm:line-clamp-2">{getMemoDisplaySubject(memo)}</span>
+                <div className="max-sm:order-2 max-sm:ml-auto max-sm:shrink-0">{getStatusBadge(memo)}</div>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
                 <span>{memo.ownerName}</span>
@@ -873,10 +873,10 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 ml-3 shrink-0">
+          <div className="flex items-center gap-1 ml-3 shrink-0 max-sm:ml-0 max-sm:justify-end">
             {readOnly ? (
               isListButtonEnabled('print') ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์">
+                <Button variant="ghost" size="icon" className="h-8 w-8 max-sm:hidden" onClick={() => handlePrint(memo)} title="พิมพ์">
                   <Printer className="h-4 w-4" />
                 </Button>
               ) : null
@@ -889,7 +889,7 @@ export default function HomePage() {
                   </Button>
                 )}
                 {isListButtonEnabled('print') && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)} title="พิมพ์ / พรีวิว">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 max-sm:hidden" onClick={() => handlePrint(memo)} title="พิมพ์ / พรีวิว">
                     <Printer className="h-4 w-4" />
                   </Button>
                 )}
@@ -929,7 +929,7 @@ export default function HomePage() {
               </Button>
             )}
             {isListButtonEnabled('print') && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrint(memo)}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 max-sm:hidden" onClick={() => handlePrint(memo)}>
                 <Printer className="h-4 w-4" />
               </Button>
             )}
@@ -947,8 +947,8 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className={`min-h-screen bg-slate-50${isApproveUser ? ' max-sm:pb-20' : ''}`}>
+      <div className="bg-white border-b px-6 py-4 flex items-center justify-between max-sm:flex-wrap max-sm:gap-2 max-sm:px-3 max-sm:py-3">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">M</div>
           <div>
@@ -956,7 +956,7 @@ export default function HomePage() {
             <p className="text-xs text-slate-600">{user?.displayName} ({user?.department || '-'})</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-sm:gap-1">
           {isListButtonEnabled('selectMode') && (
           <Button
             variant={isSelectMode ? 'default' : 'outline'}
@@ -970,36 +970,39 @@ export default function HomePage() {
           {isAdmin && (
             <Button variant="outline" size="sm" className="text-slate-700" onClick={() => router.push('/dashboard')}>
               <FileText className="h-4 w-4 mr-1" />
-              Admin
+              <span className="max-sm:hidden">Admin</span>
             </Button>
           )}
           <Button variant="outline" size="sm" className="text-slate-700" onClick={() => { logout(); router.push('/auth/login'); }}>
             <LogOut className="h-4 w-4 mr-1" />
-            ออกจากระบบ
+            <span className="max-sm:hidden">ออกจากระบบ</span>
           </Button>
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 max-sm:p-3">
         <Tabs value={activeTab === 'pending' && !isApproveUser ? 'mine' : activeTab} onValueChange={(v) => { setActiveTab(v); setPendingPage(1); setMinePage(1); setCcPage(1); setSearchQuery(''); }}>
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-            <TabsList>
+            <TabsList className="max-sm:w-full max-sm:[&>button]:flex-1">
               {isApproveUser && (
                 <TabsTrigger value="pending" className="gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  รายการทั้งหมด
-                  <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{approverMemos.length}</Badge>
+                  <Clock className="h-3.5 w-3.5 max-sm:hidden" />
+                  <span className="max-sm:hidden">รายการทั้งหมด</span>
+                  <span className="sm:hidden">ทั้งหมด</span>
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs max-sm:ml-0 max-sm:h-4 max-sm:min-w-[16px] max-sm:text-[10px]">{approverMemos.length}</Badge>
                 </TabsTrigger>
               )}
               <TabsTrigger value="cc" className="gap-1.5">
-                <Mail className="h-3.5 w-3.5" />
-                แจ้งเพื่อทราบ (CC)
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{ccMemos.length}</Badge>
+                <Mail className="h-3.5 w-3.5 max-sm:hidden" />
+                <span className="max-sm:hidden">แจ้งเพื่อทราบ (CC)</span>
+                <span className="sm:hidden">CC</span>
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs max-sm:ml-0 max-sm:h-4 max-sm:min-w-[16px] max-sm:text-[10px]">{ccMemos.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="mine" className="gap-1.5">
-                <FileText className="h-3.5 w-3.5" />
-                Memo ของฉัน
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">{myCount}</Badge>
+                <FileText className="h-3.5 w-3.5 max-sm:hidden" />
+                <span className="max-sm:hidden">Memo ของฉัน</span>
+                <span className="sm:hidden">ของฉัน</span>
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs max-sm:ml-0 max-sm:h-4 max-sm:min-w-[16px] max-sm:text-[10px]">{myCount}</Badge>
               </TabsTrigger>
             </TabsList>
 
@@ -1026,7 +1029,7 @@ export default function HomePage() {
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                       <Input
                         placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
-                        className="w-64 pl-8 h-8 text-sm"
+                        className="w-64 pl-8 h-8 text-sm max-sm:w-full"
                         value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setPendingPage(1); }}
                       />
@@ -1135,39 +1138,39 @@ export default function HomePage() {
 
       {/* Memo Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
-          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-            <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0 max-sm:left-0 max-sm:top-0 max-sm:flex max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:flex-col max-sm:overflow-hidden max-sm:rounded-none max-sm:border-0">
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10 max-sm:shrink-0 max-sm:px-3 max-sm:py-3">
+            <DialogTitle className="max-sm:text-base max-sm:pr-6">{selectedMemo?.memoNumber} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
               <X className="h-5 w-5" />
             </Button>
           </div>
           {selectedMemo && detailTemplate && (
-              <div className="p-6">
+              <div className="p-6 max-sm:flex-1 max-sm:overflow-y-auto max-sm:p-3">
                 <div
-                  className="bg-white relative"
+                  className="bg-white relative memo-mobile-fit"
                   dangerouslySetInnerHTML={{ __html: detailHtml }}
                 />
               </div>
             )}
-          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => selectedMemo && handlePrint(selectedMemo)}>
+          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2 max-sm:shrink-0 max-sm:flex-wrap max-sm:px-3 max-sm:py-3">
+            <Button variant="outline" onClick={() => selectedMemo && handlePrint(selectedMemo)} className="max-sm:hidden">
               <Printer className="h-4 w-4 mr-1" />
               พิมพ์
             </Button>
             {!detailViewOnly && selectedMemo && canUserActOnMemo(selectedMemo, user) && (selectedMemo.status === 'waiting' || selectedMemo.status === 'new') && isUserNextApprover(selectedMemo, user) && new Date(selectedMemo.deadlineAt) >= new Date() && (
               <>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(selectedMemo)}>
+                <Button className="bg-green-600 hover:bg-green-700 max-sm:flex-1" onClick={() => handleApprove(selectedMemo)}>
                   <CheckCircle className="h-4 w-4 mr-1" />
                   อนุมัติ
                 </Button>
-                <Button variant="destructive" onClick={() => handleReject(selectedMemo)}>
+                <Button variant="destructive" onClick={() => handleReject(selectedMemo)} className="max-sm:flex-1">
                   <XCircle className="h-4 w-4 mr-1" />
                   ปฏิเสธ
                 </Button>
               </>
             )}
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)} className="max-sm:flex-1">ปิด</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1248,6 +1251,44 @@ export default function HomePage() {
         onOpenChange={setIsManualOpen}
         isApprover={isApproveUser}
       />
+      {/* Mobile bottom navigation (approvers) */}
+      {isApproveUser && (
+        <nav className="sm:hidden fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+          <div className="grid grid-cols-3">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('pending'); setApproverFilter(null); setPendingPage(1); }}
+              className={`flex flex-col items-center gap-0.5 py-1.5 text-[11px] ${activeTab === 'pending' && !approverFilter ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}
+            >
+              <FileText className="h-5 w-5" />
+              ทั้งหมด
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('pending'); setApproverFilter('pending'); setPendingPage(1); }}
+              className={`flex flex-col items-center gap-0.5 py-1.5 text-[11px] ${activeTab === 'pending' && approverFilter === 'pending' ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}
+            >
+              <span className="relative">
+                <Clock className="h-5 w-5" />
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white">
+                    {pendingCount}
+                  </span>
+                )}
+              </span>
+              รออนุมัติ
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('pending'); setApproverFilter('approved'); setPendingPage(1); }}
+              className={`flex flex-col items-center gap-0.5 py-1.5 text-[11px] ${activeTab === 'pending' && approverFilter === 'approved' ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}
+            >
+              <CheckCircle className="h-5 w-5" />
+              อนุมัติแล้ว
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

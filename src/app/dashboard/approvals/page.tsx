@@ -48,6 +48,7 @@ export default function ApprovalsPage() {
   useEffect(() => { setTitle('รออนุมัติ'); }, [setTitle]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [detailHtml, setDetailHtml] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [comment, setComment] = useState('');
@@ -113,6 +114,11 @@ export default function ApprovalsPage() {
   const handleViewDetail = (memo: Memo) => {
     setSelectedMemo(memo);
     setIsDetailDialogOpen(true);
+    setDetailHtml('');
+    fetch(`/api/memo-id-html?id=${memo.id}`)
+      .then((res) => res.text())
+      .then(setDetailHtml)
+      .catch(() => setDetailHtml(''));
   };
 
   const handleApprove = (memo: Memo) => {
@@ -159,26 +165,26 @@ export default function ApprovalsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
+        <div className="flex items-center space-x-2 max-sm:space-x-0">
           <Input
             placeholder="ค้นหา เลขที่/หัวข้อ/ผู้สร้าง..."
-            className="w-64"
+            className="w-64 max-sm:w-full"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
           />
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-white max-sm:hidden">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-44 whitespace-nowrap">เลขที่ Memo</TableHead>
                 <TableHead className="whitespace-nowrap">หัวข้อ</TableHead>
-                <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
-                <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
-                <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
+                <TableHead className="w-52 whitespace-nowrap hidden md:table-cell">ผู้สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap hidden md:table-cell">วันที่สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap hidden md:table-cell">Deadline</TableHead>
                 <TableHead className="w-32 whitespace-nowrap">การดำเนินการ</TableHead>
               </TableRow>
             </TableHeader>
@@ -197,9 +203,9 @@ export default function ApprovalsPage() {
                   <TableRow key={memo.id}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">{memo.id}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{getMemoDisplaySubject(memo)}</TableCell>
-                    <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
-                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
-                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.deadlineAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell">{memo.ownerName}</TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell"><DateTimeCell date={memo.createdAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell"><DateTimeCell date={memo.deadlineAt} /></TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
                         <Button
@@ -253,6 +259,73 @@ export default function ApprovalsPage() {
           </Table>
       </div>
 
+      {/* Mobile card list (table is hidden below sm) */}
+      <div className="space-y-2 sm:hidden">
+        {filteredMemos.length === 0 ? (
+          <div className="rounded-lg border bg-white p-8 text-center text-slate-600">
+            ไม่มี Memo ที่มอบหมายให้คุณตรวจสอบหรืออนุมัติ
+          </div>
+        ) : (
+          pageMemos.map((memo) => {
+            const isOverdue = Boolean(memo.deadlineAt) && new Date(memo.deadlineAt) < new Date();
+            const canAct = canUserActOnMemo(memo, user);
+            const isOpen = memo.status === 'new' || memo.status === 'waiting';
+            return (
+              <div key={memo.id} className="rounded-lg border bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => handleViewDetail(memo)}
+                  >
+                    <p className="font-mono text-xs text-slate-500">{memo.id}</p>
+                    <p className="truncate text-sm font-medium text-slate-900">{getMemoDisplaySubject(memo)}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{memo.ownerName}</p>
+                  </button>
+                  {isOverdue ? (
+                    <Badge className="shrink-0 bg-orange-100 text-orange-700 border-orange-200">เลยเวลา</Badge>
+                  ) : null}
+                </div>
+                <div className="mt-1 flex items-center justify-end gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => handleViewDetail(memo)} title="ดูรายละเอียด">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {!isOverdue && canAct ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-green-600 hover:text-green-700"
+                        onClick={() => handleApprove(memo)}
+                        title="อนุมัติ"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleReject(memo)}
+                        title="ปฏิเสธ"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : isOpen && !isOverdue && !canAct ? (
+                    <Badge
+                      className="bg-slate-100 text-slate-600 border-slate-200"
+                      title="ผู้สร้าง Memo ไม่สามารถอนุมัติ Memo ของตนเองได้"
+                    >
+                      รอผู้อื่นดำเนินการ
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <ListPagination
         page={safePage}
         totalPages={totalPages}
@@ -262,10 +335,12 @@ export default function ApprovalsPage() {
 
       {/* View Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedMemo?.memoNumber || selectedMemo?.id} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto max-sm:left-0 max-sm:top-0 max-sm:flex max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:flex-col max-sm:overflow-hidden max-sm:rounded-none max-sm:border-0">
+          <DialogHeader className="max-sm:shrink-0">
+            <DialogTitle className="max-sm:text-base max-sm:pr-6">{selectedMemo?.memoNumber || selectedMemo?.id} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
           </DialogHeader>
+          <div className="max-sm:flex-1 max-sm:overflow-y-auto sm:contents">
+          <div className="max-sm:hidden sm:contents">
           {selectedMemo && (() => {
             const detailTemplate = templates.find((t) => t.id === selectedMemo.templateId) || null;
             const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
@@ -293,6 +368,12 @@ export default function ApprovalsPage() {
               </>
             );
           })()}
+          </div>
+          <div
+            className="hidden max-sm:block memo-mobile-fit"
+            dangerouslySetInnerHTML={{ __html: detailHtml }}
+          />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>ปิด</Button>
           </DialogFooter>

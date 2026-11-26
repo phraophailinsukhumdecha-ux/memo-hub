@@ -15,7 +15,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={title} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 max-sm:p-3">{children}</main>
       </div>
     </div>
   );

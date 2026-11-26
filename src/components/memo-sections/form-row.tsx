@@ -95,8 +95,8 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
     };
 
     const renderCell = (f: RowField, withRightBorder: boolean) => (
-      <div className={`flex items-center px-0 py-1 ${withRightBorder ? 'border-r border-slate-300' : ''}`}>
-        <span className="font-semibold text-slate-900 w-36 shrink-0" style={{ fontSize: `${labelSize}px` }}>{f.label}</span>
+      <div className={`flex items-center px-0 py-1 max-sm:flex-col max-sm:items-start max-sm:gap-1 max-sm:border-r-0 ${withRightBorder ? 'border-r border-slate-300' : ''}`}>
+        <span className="font-semibold text-slate-900 w-36 shrink-0 max-sm:w-auto" style={{ fontSize: `${labelSize}px` }}>{f.label}</span>
         <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}>: {resolveValue(f, value[f.name] as string)}</span>
       </div>
     );
@@ -110,7 +110,7 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
               <span className="text-slate-900" style={{ fontSize: `${typo.baseFontSize}px`, fontWeight: typo.boldBody ? 700 : 400 }}> : {resolveValue(row.full, value[row.full.name] as string)}</span>
             </div>
           ) : (
-            <div key={ri} className="grid grid-cols-2">
+            <div key={ri} className="grid grid-cols-2 max-sm:grid-cols-1">
               {renderCell(row.left!, true)}
               {row.right ? renderCell(row.right, false) : <div />}
             </div>
@@ -170,9 +170,9 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
   return (
     <div className="divide-y divide-slate-300">
       {rows.map((row, rowIndex) => (
-        <div key={rowIndex} className="grid grid-cols-2">
-          <div className="flex items-center px-3 py-2 border-r border-slate-300">
-            <Label className="text-sm font-semibold whitespace-nowrap text-slate-900 w-32">
+        <div key={rowIndex} className="grid grid-cols-2 max-sm:grid-cols-1">
+          <div className="flex items-center px-3 py-2 border-r border-slate-300 max-sm:flex-col max-sm:items-start max-sm:gap-1 max-sm:border-r-0">
+            <Label className="text-sm font-semibold whitespace-nowrap text-slate-900 w-32 max-sm:w-auto">
               {row.left.label}
               {isFieldRequired(row.left.name, row.left.requiredByType) && (
                 <span className="text-red-500 ml-1">*</span>
@@ -199,8 +199,8 @@ export function FormRow({ config, value = {}, onChange, readonly, memoType, user
             </div>
           </div>
           {row.right ? (
-            <div className="flex items-center px-3 py-2">
-              <Label className="text-sm font-semibold whitespace-nowrap text-slate-900 w-32">
+            <div className="flex items-center px-3 py-2 max-sm:flex-col max-sm:items-start max-sm:gap-1">
+              <Label className="text-sm font-semibold whitespace-nowrap text-slate-900 w-32 max-sm:w-auto">
                 {row.right.label}
                 {isFieldRequired(row.right.name, row.right.requiredByType) && (
                   <span className="text-red-500 ml-1">*</span>

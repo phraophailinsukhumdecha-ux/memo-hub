@@ -141,11 +141,11 @@ export default function ConditionsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
         <p className="text-sm text-slate-600">
           กำหนดเงื่อนไขและเส้นทางอนุมัติสำหรับ Memo
         </p>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="max-sm:w-full">
           <Plus className="mr-2 h-4 w-4" />
           สร้าง Condition ใหม่
         </Button>
@@ -160,7 +160,7 @@ export default function ConditionsPage() {
               <TableRow>
                 <TableHead>ชื่อ</TableHead>
                 <TableHead className="w-32">ประเภท</TableHead>
-                <TableHead>แผนก</TableHead>
+                <TableHead className="hidden md:table-cell">แผนก</TableHead>
                 <TableHead className="w-24">ระดับ</TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
@@ -172,7 +172,7 @@ export default function ConditionsPage() {
                   <TableCell>
                     <Badge variant="secondary">{getTypeLabel(condition.matchType)}</Badge>
                   </TableCell>
-                  <TableCell>{condition.matchValue}</TableCell>
+                  <TableCell className="hidden md:table-cell">{condition.matchValue}</TableCell>
                   <TableCell>{condition.approvalRoute?.length || 0} ระดับ</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-1">

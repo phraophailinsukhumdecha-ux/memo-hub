@@ -66,6 +66,17 @@ export default function MemosPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailHtml, setDetailHtml] = useState('');
+
+  const openMemoDetail = (memo: Memo) => {
+    setSelectedMemo(memo);
+    setIsDetailOpen(true);
+    setDetailHtml('');
+    fetch(`/api/memo-id-html?id=${memo.id}`)
+      .then((res) => res.text())
+      .then(setDetailHtml)
+      .catch(() => setDetailHtml(''));
+  };
   const [resendMemo, setResendMemo] = useState<Memo | null>(null);
   const [resendSelected, setResendSelected] = useState<Set<string>>(new Set());
   const [resendSending, setResendSending] = useState(false);
@@ -429,19 +440,19 @@ export default function MemosPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
+        <div className="flex items-center space-x-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-2 max-sm:space-x-0">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-600" />
             <Input
               placeholder="ค้นหา Memo..."
-              className="w-64 pl-8"
+              className="w-64 pl-8 max-sm:w-full"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
             />
           </div>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 max-sm:w-full">
               <SelectValue placeholder="สถานะ" />
             </SelectTrigger>
             <SelectContent>
@@ -455,22 +466,22 @@ export default function MemosPage() {
           </Select>
         </div>
 
-        <Button onClick={() => { setEditingDraftId(null); setIsCreating(true); }}>
+        <Button onClick={() => { setEditingDraftId(null); setIsCreating(true); }} className="max-sm:w-full">
           <Plus className="mr-2 h-4 w-4" />
           สร้าง Memo ใหม่
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-white max-sm:hidden">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-44 whitespace-nowrap">เลขที่ Memo</TableHead>
                 <TableHead className="w-48 whitespace-nowrap">หัวข้อ</TableHead>
                 <TableHead className="w-32 whitespace-nowrap">สถานะ</TableHead>
-                <TableHead className="w-52 whitespace-nowrap">ผู้สร้าง</TableHead>
-                <TableHead className="w-44 whitespace-nowrap">วันที่สร้าง</TableHead>
-                <TableHead className="w-44 whitespace-nowrap">Deadline</TableHead>
+                <TableHead className="w-52 whitespace-nowrap hidden md:table-cell">ผู้สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap hidden md:table-cell">วันที่สร้าง</TableHead>
+                <TableHead className="w-44 whitespace-nowrap hidden md:table-cell">Deadline</TableHead>
                 <TableHead className="w-32"></TableHead>
               </TableRow>
             </TableHeader>
@@ -484,12 +495,12 @@ export default function MemosPage() {
               ) : (
                 pageMemos.map((memo) => (
                   <TableRow key={memo.id}>
-                    <TableCell className="font-mono text-sm whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{memo.id}</TableCell>
-                    <TableCell className="font-medium whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => { setSelectedMemo(memo); setIsDetailOpen(true); }}>{getMemoDisplaySubject(memo)}</TableCell>
+                    <TableCell className="font-mono text-sm whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => openMemoDetail(memo)}>{memo.id}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap cursor-pointer hover:text-blue-600" onClick={() => openMemoDetail(memo)}>{getMemoDisplaySubject(memo)}</TableCell>
                     <TableCell>{getStatusBadge(memo.status)}</TableCell>
-                    <TableCell className="whitespace-nowrap">{memo.ownerName}</TableCell>
-                    <TableCell className="whitespace-nowrap"><DateTimeCell date={memo.createdAt} /></TableCell>
-                    <TableCell className="whitespace-nowrap">{memo.status === 'draft' ? '—' : <DateTimeCell date={memo.deadlineAt} />}</TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell">{memo.ownerName}</TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell"><DateTimeCell date={memo.createdAt} /></TableCell>
+                    <TableCell className="whitespace-nowrap hidden md:table-cell">{memo.status === 'draft' ? '—' : <DateTimeCell date={memo.deadlineAt} />}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
                         {memo.status === 'draft' && memo.ownerId === user?.id ? (
@@ -524,6 +535,7 @@ export default function MemosPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="max-sm:hidden"
                           onClick={() => handlePrint(memo)}
                           title="พิมพ์"
                         >
@@ -557,6 +569,59 @@ export default function MemosPage() {
           </Table>
       </div>
 
+      {/* Mobile card list (table is hidden below sm) */}
+      <div className="space-y-2 sm:hidden">
+        {filteredMemos.length === 0 ? (
+          <div className="rounded-lg border bg-white p-8 text-center text-slate-600">
+            ไม่พบข้อมูล Memo
+          </div>
+        ) : (
+          pageMemos.map((memo) => (
+            <div key={memo.id} className="rounded-lg border bg-white p-3">
+              <div className="flex items-start justify-between gap-2">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => openMemoDetail(memo)}
+                >
+                  <p className="font-mono text-xs text-slate-500">{memo.id}</p>
+                  <p className="truncate text-sm font-medium text-slate-900">{getMemoDisplaySubject(memo)}</p>
+                </button>
+                <div className="shrink-0">{getStatusBadge(memo.status)}</div>
+              </div>
+              <p className="mt-1 truncate text-xs text-slate-500">{memo.ownerName}</p>
+              <div className="mt-1 flex items-center justify-end gap-1">
+                {memo.status === 'draft' && memo.ownerId === user?.id ? (
+                  <Button variant="ghost" size="icon" onClick={() => openDraft(memo)} title="แก้ไข">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                <Button variant="ghost" size="icon" onClick={() => handleDuplicate(memo)} title="Dup เอกสาร">
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="max-sm:hidden" onClick={() => handlePrint(memo)} title="พิมพ์">
+                  <Printer className="h-4 w-4" />
+                </Button>
+                {memo.status !== 'draft' && (
+                  <Button variant="ghost" size="icon" onClick={() => openResendDialog(memo)} title="ส่งเมลซ้ำ">
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-600 hover:text-red-700"
+                  onClick={() => handleDeleteMemo(memo.id)}
+                  title="ลบ"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       <ListPagination
         page={safePage}
         totalPages={totalPages}
@@ -566,9 +631,9 @@ export default function MemosPage() {
 
       {/* Memo Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
-          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-            <DialogTitle>{selectedMemo?.memoNumber} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0 max-sm:left-0 max-sm:top-0 max-sm:flex max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:flex-col max-sm:overflow-hidden max-sm:rounded-none max-sm:border-0">
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10 max-sm:shrink-0 max-sm:px-3 max-sm:py-3">
+            <DialogTitle className="max-sm:text-base max-sm:pr-6">{selectedMemo?.memoNumber} - {selectedMemo ? getMemoDisplaySubject(selectedMemo) : ''}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
               <X className="h-5 w-5" />
             </Button>
@@ -578,35 +643,43 @@ export default function MemosPage() {
             const detailOwnerUser = allUsers.find((u) => u.id === selectedMemo.ownerId) || null;
             if (!detailTemplate) return <p className="p-6 text-slate-500">ไม่พบเทมเพลต</p>;
             return (
-              <div className="p-6">
-                <div className="memo-font border-2 border-slate-900">
-                  <div className="border-b-2 border-slate-900 py-3 text-center">
-                    <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
-                  </div>
-                  <div className="p-6 space-y-0">
-                    {orderFieldsWithAttachmentsLast(detailTemplate.fields.filter((f) => f.type !== 'memo_type')).map((field) => (
-                      <SectionRenderer
-                        key={field.id}
-                        field={field}
-                        value={selectedMemo.formData?.[field.id]}
-                        formData={{ ...(selectedMemo.formData as Record<string, unknown>), memoNumber: selectedMemo.memoNumber }}
-                        readonly={true}
-                        ownerUser={detailOwnerUser}
-                        users={allUsers}
-                        typography={detailTemplate.typography}
-                        memoId={selectedMemo.id}
-                        viewerId={user?.id}
-                        viewerRole={user?.role}
-                      />
-                    ))}
+              <div className="p-6 max-sm:flex-1 max-sm:overflow-y-auto max-sm:p-3">
+                <div className="max-sm:hidden">
+                  <div className="memo-font border-2 border-slate-900">
+                    <div className="border-b-2 border-slate-900 py-3 text-center">
+                      <h1 className="text-2xl font-bold tracking-[0.3em] text-slate-900">MEMO</h1>
+                    </div>
+                    <div className="p-6 space-y-0">
+                      {orderFieldsWithAttachmentsLast(detailTemplate.fields.filter((f) => f.type !== 'memo_type')).map((field) => (
+                        <SectionRenderer
+                          key={field.id}
+                          field={field}
+                          value={selectedMemo.formData?.[field.id]}
+                          formData={{ ...(selectedMemo.formData as Record<string, unknown>), memoNumber: selectedMemo.memoNumber }}
+                          readonly={true}
+                          ownerUser={detailOwnerUser}
+                          users={allUsers}
+                          typography={detailTemplate.typography}
+                          memoId={selectedMemo.id}
+                          viewerId={user?.id}
+                          viewerRole={user?.role}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <MemoRemarks memo={selectedMemo} className="mt-4" />
+                <div
+                  className="hidden max-sm:block memo-mobile-fit"
+                  dangerouslySetInnerHTML={{ __html: detailHtml }}
+                />
+                <div className="max-sm:hidden">
+                  <MemoRemarks memo={selectedMemo} className="mt-4" />
+                </div>
               </div>
             );
           })()}
-          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end">
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>ปิด</Button>
+          <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end max-sm:shrink-0 max-sm:flex-wrap max-sm:px-3 max-sm:py-3">
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)} className="max-sm:w-full">ปิด</Button>
           </div>
         </DialogContent>
       </Dialog>

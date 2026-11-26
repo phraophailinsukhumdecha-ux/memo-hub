@@ -39,9 +39,9 @@ export function ListPagination({ page, totalPages, totalItems, onPageChange }: L
     );
   }
   return (
-    <div className="flex items-center justify-between pt-3">
+    <div className="flex items-center justify-between pt-3 max-sm:flex-col max-sm:items-start max-sm:gap-2">
       <p className="text-xs text-slate-500">{totalItems} รายการ</p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-sm:w-full max-sm:justify-between">
         <Button
           variant="outline"
           size="sm"

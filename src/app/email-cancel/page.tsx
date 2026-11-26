@@ -151,7 +151,7 @@ function EmailCancelContent() {
             />
           </div>
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end max-sm:flex-col-reverse max-sm:[&>button]:w-full">
             <Button variant="outline" onClick={() => window.history.back()} disabled={submitting}>
               ยกเลิก
             </Button>

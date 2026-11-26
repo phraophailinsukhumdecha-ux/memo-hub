@@ -36,7 +36,7 @@ export function TypographyEditor({ value, onChange, showReset }: TypographyEdito
 
   return (
     <div className="space-y-3 rounded-lg border bg-slate-50/50 p-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-1">
         <p className="text-xs font-semibold text-slate-600">รูปแบบตัวอักษร section นี้ (ว่าง = ใช้ค่าของเทมเพลต)</p>
         {showReset && (
           <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => onChange({})}>
@@ -78,7 +78,7 @@ export function TypographyEditor({ value, onChange, showReset }: TypographyEdito
           />
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
         <div className="space-y-1">
           <Label className="text-xs">ขนาดฟอนต์ (px)</Label>
           <Input

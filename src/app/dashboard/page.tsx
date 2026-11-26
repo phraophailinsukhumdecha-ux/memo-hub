@@ -133,7 +133,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 max-sm:grid-cols-2 max-sm:gap-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Memo ทั้งหมด</CardTitle>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 max-sm:min-w-0 max-sm:overflow-hidden">
               <CardHeader>
                 <CardTitle>สัดส่วนสถานะ</CardTitle>
                 <CardDescription>จำนวน Memo แยกตามสถานะ</CardDescription>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                 {statusData.length === 0 ? (
                   <p className="text-center text-slate-600 py-8">ยังไม่มีข้อมูล</p>
                 ) : (
-                  <div className="h-[240px]">
+                  <div className="h-[240px] max-sm:min-w-0 max-sm:w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -232,13 +232,13 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 max-sm:min-w-0 max-sm:overflow-hidden">
               <CardHeader>
                 <CardTitle>แนวโน้มการสร้าง Memo</CardTitle>
                 <CardDescription>จำนวน Memo ที่สร้างในรอบ 8 สัปดาห์ล่าสุด</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[240px]">
+                <div className="h-[240px] max-sm:min-w-0 max-sm:w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weeklyData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -254,7 +254,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
+            <Card className="max-sm:min-w-0 max-sm:overflow-hidden">
               <CardHeader>
                 <CardTitle>Memo ล่าสุด</CardTitle>
                 <CardDescription>รายการ Memo ที่สร้างล่าสุดในระบบ</CardDescription>
@@ -266,15 +266,15 @@ export default function DashboardPage() {
                   ) : (
                     recentMemos.map((memo) => (
                       <div key={memo.id} className="rounded-lg border p-3">
-                        <div className="flex items-start justify-between">
-                          <p className="text-sm font-medium truncate flex-1">
+                        <div className="flex items-start justify-between max-sm:gap-2">
+                          <p className="text-sm font-medium truncate flex-1 min-w-0">
                             <span className="font-mono text-slate-700">{memo.memoNumber}</span>
                             <span className="mx-1 text-slate-400">·</span>
                             {getMemoDisplaySubject(memo)}
                           </p>
-                          <div className="ml-3 shrink-0">{getStatusBadge(memo.status)}</div>
+                          <div className="ml-3 max-sm:ml-1 shrink-0">{getStatusBadge(memo.status)}</div>
                         </div>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-1 max-sm:flex-col max-sm:items-start max-sm:gap-0.5">
                           <p className="text-xs text-slate-600">{memo.ownerName}</p>
                           <p className="text-xs text-slate-500">{formatDate(memo.createdAt)} {memo.createdAt.getFullYear() + 543} {formatTime(memo.createdAt)}</p>
                         </div>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="max-sm:min-w-0 max-sm:overflow-hidden">
               <CardHeader>
                 <CardTitle>Memo ใกล้หมดอายุ</CardTitle>
                 <CardDescription>Memo ที่เหลือเวลาไม่เกิน 3 วัน</CardDescription>
@@ -312,9 +312,9 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="max-sm:min-w-0 max-sm:overflow-hidden">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-1">
                 <div>
                   <CardTitle>กิจกรรมล่าสุด</CardTitle>
                   <CardDescription>10 รายการล่าสุดในระบบ</CardDescription>
@@ -330,11 +330,11 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y">
                   {logs.map((log) => (
-                    <div key={log.id} className="flex items-center gap-3 py-2.5">
+                    <div key={log.id} className="flex items-center gap-3 py-2.5 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-1">
                       <div className="shrink-0">{getActionBadge(log.action)}</div>
-                      <p className="text-sm text-slate-700 truncate flex-1">{log.details}</p>
-                      <p className="text-xs text-slate-500 shrink-0">{log.userName}</p>
-                      <p className="text-xs text-slate-400 shrink-0 w-40 text-right"><DateTimeCell date={log.timestamp} /></p>
+                      <p className="text-sm text-slate-700 truncate flex-1 min-w-0">{log.details}</p>
+                      <p className="text-xs text-slate-500 shrink-0 max-sm:hidden">{log.userName}</p>
+                      <p className="text-xs text-slate-400 shrink-0 w-40 text-right max-sm:w-full max-sm:text-left max-sm:text-[11px]"><DateTimeCell date={log.timestamp} /></p>
                     </div>
                   ))}
                 </div>

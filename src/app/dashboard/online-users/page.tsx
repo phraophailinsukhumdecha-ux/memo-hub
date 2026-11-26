@@ -68,7 +68,7 @@ export default function OnlineUsersPage() {
           <Button
             variant="outline"
             size="sm"
-            className="ml-auto"
+            className="ml-auto max-sm:ml-0 max-sm:w-full"
             onClick={() => setShowAll((value) => !value)}
           >
             {showAll ? 'แสดงเฉพาะออนไลน์' : 'แสดงทั้งหมด'}
@@ -82,10 +82,10 @@ export default function OnlineUsersPage() {
             <TableRow>
               <TableHead className="w-12"></TableHead>
               <TableHead>ชื่อ</TableHead>
-              <TableHead>แผนก</TableHead>
-              <TableHead>ตำแหน่ง</TableHead>
+              <TableHead className="hidden md:table-cell">แผนก</TableHead>
+              <TableHead className="hidden md:table-cell">ตำแหน่ง</TableHead>
               <TableHead>บทบาท</TableHead>
-              <TableHead>เข้าสู่ระบบล่าสุด</TableHead>
+              <TableHead className="hidden md:table-cell">เข้าสู่ระบบล่าสุด</TableHead>
               <TableHead>สถานะ</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,10 +108,10 @@ export default function OnlineUsersPage() {
                       />
                     </TableCell>
                     <TableCell className="font-medium">{user.displayName}</TableCell>
-                    <TableCell>{user.department || '-'}</TableCell>
-                    <TableCell>{user.position || '-'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{user.department || '-'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{user.position || '-'}</TableCell>
                     <TableCell>{roleLabel(user.role)}</TableCell>
-                    <TableCell className="text-sm text-slate-600">
+                    <TableCell className="text-sm text-slate-600 hidden md:table-cell">
                       {user.lastLoginAt ? <DateTimeCell date={new Date(user.lastLoginAt)} /> : '-'}
                     </TableCell>
                     <TableCell>

@@ -45,7 +45,7 @@ export default function EventLogsPage() {
         บันทึกกิจกรรมของผู้ใช้ในระบบ (Audit Trail)
       </p>
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-white max-sm:hidden">
         {logs.length === 0 ? (
           <div className="p-8 text-center text-slate-600">ยังไม่มี Event Log</div>
         ) : (
@@ -53,11 +53,11 @@ export default function EventLogsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-36">วันที่/เวลา</TableHead>
-                <TableHead className="w-32">ผู้กระทำ</TableHead>
+                <TableHead className="w-32 hidden md:table-cell">ผู้กระทำ</TableHead>
                 <TableHead className="w-28">ประเภท</TableHead>
-                <TableHead className="w-28">ช่องทาง</TableHead>
+                <TableHead className="w-28 hidden md:table-cell">ช่องทาง</TableHead>
                 <TableHead>รายละเอียด</TableHead>
-                <TableHead className="w-64">หมายเหตุ</TableHead>
+                <TableHead className="w-64 hidden md:table-cell">หมายเหตุ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,9 +67,9 @@ export default function EventLogsPage() {
                 return (
                   <TableRow key={log.id}>
                     <TableCell className="text-sm"><DateTimeCell date={log.timestamp} /></TableCell>
-                    <TableCell className="text-sm">{log.userName}</TableCell>
+                    <TableCell className="text-sm hidden md:table-cell">{log.userName}</TableCell>
                     <TableCell>{getActionBadge(log.action)}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {channel === 'email' ? (
                         <Badge className="border-purple-200 bg-purple-100 text-purple-700">อีเมล</Badge>
                       ) : channel === 'web' ? (
@@ -79,12 +79,51 @@ export default function EventLogsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm">{log.details}</TableCell>
-                    <TableCell className="text-sm text-slate-600">{comment || '—'}</TableCell>
+                    <TableCell className="text-sm text-slate-600 hidden md:table-cell">{comment || '—'}</TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+        )}
+      </div>
+
+      {/* Mobile cards: show every field instead of hiding columns */}
+      <div className="space-y-2 sm:hidden">
+        {logs.length === 0 ? (
+          <div className="rounded-lg border bg-white p-8 text-center text-slate-600">ยังไม่มี Event Log</div>
+        ) : (
+          logs.map((log) => {
+            const channel = log.metadata?.channel;
+            const comment = typeof log.metadata?.comment === 'string' ? log.metadata.comment : '';
+            return (
+              <div key={log.id} className="rounded-lg border bg-white p-3 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-500"><DateTimeCell date={log.timestamp} /></span>
+                  <div className="shrink-0">{getActionBadge(log.action)}</div>
+                </div>
+                <p className="text-sm text-slate-900 break-words">{log.details}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <span>
+                    ผู้กระทำ: <span className="text-slate-700">{log.userName || '-'}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    ช่องทาง:{' '}
+                    {channel === 'email' ? (
+                      <Badge className="border-purple-200 bg-purple-100 text-purple-700">อีเมล</Badge>
+                    ) : channel === 'web' ? (
+                      <Badge className="border-blue-200 bg-blue-100 text-blue-700">ระบบ</Badge>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 break-words">
+                  <span className="text-slate-600">หมายเหตุ:</span> {comment || '—'}
+                </p>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

@@ -450,7 +450,7 @@ export function ApprovalGrid({ config, value = {}, onChange, readonly, memoType,
           const colsInRow = rowIndices.length;
           const gridCols = colsInRow === 2 ? 'grid-cols-2' : colsInRow === 3 ? 'grid-cols-3' : `grid-cols-${colsInRow}`;
           return (
-            <div key={rowIndex} className={`grid ${gridCols} divide-x divide-slate-900 ${rowIndex > 0 ? 'border-t border-slate-900' : ''}`}>
+            <div key={rowIndex} className={`grid ${gridCols} divide-x divide-slate-900 max-sm:grid-cols-1 max-sm:divide-x-0 max-sm:divide-y ${rowIndex > 0 ? 'border-t border-slate-900' : ''}`}>
               {rowIndices.map((colIdx) => renderColumn(colIdx))}
             </div>
           );

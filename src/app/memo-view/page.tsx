@@ -99,14 +99,14 @@ function MemoViewContent() {
     );
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4">
+    <div className="min-h-screen bg-slate-100 py-8 px-4 max-sm:py-3 max-sm:px-2">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
           <h1 className="text-lg font-bold text-slate-900">{memo.memoNumber}</h1>
           {statusBadge}
         </div>
         <div
-          className="bg-white relative"
+          className="bg-white relative memo-mobile-fit"
           dangerouslySetInnerHTML={{ __html: html }}
         />
         <p className="text-xs text-slate-400 text-center mt-4">MemoHub Digital Memo & Approval System</p>

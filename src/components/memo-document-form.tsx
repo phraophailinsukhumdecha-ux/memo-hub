@@ -10,7 +10,7 @@ import { ApprovalGrid, SectionRenderer, AttachmentSection } from '@/components/m
 import { MemoTemplate, User, Group, ApprovalGridConfig, AttachmentSectionConfig, MemoAttachment, Memo } from '@/types';
 import { printMemo } from '@/lib/memo-pdf';
 import { orderFieldsWithAttachmentsLast } from '@/lib/field-order';
-import { Mail, Printer, Save, X } from 'lucide-react';
+import { Eye, Mail, Printer, Save, X } from 'lucide-react';
 
 interface MemoDocumentFormProps {
   templates: MemoTemplate[];
@@ -42,6 +42,8 @@ export function MemoDocumentForm({
   users,
 }: MemoDocumentFormProps) {
   const [memoNumber, setMemoNumber] = useState<string>('');
+  // Mobile only: the preview is hidden by default and opens as an overlay.
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   useEffect(() => {
     if (!selectedTemplate && templates.length > 0) {
@@ -356,30 +358,52 @@ export function MemoDocumentForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-[1400px] h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 max-sm:p-0">
+      <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-[1400px] h-[95vh] flex flex-col max-sm:h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="shrink-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">{title || 'สร้าง Memo ใหม่'}</h2>
-          <Button variant="ghost" size="icon" onClick={onCancel}>
-            <X className="h-5 w-5 text-slate-900" />
-          </Button>
+        <div className="shrink-0 bg-white border-b px-6 py-4 flex items-center justify-between max-sm:px-3 max-sm:py-3">
+          <h2 className="text-lg font-bold text-slate-900 max-sm:text-base max-sm:truncate">{title || 'สร้าง Memo ใหม่'}</h2>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden"
+              onClick={() => setShowMobilePreview((v) => !v)}
+              title="ดูตัวอย่างเอกสาร"
+            >
+              <Eye className="h-5 w-5 text-slate-900" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onCancel}>
+              <X className="h-5 w-5 text-slate-900" />
+            </Button>
+          </div>
         </div>
 
         {/* Split Panel */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden max-sm:flex-col max-sm:overflow-y-auto">
           {/* Left: Form Fields */}
-          <div className="w-1/2 overflow-y-auto border-r">
-            <div className="p-6 space-y-4">
+          <div className="w-1/2 overflow-y-auto border-r max-sm:w-full max-sm:border-r-0 max-sm:border-b">
+            <div className="p-6 space-y-4 max-sm:p-3">
               <h3 className="text-sm font-semibold text-slate-700">กรอกข้อมูล Memo</h3>
               {selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'company_header' && f.type !== 'approval_grid').map((field) => renderField(field))}
             </div>
           </div>
 
           {/* Right: Memo Preview */}
-          <div className="w-1/2 overflow-y-auto bg-slate-100 p-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-4">ตัวอย่าง Memo</h3>
-            <div className="memo-font bg-white border-2 border-slate-900 text-sm">
+          <div className={`w-1/2 overflow-y-auto bg-slate-100 p-6 max-sm:fixed max-sm:inset-0 max-sm:z-10 max-sm:w-full max-sm:bg-white max-sm:p-3 ${showMobilePreview ? 'block' : 'max-sm:hidden'}`}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-700">ตัวอย่าง Memo</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="sm:hidden"
+                onClick={() => setShowMobilePreview(false)}
+                title="ปิดตัวอย่าง"
+              >
+                <X className="h-5 w-5 text-slate-900" />
+              </Button>
+            </div>
+            <div className="memo-font bg-white border-2 border-slate-900 text-sm memo-mobile-fit">
               <div className="p-4 space-y-0">
                 {orderFieldsWithAttachmentsLast(selectedTemplate.fields.filter((f) => f.type !== 'memo_type' && f.type !== 'section_title' && f.type !== 'checkbox_group' && !(f.type === 'dropdown_select' && f.label === 'จุดประสงค์'))).map((field) => (
                   <SectionRenderer
@@ -402,19 +426,19 @@ export function MemoDocumentForm({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={handlePreviewPrint} disabled={creating}>
+        <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-2 max-sm:flex-wrap max-sm:px-3 max-sm:py-3">
+          <Button variant="outline" onClick={handlePreviewPrint} disabled={creating} className="max-sm:hidden">
             <Printer className="h-4 w-4 mr-1" />
             พิมพ์ / พรีวิว
           </Button>
-          <Button variant="outline" onClick={onCancel} disabled={creating}>
+          <Button variant="outline" onClick={onCancel} disabled={creating} className="max-sm:flex-1">
             ยกเลิก
           </Button>
-          <Button variant="outline" onClick={() => onSubmit('draft')} disabled={creating}>
+          <Button variant="outline" onClick={() => onSubmit('draft')} disabled={creating} className="max-sm:flex-1">
             <Save className="h-4 w-4 mr-1" />
             {creating && creatingAction === 'draft' ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
           </Button>
-          <Button onClick={() => onSubmit('publish')} disabled={creating} className="bg-slate-900 hover:bg-slate-800">
+          <Button onClick={() => onSubmit('publish')} disabled={creating} className="bg-slate-900 hover:bg-slate-800 max-sm:order-first max-sm:w-full">
             <Mail className="h-4 w-4 mr-1" />
             {creating && creatingAction !== 'draft' ? 'กำลังสร้าง...' : 'สร้าง Memo และส่งอีเมล'}
           </Button>

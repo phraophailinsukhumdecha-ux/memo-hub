@@ -1013,17 +1013,17 @@ export default function SettingsPage() {
   return (
     <>
       <Tabs defaultValue="syslog" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="syslog" className="flex items-center space-x-2"><Activity className="h-4 w-4" /><span>Syslog</span></TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2"><Users className="h-4 w-4" /><span>ผู้ใช้</span></TabsTrigger>
-          <TabsTrigger value="master-data" className="flex items-center space-x-2"><Settings2 className="h-4 w-4" /><span>ข้อมูลหลัก</span></TabsTrigger>
-          <TabsTrigger value="smtp" className="flex items-center space-x-2"><Mail className="h-4 w-4" /><span>ตั้งค่าอีเมล</span></TabsTrigger>
-          <TabsTrigger value="email-format" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เนื้อหาอีเมล</span></TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>เทมเพลต</span></TabsTrigger>
-          <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Deadline</span></TabsTrigger>
-          <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4" /><span>คู่มือการใช้งาน</span></TabsTrigger>
-          <TabsTrigger value="drive" className="flex items-center space-x-2"><Paperclip className="h-4 w-4" /><span>ไฟล์แนบ / Drive</span></TabsTrigger>
-          <TabsTrigger value="memo-list" className="flex items-center space-x-2"><ListChecks className="h-4 w-4" /><span>หน้า My Memo</span></TabsTrigger>
+        <TabsList className="max-sm:h-auto max-sm:flex-wrap max-sm:gap-1 max-sm:py-1">
+          <TabsTrigger value="syslog" className="flex items-center space-x-2"><Activity className="h-4 w-4 max-sm:hidden" /><span>Syslog</span></TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center space-x-2"><Users className="h-4 w-4 max-sm:hidden" /><span>ผู้ใช้</span></TabsTrigger>
+          <TabsTrigger value="master-data" className="flex items-center space-x-2"><Settings2 className="h-4 w-4 max-sm:hidden" /><span>ข้อมูลหลัก</span></TabsTrigger>
+          <TabsTrigger value="smtp" className="flex items-center space-x-2"><Mail className="h-4 w-4 max-sm:hidden" /><span>ตั้งค่าอีเมล</span></TabsTrigger>
+          <TabsTrigger value="email-format" className="flex items-center space-x-2"><FileText className="h-4 w-4 max-sm:hidden" /><span>เนื้อหาอีเมล</span></TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center space-x-2"><FileText className="h-4 w-4 max-sm:hidden" /><span>เทมเพลต</span></TabsTrigger>
+          <TabsTrigger value="deadline" className="flex items-center space-x-2"><Clock className="h-4 w-4 max-sm:hidden" /><span>Deadline</span></TabsTrigger>
+          <TabsTrigger value="manual" className="flex items-center space-x-2"><HelpCircle className="h-4 w-4 max-sm:hidden" /><span>คู่มือการใช้งาน</span></TabsTrigger>
+          <TabsTrigger value="drive" className="flex items-center space-x-2"><Paperclip className="h-4 w-4 max-sm:hidden" /><span>ไฟล์แนบ / Drive</span></TabsTrigger>
+          <TabsTrigger value="memo-list" className="flex items-center space-x-2"><ListChecks className="h-4 w-4 max-sm:hidden" /><span>หน้า My Memo</span></TabsTrigger>
         </TabsList>
 
         {/* Syslog */}
@@ -1046,17 +1046,17 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
+                <div className="relative max-sm:w-full">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                   <Input
                     placeholder="ค้นหา log..."
-                    className="w-64 pl-8 h-9"
+                    className="w-64 pl-8 h-9 max-sm:w-full"
                     value={syslogSearch}
                     onChange={(e) => setSyslogSearch(e.target.value)}
                   />
                 </div>
                 <Select value={syslogLevel} onValueChange={setSyslogLevel}>
-                  <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Level" /></SelectTrigger>
+                  <SelectTrigger className="w-36 h-9 max-sm:w-full"><SelectValue placeholder="Level" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">ทุกระดับ</SelectItem>
                     <SelectItem value="info">info</SelectItem>
@@ -1065,7 +1065,7 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <Select value={syslogCategory} onValueChange={setSyslogCategory}>
-                  <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectTrigger className="w-40 h-9 max-sm:w-full"><SelectValue placeholder="Category" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">ทุกหมวด</SelectItem>
                     <SelectItem value="auth">auth</SelectItem>
@@ -1081,10 +1081,10 @@ export default function SettingsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[170px]">วันที่/เวลา</TableHead>
-                      <TableHead className="w-[80px]">Level</TableHead>
-                      <TableHead className="w-[100px]">Category</TableHead>
+                      <TableHead className="w-[80px] hidden md:table-cell">Level</TableHead>
+                      <TableHead className="w-[100px] hidden md:table-cell">Category</TableHead>
                       <TableHead>ข้อความ</TableHead>
-                      <TableHead className="w-[120px]">ผู้ใช้</TableHead>
+                      <TableHead className="w-[120px] hidden md:table-cell">ผู้ใช้</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1096,16 +1096,16 @@ export default function SettingsPage() {
                           <TableCell className="text-sm">
                             {log.timestamp instanceof Date ? formatThaiDateTime(log.timestamp) : '-'}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Badge variant={log.level === 'error' ? 'destructive' : log.level === 'warning' ? 'secondary' : 'default'}>
                               {log.level}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Badge variant="outline">{log.category}</Badge>
                           </TableCell>
                           <TableCell className="text-sm">{log.message}</TableCell>
-                          <TableCell className="text-sm">{log.userName || '-'}</TableCell>
+                          <TableCell className="text-sm hidden md:table-cell">{log.userName || '-'}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -1142,7 +1142,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
                     <div className="space-y-1.5"><Label className="text-xs">SMTP Host</Label><Input value={settings?.smtp.host || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, host: e.target.value } })} placeholder="smtp.gmail.com" /></div>
                     <div className="space-y-1.5"><Label className="text-xs">SMTP Port</Label><Input value={settings?.smtp.port || 587} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, port: parseInt(e.target.value) || 587 } })} placeholder="587" /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Username</Label><Input type="email" value={settings?.smtp.user || ''} onChange={(e) => setSettings({ ...settings!, smtp: { ...settings!.smtp, user: e.target.value } })} placeholder="user@gmail.com" /></div>
@@ -1747,9 +1747,9 @@ Deadline: {deadline}
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[180px]">แผนก</TableHead>
+                        <TableHead className="w-[180px] max-sm:w-auto">แผนก</TableHead>
                         <TableHead>โฟลเดอร์</TableHead>
-                        <TableHead>Drive Folder ID</TableHead>
+                        <TableHead className="hidden md:table-cell">Drive Folder ID</TableHead>
                         <TableHead className="w-[70px]" />
                       </TableRow>
                     </TableHeader>
@@ -1765,7 +1765,7 @@ Deadline: {deadline}
                           <TableRow key={folder.id}>
                             <TableCell className="font-medium">{folder.department}</TableCell>
                             <TableCell>{folder.name}</TableCell>
-                            <TableCell className="font-mono text-xs text-slate-500">{folder.driveFolderId}</TableCell>
+                            <TableCell className="font-mono text-xs text-slate-500 hidden md:table-cell">{folder.driveFolderId}</TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
@@ -1911,15 +1911,15 @@ Deadline: {deadline}
             </Card>
           ) : (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
                 <div><CardTitle>เทมเพลต Memo</CardTitle><CardDescription>จัดการเทมเพลตสำหรับสร้าง Memo</CardDescription></div>
-                <Button onClick={handleCreateTemplate}><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
+                <Button onClick={handleCreateTemplate} className="max-sm:w-full"><Plus className="mr-2 h-4 w-4" />สร้างเทมเพลตใหม่</Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 {templates.map((t) => (
                   <div key={t.id} className="border rounded-lg overflow-hidden">
                     {/* Template header */}
-                    <div className="flex items-center justify-between p-4 bg-slate-50 border-b">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 border-b max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-slate-500" />
                         <div>
@@ -1927,17 +1927,17 @@ Deadline: {deadline}
                           {t.description && <p className="text-xs text-slate-500">{t.description}</p>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEditTemplate(t)}>
+                      <div className="flex items-center gap-1 max-sm:flex-wrap">
+                        <Button variant="ghost" size="sm" className="max-sm:flex-1" onClick={() => handleEditTemplate(t)}>
                           <Pencil className="h-3.5 w-3.5 mr-1" />แก้ไขชื่อ
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
+                        <Button variant="ghost" size="sm" className="max-sm:flex-1" onClick={() => handleOpenSections(t)}>
                           <Settings className="h-3.5 w-3.5 mr-1" />Sections
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(t)}>
+                        <Button variant="ghost" size="sm" className="max-sm:flex-1" onClick={() => handleDuplicateTemplate(t)}>
                           <Copy className="h-3.5 w-3.5 mr-1" />คัดลอก
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteTemplate(t.id)}>
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 max-sm:flex-1" onClick={() => handleDeleteTemplate(t.id)}>
                           <Trash2 className="h-3.5 w-3.5 mr-1" />ลบ
                         </Button>
                       </div>
@@ -1971,7 +1971,7 @@ Deadline: {deadline}
                               onChange={(e) => setEditingHeader({ ...editingHeader, logoUrl: e.target.value })}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
                             <div className="space-y-1">
                               <Label>ชื่อบริษัท (อังกฤษ, แถบบน)</Label>
                               <Input
@@ -2011,7 +2011,7 @@ Deadline: {deadline}
                               onChange={(e) => setEditingHeader({ ...editingHeader, addressText: e.target.value })}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
                             <div className="space-y-1">
                               <Label>ป้าย MEMO NO.</Label>
                               <Input value={editingHeader.memoNoLabel} onChange={(e) => setEditingHeader({ ...editingHeader, memoNoLabel: e.target.value })} />
@@ -2086,8 +2086,8 @@ Deadline: {deadline}
                         <div className="space-y-2">
                           {editingFormFields.map((f, i) => (
                             <div key={i} className="p-3 border rounded-lg bg-white space-y-2">
-                              <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2 max-sm:flex-wrap max-sm:items-stretch">
+                                <div className="flex items-center gap-1">
                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveFormFieldUp(i)} disabled={i === 0}>
                                   <ChevronUp className="h-3 w-3" />
                                 </Button>
@@ -2096,13 +2096,13 @@ Deadline: {deadline}
                                 </Button>
                               </div>
                               <Input
-                                className="w-40"
+                                className="w-40 max-sm:w-full"
                                 placeholder="Label (เช่น REF. No.)"
                                 value={f.label}
                                 onChange={(e) => updateFormField(i, { label: e.target.value })}
                               />
                               <Select value={f.type} onValueChange={(v) => updateFormField(i, { type: v })}>
-                                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-28 max-sm:w-full"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="text">Text</SelectItem>
                                   <SelectItem value="date">Date</SelectItem>
@@ -2113,7 +2113,7 @@ Deadline: {deadline}
                               </Select>
                               {f.type === 'dropdown' && (
                                 <Select value={f.inputType || 'dropdown'} onValueChange={(v) => updateFormField(i, { inputType: v as 'text' | 'dropdown' })}>
-                                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                                  <SelectTrigger className="w-36 max-sm:w-full"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="dropdown">ดร็อปดาวน์</SelectItem>
                                     <SelectItem value="text">ช่องพิมพ์</SelectItem>
@@ -2136,13 +2136,13 @@ Deadline: {deadline}
                                 </div>
                               )}
                               <Input
-                                className="w-32"
+                                className="w-32 max-sm:w-full"
                                 placeholder="Key"
                                 value={f.name}
                                 onChange={(e) => updateFormField(i, { name: e.target.value })}
                               />
                               <Select value={f.width || 'half'} onValueChange={(v) => updateFormField(i, { width: v as 'full' | 'half' })}>
-                                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-28 max-sm:w-full"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="half">ครึ่งแถว</SelectItem>
                                   <SelectItem value="full">เต็มแถว</SelectItem>
@@ -2189,8 +2189,8 @@ Deadline: {deadline}
                             }
                             return fields.map((f, i) => (
                               <div key={i} className="p-2 bg-slate-50 rounded border text-sm space-y-1">
-                                <div className="flex items-center gap-3">
-                                <span className="font-medium text-slate-700 w-40">
+                                <div className="flex items-center gap-3 max-sm:flex-wrap">
+                                <span className="font-medium text-slate-700 w-40 max-sm:w-auto">
                                   {f.label || <span className="italic text-slate-400">ไม่มี label</span>}
                                   {f.required && <span className="text-red-500 ml-1">*</span>}
                                 </span>
@@ -2215,7 +2215,7 @@ Deadline: {deadline}
 
                     {/* Sections list - all sections from template */}
                     <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3 max-sm:flex-col max-sm:items-start max-sm:gap-1">
                         <h5 className="text-sm font-semibold text-slate-700">Sections ทั้งหมดใน Memo</h5>
                         <Button variant="ghost" size="sm" onClick={() => handleOpenSections(t)}>
                           <Settings className="h-3.5 w-3.5 mr-1" />แก้ไข Sections
@@ -2237,8 +2237,8 @@ Deadline: {deadline}
                           if (isHidden) return null;
                           const isProtected = f.type === 'form_row' || f.type === 'company_header';
                           return (
-                            <div key={i} className={`flex items-center gap-3 p-2 rounded border text-sm ${isProtected ? 'bg-blue-50 border-blue-200' : 'bg-slate-50'}`}>
-                              <span className="font-medium text-slate-700 w-48">{f.label || typeLabels[f.type] || f.type}</span>
+                            <div key={i} className={`flex items-center gap-3 p-2 rounded border text-sm max-sm:flex-wrap ${isProtected ? 'bg-blue-50 border-blue-200' : 'bg-slate-50'}`}>
+                              <span className="font-medium text-slate-700 w-48 max-sm:w-auto">{f.label || typeLabels[f.type] || f.type}</span>
                               <span className={`text-xs px-2 py-0.5 rounded ${isProtected ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-700'}`}>{typeLabels[f.type] || f.type}</span>
                               {f.type === 'form_row' && (() => {
                                 const config = (f.fieldConfig || {}) as { fields?: Array<{ name: string; label: string }> };
@@ -2274,27 +2274,28 @@ Deadline: {deadline}
         {/* Users */}
         <TabsContent value="users">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
               <div><CardTitle>จัดการผู้ใช้</CardTitle><CardDescription>เพิ่ม/แก้ไข/ลบ ผู้ใช้งานในระบบ</CardDescription></div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsUserImportDialogOpen(true)}><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าจากชีท</Button>
-                <Button onClick={handleCreateUser}><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
+              <div className="flex items-center gap-2 max-sm:w-full">
+                <Button variant="outline" size="sm" onClick={() => setIsUserImportDialogOpen(true)} className="max-sm:flex-1"><FileSpreadsheet className="mr-1 h-3 w-3" />นำเข้าจากชีท</Button>
+                <Button onClick={handleCreateUser} className="max-sm:flex-1"><Plus className="mr-2 h-4 w-4" />เพิ่มผู้ใช้ใหม่</Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
                 <Input
                   placeholder="ค้นหาชื่อผู้ใช้..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="max-w-sm"
+                  className="max-w-sm max-sm:max-w-none"
                 />
                 {selectedUserIds.size > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteUsers}>
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteUsers} className="max-sm:w-full">
                     <Trash2 className="h-4 w-4 mr-1" />ลบ {selectedUserIds.size} รายการ
                   </Button>
                 )}
               </div>
+              <div className="max-sm:hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2365,6 +2366,56 @@ Deadline: {deadline}
                   ))}
                 </TableBody>
               </Table>
+              </div>
+
+              {/* Mobile user cards (table is hidden below sm) */}
+              <div className="space-y-2 sm:hidden">
+                {users
+                  .filter((u) => !userSearch || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))
+                  .sort((a, b) => (a.username || '').localeCompare(b.username || '', 'en', { numeric: true }))
+                  .map((u) => (
+                    <div key={u.id} className="rounded-lg border p-3">
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 rounded"
+                          checked={selectedUserIds.has(u.id)}
+                          onChange={() => setSelectedUserIds(toggleInSet(selectedUserIds, u.id))}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-slate-900">{u.displayName}</p>
+                          <p className="truncate font-mono text-xs text-slate-500">{u.username}</p>
+                          <p className="truncate text-xs text-slate-500">{u.email}</p>
+                        </div>
+                        {isUserOnline(u) ? (
+                          <Badge className="shrink-0 border-green-200 bg-green-100 text-green-700">ออนไลน์</Badge>
+                        ) : (
+                          <span className="shrink-0 text-xs text-slate-400">ออฟไลน์</span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500">
+                        {getRoleLabel(u.role)}
+                        <span className="truncate">· {u.department || '-'}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
+                          ผู้อนุมัติ
+                          <button
+                            type="button"
+                            onClick={() => handleToggleApprover(u)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.isApprover ? 'bg-green-600' : 'bg-slate-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${u.isApprover ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)}><FileText className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteUser(u.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

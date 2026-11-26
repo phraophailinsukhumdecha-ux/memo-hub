@@ -26,3 +26,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Mobile memo view: the document is a fixed A4 canvas (210mm wide). Scale it
+   down to the screen width so the whole page is visible without horizontal
+   scrolling. Display only — print/PDF output is unaffected. */
+@media (max-width: 640px) {
+  .memo-mobile-fit {
+    zoom: 0.42;
+  }
+}
+@media (max-width: 356px) {
+  .memo-mobile-fit {
+    zoom: 0.36;
+  }
+}
